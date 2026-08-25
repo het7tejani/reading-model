@@ -1,0 +1,202 @@
+import { ReadingInputs, TarotCard } from '../types';
+import { calculateLifePath, LIFE_PATH_ARCHETYPES } from './numerology';
+import { READING_TOPICS, cleanTopicTitle } from '../data/readingTopics';
+
+// Elemental mappings for dynamic prescription based on the cards drawn
+const ELEMENT_CRYSTALS: Record<string, { primary: string; reason: string }> = {
+  Fire: { primary: 'Carnelian and Sunstone', reason: 'to reignite creative courage, warm the solar plexus, and dispel stagnation' },
+  Water: { primary: 'Moonstone and Rose Quartz', reason: 'to soothe emotional waters, soften heart defenses, and enhance intuitive receptivity' },
+  Air: { primary: 'Lapis Lazuli and Blue Lace Agate', reason: 'to clear mental fog, calm overthinking, and invite honest communication' },
+  Earth: { primary: 'Smoky Quartz and Green Aventurine', reason: 'to ground physical vitality, relieve stress, and anchor stable abundance' },
+  Spirit: { primary: 'Amethyst and Selenite', reason: 'to purify the aura, align crown wisdom, and invite higher spiritual clarity' },
+};
+
+const ELEMENT_BOTANICALS: Record<string, { primary: string; reason: string }> = {
+  Fire: { primary: 'Rosemary and Cinnamon', reason: 'to stimulate circulation of vital energy, kindle motivation, and purify fatigue' },
+  Water: { primary: 'Chamomile and Rose Petals', reason: 'to ease nervous tension, promote restful sleep, and nourish the emotional body' },
+  Air: { primary: 'Eucalyptus and Peppermint', reason: 'to expand breath, release mental heaviness, and bring refreshing focus' },
+  Earth: { primary: 'Holy Basil (Tulsi) and Cedarwood', reason: 'to restore adrenal balance, ground scattered thoughts, and protect sacred space' },
+  Spirit: { primary: 'Frankincense and Lavender', reason: 'to elevate consciousness, still racing thoughts, and create peaceful sanctuary' },
+};
+
+export function generateTarotNumerologyReadingMarkdown(inputs: ReadingInputs): string {
+  const { name, age, dob, problem, question, topic, cards } = inputs;
+  const safeTopicTitle = cleanTopicTitle(topic);
+  const card1 = cards[0] || ({ name: 'The Star', keywords: ['Hope', 'Renewal', 'Serenity', 'Healing'], element: 'Air', archetype: 'The Guiding Light' } as TarotCard);
+  const card2 = cards[1] || ({ name: 'Eight of Swords', keywords: ['Overthinking', 'Mental Cage', 'Hesitation'], element: 'Air', archetype: 'The Bound Seeker' } as TarotCard);
+  const card3 = cards[2] || ({ name: 'The Sun', keywords: ['Joy', 'Vitality', 'Radiance', 'Clarity'], element: 'Fire', archetype: 'The Divine Radiance' } as TarotCard);
+
+  const numerology = calculateLifePath(dob) || {
+    lifePathNumber: 7,
+    mathBreakdown: 'Month: 7, Day: 7, Year: 2+0+0+0=2, Total: 7+7+2=16 -> 1+6=7',
+    coreEnergyTitle: 'The Mystic Seeker & Sacred Analyst',
+    archetype: 'The Inner Sage',
+    governingPlanet: 'Neptune',
+  };
+
+  const lpNumber = numerology.lifePathNumber;
+  const lpInfo = LIFE_PATH_ARCHETYPES[lpNumber] || {
+    coreEnergyTitle: numerology.coreEnergyTitle,
+    archetype: numerology.archetype,
+    governingPlanet: numerology.governingPlanet,
+    description: 'Carries deep spiritual discernment and intuitive alignment.',
+  };
+
+  const kw1 = card1.keywords?.slice(0, 6).join(', ') || 'Awareness, Reflection, Awakening';
+  const kw2 = card2.keywords?.slice(0, 6).join(', ') || 'Resistance, Uncertainty, Tension';
+  const kw3 = card3.keywords?.slice(0, 6).join(', ') || 'Resolution, Wholeness, Light';
+
+  // Determine dominant elements from the cards drawn for dynamic prescription
+  const elem1 = card1.element || 'Water';
+  const elem2 = card2.element || 'Air';
+  const elem3 = card3.element || 'Fire';
+
+  const crystalPair = ELEMENT_CRYSTALS[elem3] || ELEMENT_CRYSTALS[elem1] || ELEMENT_CRYSTALS['Spirit'];
+  const botanicalPair = ELEMENT_BOTANICALS[elem2] || ELEMENT_BOTANICALS[elem3] || ELEMENT_BOTANICALS['Spirit'];
+
+  // Match topic object and extract exact main headline
+  const matchedTopic = READING_TOPICS.find((t) =>
+    safeTopicTitle.toLowerCase().includes(t.title.toLowerCase()) ||
+    safeTopicTitle.toLowerCase().includes(t.headline.toLowerCase()) ||
+    t.id === Number(topic)
+  );
+  const mainHeadline = matchedTopic ? matchedTopic.headline : safeTopicTitle.toUpperCase() || 'SACRED TAROT & NUMEROLOGY ORACLE';
+
+  // Clean problem & question snippet for natural prose
+  const cleanProblem = (problem || 'seeking divine clarity').trim().replace(/[.\n]+$/, '');
+  const cleanQuestion = (question || 'What is the highest wisdom for my path?').trim().replace(/[?\n]+$/, '');
+
+  // Build dynamic Q&A section based on category custom questions if provided
+  let qaSectionContent = '';
+  let customQs = inputs.categoryData?.customQuestions;
+  if ((!customQs || !Array.isArray(customQs) || customQs.length === 0) && (safeTopicTitle.toLowerCase().includes('10 question') || Number(topic) === 32)) {
+    customQs = [
+      '1. What is the hidden lesson in my current situation?',
+      '2. What energy should I embody to attract my desired outcome?',
+      '3. What subconscious block do I need to release right now?',
+      '4. How will I recognize the right path when it arrives?',
+      '5. What is the ultimate potential of this journey?',
+      '6. What is the true energetic intention of those around me?',
+      '7. What impending financial or career breakthrough is forming?',
+      '8. What spiritual protection or guide is watching over me?',
+      '9. What major milestone will arrive within the next 6 months?',
+      '10. What final advice does the universe have for my soul peace?',
+    ];
+  }
+
+  if (customQs && Array.isArray(customQs) && customQs.length > 0) {
+    qaSectionContent = customQs.map((q, idx) => {
+      const cleanQ = q.replace(/^\d+\.\s*/, '').trim();
+      const cardRef = idx % 3 === 0 ? card1.name : (idx % 3 === 1 ? card2.name : card3.name);
+      return `**${cleanQ}**\nChanneled under the vibrational resonance of ${cardRef} and Life Path ${lpNumber}, the answer reveals that authentic alignment is already unfolding for ${name}. Trust your intuitive discernment and allow conscious self-honoring decisions to lead your path forward with peace, boundary integrity, and sovereign clarity.`;
+    }).join('\n\n');
+  } else {
+    qaSectionContent = `**What is the hidden lesson in my current situation?**
+The deeper spiritual lesson illuminated by ${card2.name} is that your emotional peace cannot remain conditional upon the validation, reactions, or approval of others. This circumstance is actively teaching you how to anchor unconditional self-worth within your own center, establishing boundaries that protect your peace while refusing to diminish your truth to keep a false sense of harmony. You are learning that letting go of what drains you is the ultimate act of self-reverence.
+
+**What energy should I embody to attract my desired outcome?**
+You are called to embody the magnetic, luminous presence of ${card3.name}—approaching your daily decisions and future vision with joyful optimism, relaxed nervous-system confidence, and unwavering self-respect. When you move through the world expecting goodwill, clarity, and reciprocal respect, your vibrational field naturally dissolves resistance and calls forward the exact breakthroughs and aligned connections you desire.
+
+**What subconscious block do I need to release right now?**
+You must gently release the exhausting, deeply ingrained narrative that you are responsible for fixing everyone else's discomfort or that choosing your own happiness will lead to abandonment. Forgive yourself for the times you tolerated ambiguity, and release the instinct to over-analyze every detail out of fear of making a mistake. You are safe to choose clarity and move forward without guilt.
+
+**How will I recognize the right path when it arrives?**
+Reflecting the intuitive resonance of ${card1.name} and ${card3.name}, the right path will not create frantic mental urgency, dread, or inner knotting; instead, it will announce itself through an immediate somatic release in your chest, a quiet exhale of relief, and synchronicities that flow effortlessly without forceful manipulation. When a path is right, peace precedes the outcome.
+
+**What is the ultimate potential of this journey?**
+The ultimate potential of this sacred journey is stepping into full spiritual and emotional sovereignty as a Life Path ${lpNumber}, experiencing profound alignment, deep reciprocal partnerships, flourishing creative vitality, and an unshakeable sense of joy and inner sanctuary across ${safeTopicTitle}. You are claiming the life and peace you have always deserved.`;
+  }
+
+  return `# ${mainHeadline}
+
+## 1. Numerology (Life Path)
+
+${numerology.mathBreakdown}
+
+At ${age} years old, born under the celestial blueprint of ${dob}, you channel the vibrational frequency of Life Path ${lpNumber}—embodying ${lpInfo.coreEnergyTitle} governed by ${lpInfo.governingPlanet}. Your soul's fundamental strength lies in ${lpInfo.description.toLowerCase()} You are wired for genuine depth, conscious integrity, and meaningful purpose, which explains why unresolved tensions, superficial compromises, or unreciprocated dynamics weigh so heavily upon your spirit.
+
+In addressing what you are navigating right now—specifically regarding "${cleanProblem}" within ${safeTopicTitle}—this Life Path ${lpNumber} energy serves as an essential compass. The friction and emotional weight you have been experiencing is not a sign of failure; rather, it is a sacred catalyst calling you to step out of people-pleasing and realign with your authentic sovereignty as ${lpInfo.archetype}. When you stand firmly in your core vibrational frequency, you naturally access the clarity, discernment, and spiritual authority needed to resolve this chapter with grace and confidence.
+
+---
+
+## 2. 3-Card Energy Overview
+
+### Card 1: ${card1.name} (Position: Current Energy)
+**Keywords:** ${kw1}
+
+${card1.name} captures the present state of your aura as you examine your inquiry in ${safeTopicTitle}. Governed by ${elem1}, this archetype reflects an intuitive realization taking root within you. You have arrived at a juncture where continuing to tolerate ambiguity, exhaustion, or emotional strain is no longer acceptable to your spirit. Beneath any surface fatigue lies a deep, quiet resilience ready to reclaim your personal peace and clear direction.
+
+Traditionally, ${card1.name} signals that your perceptions regarding "${cleanProblem}" are accurate and grounded in genuine intuitive awareness. Your inner guidance system is urging you to trust what you are feeling and prepare for a healthy, conscious shift toward emotional spaciousness, self-respect, and empowered discernment.
+
+### Card 2: ${card2.name} (Position: The Blockage)
+**Keywords:** ${kw2}
+
+In the position of The Blockage, ${card2.name} sheds compassionate light on the mental loops, doubts, or self-limiting assumptions holding you back. Influenced by the element of ${elem2}, this card mirrors the exhausting habit of overthinking every possible consequence or fearing that choosing your own peace will bring conflict, guilt, or loss.
+
+The sacred medicine of ${card2.name} is to recognize that the hesitation keeping you immobilized is not an objective obstacle, but rather an outdated mental narrative rooted in past conditioning and self-protection. By extending gentle forgiveness to yourself and recognizing your inherent right to be fulfilled and heard, you dismantle this internal obstacle and restore your freedom of decisive action.
+
+### Card 3: ${card3.name} (Position: Path Forward)
+**Keywords:** ${kw3}
+
+The arrival of ${card3.name} in the position of The Path Forward brings an empowering, triumphant forecast. Carried by the vibrant force of ${elem3}, this card promises renewed enthusiasm, mutual clarity, and constructive breakthroughs in ${safeTopicTitle}. It offers reassurance that taking decisive, heart-aligned action will unlock immediate relief and energetic momentum.
+
+To manifest the elevated medicine of ${card3.name}, you are invited to direct your energy toward what is life-giving, honest, and reciprocal. As you courageously address "${cleanQuestion}", the transformative frequency of ${card3.name} ensures that your path forward is illuminated with lightness, joy, grounded stability, and profound fulfillment.
+
+---
+
+## 3. Synthesis
+
+Your Oracle reading weaves a transformative spiritual bridge between your Life Path ${lpNumber} vibrational frequency and the dynamic evolutionary passage from ${card1.name}, through ${card2.name}, into the triumphant blessing of ${card3.name}. At this pivotal moment in your journey at age ${age}, you stand at a sacred crossroads where old coping mechanisms and self-sacrificing habits are ready to be lovingly dissolved. Your soul is asking you to stop compromising your well-being for temporary comfort or external approval, inviting you instead to anchor your life in authentic sovereignty, conscious boundaries, and unshakeable peace.
+
+Your core challenge—navigating "${cleanProblem}"—has served as a potent initiation for your boundaries, discernment, and self-worth. While this circumstance has caused genuine emotional weight, circular thoughts, and sleepless reflection, it has simultaneously illuminated what is sacred and non-negotiable for your spirit. The foundational awareness embodied by ${card1.name} proves that you are no longer blind to what requires realignment; your intuition has already sounded the clarion call for renewal, clarity, and self-honoring decisions.
+
+Through the illuminating mirror of ${card2.name}, you are invited to recognize how hesitation, fear of disappointment, or an over-reliance on mental analysis has perpetuated the very impasse you wish to resolve. By honoring the protective instinct behind this hesitation without allowing it to dictate your future actions, you reclaim your personal authority, break the cycle of self-doubt, and allow your nervous system to rest in certainty.
+
+As you consciously pivot toward the radiant frequency of ${card3.name}, your sacred inquiry—"${cleanQuestion}?"—receives a resounding confirmation of cosmic alignment, clarity, and hope. The breakthrough you seek will not arrive through endless worry or forceful control, but through calm, steady, heart-centered presence and decisive action rooted in your inherent dignity as a Life Path ${lpNumber}.
+
+Trust that you are fully equipped, spiritually protected, and ready to welcome this elevated chapter of reciprocal harmony, deep fulfillment, and lasting peace in ${safeTopicTitle}. The universe is actively conspiring to support your highest alignment as you step boldly into your truth and allow your authentic light to lead the way.
+
+---
+
+## 4. Q&A Insights
+
+${qaSectionContent}
+
+---
+
+## 5. Action Steps & Reflection
+
+[1] **Establish Sacred Clarity & Boundary Audit (Days 1–7):** Dedicate 15 minutes each morning to uncensored journaling regarding "${cleanProblem}". Identify every area where your energy is being depleted by people-pleasing, hesitation, or unexpressed needs. Write down three firm, non-negotiable boundaries you will uphold across ${safeTopicTitle}, and practice the sacred boundary mantra: "My peace is non-negotiable, and I choose to honor my authentic needs without apology or explanation." Begin each day by placing your hands over your solar plexus and breathing deeply, anchoring full permission to prioritize your own emotional equilibrium above all else.
+
+[2] **Dissolve the Mental Loop & Regulate the Nervous System (Days 8–15):** Whenever the overthinking and hesitation of ${card2.name} arises, pause immediately and place both hands over your heart center. Take 6 slow diaphragmatic breaths (inhale for 4 seconds, hold for 4, exhale for 6) to signal safety to your nervous system. Speak aloud: "I acknowledge this fear, I thank it for trying to keep me safe, and I choose to release control to divine timing and my inner truth." In the evening, write down the specific worry keeping your mind awake, followed by three objective facts that prove you are safe and fully capable of handling whatever comes.
+
+[3] **Execute One Courageous Shift & Embody Radiant Momentum (Days 16–22):** Take one tangible, heart-aligned action that directly reflects the solution-focused energy of ${card3.name}. Whether having an honest, grounded conversation regarding "${cleanQuestion}", making a long-delayed decision, or saying a clear 'no' to what drains you, act with kindness and unapologetic confidence. Trust that the universe meets courage with immediate support, energetic expansion, and reciprocal respect, clearing the stagnant past to make room for lasting fulfillment.
+
+[4] **Anchor Your Life Path Sovereign Blueprint (Days 23–30):** Create a dedicated evening grounding ritual honoring how much you have grown as a Life Path ${lpNumber} at age ${age}. Light a candle, hold your crystal ally, and meditate quietly on your innate soul gifts and sovereign worth. Seal this 30-day journey by writing a letter of gratitude to your future self, anchoring unwavering trust in your destiny, celebrating your emotional freedom, and declaring your readiness to welcome reciprocal love, joy, and peace.
+
+---
+
+## 6. Your Energetic Mantras
+
+* I AM aligned with the divine wisdom and discernment of my Life Path ${lpNumber} blueprint.
+* I AM releasing all hesitation, overthinking, and self-doubt highlighted by ${card2.name}.
+* I AM worthy of effortless peace, mutual respect, and absolute clarity in ${safeTopicTitle}.
+* I AM stepping boldly into the luminous, joyful, and expansive energy of ${card3.name}.
+* I AM honoring my truth and trusting the sacred timing and orchestration of my life.
+
+---
+
+## 7. Soul Inquiries
+
+1. What truth about my situation with "${cleanProblem}" have I been reluctant to acknowledge, and what profound freedom comes from facing it with love?
+2. In what ways has the fear or hesitation of ${card2.name} been trying to protect me, and how can I thank it before consciously stepping forward?
+3. How will my daily life, energy, and relationships feel once the radiant resolution of ${card3.name} is fully anchored in ${safeTopicTitle}?
+
+---
+
+## 8. Your Spiritual Prescription
+
+* **The Crystal:** ${crystalPair.primary} — ${crystalPair.reason}, harmonizing the energies of ${card1.name} and ${card3.name}.
+* **The Botanical:** ${botanicalPair.primary} — ${botanicalPair.reason}, providing soothing support as you navigate ${card2.name}.
+* **The Practice:** **Heart-Centered Elemental Realignment.** Dedicate 5 to 10 minutes each morning to sit in quiet stillness. Place one hand over your heart and one on your solar plexus. Inhale deeply through your nose for 4 counts, envisioning golden light filling your heart space, and exhale slowly for 6 counts, releasing all tension and doubt into the earth.`;
+}

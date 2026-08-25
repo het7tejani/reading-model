@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #FCFAF7;
+    color: #2C2C2C;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Geometric Balance Theme Surfaces and Accents */
+.bg-theme-canvas {
+  background-color: #FCFAF7;
+}
+
+.bg-theme-surface {
+  background-color: #FFFFFF;
+}
+
+.bg-theme-secondary {
+  background-color: #F2EDE8;
+}
+
+.border-theme-primary {
+  border-color: #E0D7CC;
+}
+
+.border-theme-secondary {
+  border-color: #EEEAE5;
+}
+
+.text-theme-dark {
+  color: #2C2C2C;
+}
+
+.text-theme-primary {
+  color: #4A3F35;
+}
+
+.text-theme-muted {
+  color: #8C7B6A;
+}
+
+.text-theme-body {
+  color: #5C554E;
+}
+
+.text-theme-ochre {
+  color: #D4A373;
+}
+
+.text-theme-copper {
+  color: #BC6C25;
+}
+
+.text-theme-olive {
+  color: #606C38;
+}
+
+/* Subtle Geometric Grid & Texture pattern */
+.bg-geometric-grid {
+  background-color: #FCFAF7;
+  background-image: radial-gradient(#E0D7CC 0.75px, transparent 0.75px), radial-gradient(#E0D7CC 0.75px, #FCFAF7 0.75px);
+  background-size: 30px 30px;
+  background-position: 0 0, 15px 15px;
+}
+
+/* Markdown styling inside reading container - Geometric Balance Editorial Style */
+.reading-content h1 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 2rem;
+  font-weight: 600;
+  font-style: italic;
+  color: #4A3F35;
+  margin-top: 1.75rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #E0D7CC;
+  padding-bottom: 0.5rem;
+}
+
+.reading-content h2 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #4A3F35;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid #EEEAE5;
+  padding-bottom: 0.35rem;
+}
+
+.reading-content h3 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  font-style: italic;
+  color: #4A3F35;
+  margin-top: 1.25rem;
+  margin-bottom: 0.4rem;
+}
+
+.reading-content p {
+  margin-bottom: 1.1rem;
+  line-height: 1.75;
+  color: #5C554E;
+  font-size: 0.9375rem;
+}
+
+.reading-content ul, .reading-content ol {
+  margin-top: 0.5rem;
+  margin-bottom: 1.25rem;
+  padding-left: 1.5rem;
+}
+
+.reading-content ul {
+  list-style-type: disc;
+}
+
+.reading-content ol {
+  list-style-type: decimal;
+}
+
+.reading-content li {
+  margin-bottom: 0.5rem;
+  line-height: 1.65;
+  color: #5C554E;
+  font-size: 0.9375rem;
+}
+
+.reading-content hr {
+  border: 0;
+  border-top: 1px solid #E0D7CC;
+  margin: 2rem 0;
+}
+
+.reading-content strong {
+  color: #2C2C2C;
+  font-weight: 600;
+}
+
+.reading-content blockquote {
+  border-left: 2px solid #D4A373;
+  padding-left: 1rem;
+  font-style: italic;
+  color: #5C554E;
+  margin: 1.25rem 0;
+  background-color: #F2EDE8;
+  padding: 0.75rem 1rem;
+  border-radius: 2px;
+}
+
+/* Print optimizations for direct PDF printing */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #2c2c2c !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .reading-content h1,
+  .reading-content h2,
+  .reading-content h3 {
+    color: #4A3F35 !important;
+    border-bottom-color: #E0D7CC !important;
+  }
+  .reading-content p,
+  .reading-content li {
+    color: #5C554E !important;
+  }
+  .reading-content strong {
+    color: #2C2C2C !important;
+  }
+}
