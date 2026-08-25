@@ -11,8 +11,12 @@ export const generateAndDownloadPdf = async (
   querentName: string,
   onProgress?: (progress: PdfGenerationProgress) => void
 ): Promise<void> => {
-  const pageElements = document.querySelectorAll<HTMLElement>('.pdf-page');
-  const totalPages = pageElements.length || 25;
+  const pageElements = Array.from(document.querySelectorAll<HTMLElement>('.pdf-page'));
+  const totalPages = pageElements.length;
+
+  if (totalPages === 0) {
+    throw new Error('No PDF pages found to render.');
+  }
 
   const pdf = new jsPDF({
     orientation: 'portrait',
@@ -23,15 +27,15 @@ export const generateAndDownloadPdf = async (
   const pdfWidth = pdf.internal.pageSize.getWidth();
   const pdfHeight = pdf.internal.pageSize.getHeight();
 
-  for (let i = 1; i <= totalPages; i++) {
-    const pageEl = document.getElementById(`pdf-page-${i}`);
-    if (!pageEl) continue;
+  for (let i = 0; i < totalPages; i++) {
+    const pageEl = pageElements[i];
+    const pageNum = i + 1;
 
     if (onProgress) {
       onProgress({
-        currentPage: i,
+        currentPage: pageNum,
         totalPages,
-        status: `Rendering page ${i} of ${totalPages}...`,
+        status: `Rendering page ${pageNum} of ${totalPages}...`,
       });
     }
 
@@ -46,7 +50,7 @@ export const generateAndDownloadPdf = async (
 
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
-    if (i > 1) {
+    if (i > 0) {
       pdf.addPage();
     }
 

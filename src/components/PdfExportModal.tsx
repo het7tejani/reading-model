@@ -28,7 +28,7 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
 
   const categorySpec = getCategorySpecByTopic(inputs.topic || 1);
   const blueprint = getTopicMasterBlueprint(inputs.topic || categorySpec.id);
-  const totalPages = blueprint.totalPages;
+  const [renderedTotalPages, setRenderedTotalPages] = useState<number>(blueprint.totalPages);
 
   if (!isOpen) return null;
 
@@ -64,14 +64,14 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-serif italic font-bold text-base text-[#4A3F35]">
-                  {totalPages}-Page Client PDF Preview & Export
+                  {renderedTotalPages}-Page Client PDF Preview & Export
                 </h3>
                 <span className="px-2 py-0.5 rounded-xs bg-[#F2EDE8] border border-[#BC6C25]/40 text-[#BC6C25] text-[10px] font-bold uppercase tracking-wider font-mono">
                   Daisy Medium Studio
                 </span>
               </div>
               <p className="text-xs text-[#8C7B6A]">
-                Client: {inputs.name || 'Querent'} • {categorySpec.title} ({totalPages} Pages Universal Blueprint)
+                Client: {inputs.name || 'Querent'} • {categorySpec.title} ({renderedTotalPages} Pages Dynamic Blueprint)
               </p>
             </div>
           </div>
@@ -96,12 +96,12 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
               ) : downloadSuccess ? (
                 <>
                   <Check className="w-3.5 h-3.5" />
-                  <span>Downloaded {totalPages} Pages!</span>
+                  <span>Downloaded {renderedTotalPages} Pages!</span>
                 </>
               ) : (
                 <>
                   <Download className="w-3.5 h-3.5 text-[#D4A373]" />
-                  <span>Download {totalPages}-Page PDF</span>
+                  <span>Download {renderedTotalPages}-Page PDF</span>
                 </>
               )}
             </button>
@@ -147,7 +147,7 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
               <span>
                 {customTemplatePages && customTemplatePages.length > 0
                   ? `Rendering text on top of your original uploaded PDF base pages (${customTemplatePages.length} pages loaded):`
-                  : `All ${totalPages} pages rendered with card artwork, numerology mandala, and dynamic category modules:`}
+                  : `All ${renderedTotalPages} pages rendered with card artwork, numerology mandala, and dynamic category modules:`}
               </span>
             </div>
 
@@ -157,6 +157,7 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
                 inputs={inputs}
                 markdown={markdown}
                 customTemplatePages={customTemplatePages}
+                onTotalPagesCalculated={(cnt) => setRenderedTotalPages(cnt)}
               />
             </div>
           </div>

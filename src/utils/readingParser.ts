@@ -248,26 +248,38 @@ export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): 
 
   // 5. Action Steps
   const actionRaw = findSection('action') || findSection('reflection') || '';
-  const actionSteps = actionRaw
-    .split('\n')
-    .filter(l => l.match(/^(\d+\.|\*|-)/))
-    .map(l => l.replace(/^[\d.*-]+\s*/, '').trim())
-    .filter(l => l.length > 10);
+  
+  // Extract action steps supporting multi-line blocks, numbered lists [1], 1., 1), etc.
+  const rawActionBlocks = actionRaw
+    .split(/(?:^|\n+)(?:\[?\d+\]?[\.\)]?|\*|-)\s+/)
+    .map(b => b.trim())
+    .filter(b => b.length > 5);
+
+  const parsedActionSteps: string[] = [];
+  if (rawActionBlocks.length > 0) {
+    for (const block of rawActionBlocks) {
+      // Normalize line breaks within a single step to preserve paragraph continuity
+      const cleanBlock = block.replace(/\r\n/g, '\n').replace(/\n+/g, ' ').trim();
+      if (cleanBlock.length > 15) {
+        parsedActionSteps.push(cleanBlock);
+      }
+    }
+  }
 
   // 6. Energetic Mantras
   const mantraRaw = findSection('mantras') || findSection('energetic mantras') || findSection('affirmations') || '';
   const mantras = mantraRaw
     .split('\n')
-    .filter(l => l.trim().length > 5)
-    .map(l => l.replace(/^[\d.*"'-]+\s*/, '').replace(/["']/g, '').trim())
-    .filter(l => l.length > 5);
+    .filter(l => l.trim().length > 3)
+    .map(l => l.replace(/^[\d.*"'-•]+\s*/, '').replace(/["']/g, '').replace(/\*\*/g, '').trim())
+    .filter(l => l.length > 5 && !l.toLowerCase().startsWith('repeat'));
 
   // 7. Soul Inquiries
   const inquiriesRaw = findSection('soul inquiries') || findSection('inquiries') || findSection('journaling') || '';
   const soulInquiries = inquiriesRaw
     .split('\n')
-    .filter(l => l.match(/^(\d+\.|\*|-)/) || l.includes('?'))
-    .map(l => l.replace(/^[\d.*-]+\s*/, '').trim())
+    .filter(l => l.match(/^(\d+[\.\)]|\*|-|•)/) || l.includes('?'))
+    .map(l => l.replace(/^[\d.*-•\)]+\s*/, '').replace(/\*\*/g, '').trim())
     .filter(l => l.length > 10);
 
   // 8. Spiritual Prescription
@@ -314,7 +326,7 @@ export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): 
       'Stepping decisively into the elevated medicine of your path forward brings sustainable peace, authentic connection, and joyful abundance into every facet of your life journey.'
     ],
     qaInsights: qaInsights.length >= 3 ? qaInsights : defaultQA,
-    actionSteps: actionSteps.length >= 3 ? actionSteps : [
+    actionSteps: parsedActionSteps.length >= 2 ? parsedActionSteps : [
       '[1] Establish Sacred Clarity & Boundary Audit (Days 1–7): Dedicate 15 minutes each morning to uncensored journaling. Identify every area where your energy is being depleted by people-pleasing or hesitation. Practice the sacred boundary mantra: "My peace is non-negotiable, and I choose to honor my authentic needs without apology or explanation."',
       '[2] Dissolve the Mental Loop & Regulate the Nervous System (Days 8–15): Whenever overthinking or hesitation arises, pause immediately and place both hands over your heart center. Take 6 slow diaphragmatic breaths. State aloud: "I acknowledge this fear, I thank it for trying to keep me safe, and I choose to release control to divine timing."',
       '[3] Execute One Courageous Shift & Embody Radiant Momentum (Days 16–22): Take one tangible, heart-aligned action that directly reflects solution-focused energy. Whether having an honest, grounded conversation or setting a firm boundary, act with kindness and confidence, trusting that the universe meets courage with immediate support.',
