@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { ReadingInputs } from '../types';
 import { calculateLifePath, reduceToSingleDigit, LIFE_PATH_ARCHETYPES } from '../utils/numerology';
-import { parseReadingMarkdown } from '../utils/readingParser';
+import { parseReadingMarkdown, cleanHeadingText, cleanMarkdownText } from '../utils/readingParser';
 import { getTarotCardImageUrl } from '../utils/tarotImageMapper';
 import { cleanTopicTitle } from '../data/readingTopics';
 import { getCategorySpecByTopic } from '../data/categoryConfig';
@@ -248,28 +248,33 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
       };
     }
     // Clean raw from markdown bold, list prefixes, brackets
-    let clean = raw.replace(/^\[?\d+\]?[\.\)]?\s*/, '').replace(/^[-*•]\s*/, '').trim();
-    clean = clean.replace(/\*\*/g, '').trim();
+    let clean = raw
+      .replace(/^\[?\d+\]?[\.\)]?\s*/, '')
+      .replace(/^[-*•]\s*/, '')
+      .trim();
 
     if (clean.includes(':')) {
       const parts = clean.split(':');
-      const stepHeader = parts[0].trim();
-      let stepBody = parts.slice(1).join(':').trim();
+      const rawHeader = parts[0];
+      const rawBody = parts.slice(1).join(':');
 
-      if (!stepBody || stepBody === '**' || stepBody === '*' || stepBody.length < 8) {
-        stepBody = defaultBody;
-      }
+      const stepHeader = cleanHeadingText(rawHeader, defaultTitle);
+      const stepBody = cleanMarkdownText(rawBody, defaultBody);
+
       return {
-        phase: stepHeader || defaultPhase,
-        title: stepHeader || defaultTitle,
-        body: stepBody,
+        phase: defaultPhase,
+        title: stepHeader,
+        body: stepBody.length > 8 ? stepBody : defaultBody,
       };
     }
+
+    const cleanTitle = cleanHeadingText(clean, defaultTitle);
+    const cleanBody = cleanMarkdownText(clean, defaultBody);
 
     return {
       phase: defaultPhase,
       title: defaultTitle,
-      body: clean.length > 15 ? clean : defaultBody,
+      body: cleanBody.length > 15 ? cleanBody : defaultBody,
     };
   };
 
@@ -523,39 +528,60 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         <div className="relative w-full my-auto flex flex-col items-center">
           <TripleArchOverCardsSvg className="w-[580px] h-[260px] text-[#C4B6A4] absolute top-[-10px] pointer-events-none opacity-30" />
 
-          <div className="grid grid-cols-3 gap-6 w-full max-w-2xl z-10">
+          <div className="grid grid-cols-3 gap-6 w-full max-w-xl z-10 mx-auto items-center justify-items-center">
             <div className="flex flex-col items-center space-y-2">
-              <div className="w-[120px] h-[190px] rounded overflow-hidden border border-[#A89884] shadow-md bg-white">
-                <img src={card1Img} alt={card1.name} className="w-full h-full object-cover" />
+              <div className="w-[120px] max-w-[120px] aspect-[2/3] p-1.5 bg-[#FAF7EE] rounded border border-[#A89884]/80 shadow-md flex items-center justify-center">
+                <div className="w-full h-full rounded-sm overflow-hidden border border-[#D8CEBE] bg-[#F7F3EB] flex items-center justify-center">
+                  <img
+                    src={card1Img}
+                    alt={card1.name}
+                    className="w-full h-full object-contain"
+                    style={{ objectFit: 'contain' }}
+                  />
+                </div>
               </div>
               <span className="text-[8pt] font-sans uppercase tracking-[0.2em] text-[#6B5E51] font-semibold">
                 Card I · Current
               </span>
-              <p className="font-serif font-bold text-[11pt] text-[#1F1914] leading-tight">
+              <p className="font-serif font-bold text-[11pt] text-[#1F1914] leading-tight text-center">
                 {card1.name}
               </p>
             </div>
 
             <div className="flex flex-col items-center space-y-2">
-              <div className="w-[120px] h-[190px] rounded overflow-hidden border border-[#A89884] shadow-md bg-white">
-                <img src={card2Img} alt={card2.name} className="w-full h-full object-cover" />
+              <div className="w-[120px] max-w-[120px] aspect-[2/3] p-1.5 bg-[#FAF7EE] rounded border border-[#A89884]/80 shadow-md flex items-center justify-center">
+                <div className="w-full h-full rounded-sm overflow-hidden border border-[#D8CEBE] bg-[#F7F3EB] flex items-center justify-center">
+                  <img
+                    src={card2Img}
+                    alt={card2.name}
+                    className="w-full h-full object-contain"
+                    style={{ objectFit: 'contain' }}
+                  />
+                </div>
               </div>
               <span className="text-[8pt] font-sans uppercase tracking-[0.2em] text-[#6B5E51] font-semibold">
                 Card II · Blockage
               </span>
-              <p className="font-serif font-bold text-[11pt] text-[#1F1914] leading-tight">
+              <p className="font-serif font-bold text-[11pt] text-[#1F1914] leading-tight text-center">
                 {card2.name}
               </p>
             </div>
 
             <div className="flex flex-col items-center space-y-2">
-              <div className="w-[120px] h-[190px] rounded overflow-hidden border border-[#A89884] shadow-md bg-white">
-                <img src={card3Img} alt={card3.name} className="w-full h-full object-cover" />
+              <div className="w-[120px] max-w-[120px] aspect-[2/3] p-1.5 bg-[#FAF7EE] rounded border border-[#A89884]/80 shadow-md flex items-center justify-center">
+                <div className="w-full h-full rounded-sm overflow-hidden border border-[#D8CEBE] bg-[#F7F3EB] flex items-center justify-center">
+                  <img
+                    src={card3Img}
+                    alt={card3.name}
+                    className="w-full h-full object-contain"
+                    style={{ objectFit: 'contain' }}
+                  />
+                </div>
               </div>
               <span className="text-[8pt] font-sans uppercase tracking-[0.2em] text-[#6B5E51] font-semibold">
                 Card III · Forward
               </span>
-              <p className="font-serif font-bold text-[11pt] text-[#1F1914] leading-tight">
+              <p className="font-serif font-bold text-[11pt] text-[#1F1914] leading-tight text-center">
                 {card3.name}
               </p>
             </div>
@@ -599,9 +625,16 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           </p>
         </div>
 
-        <div className="my-auto flex flex-col items-center">
-          <div className="w-[240px] h-[380px] rounded overflow-hidden border border-[#A89884] shadow-lg bg-white">
-            <img src={card1Img} alt={card1.name} className="w-full h-full object-cover" />
+        <div className="my-auto flex flex-col items-center justify-center w-full py-1">
+          <div className="w-[240px] max-w-[240px] aspect-[2/3] p-2 bg-[#FAF7EE] rounded border border-[#A89884]/80 shadow-lg flex items-center justify-center">
+            <div className="w-full h-full rounded-sm overflow-hidden border border-[#D8CEBE] bg-[#F7F3EB] flex items-center justify-center">
+              <img
+                src={card1Img}
+                alt={card1.name}
+                className="w-full h-full object-contain"
+                style={{ objectFit: 'contain' }}
+              />
+            </div>
           </div>
         </div>
 
@@ -699,9 +732,16 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           </p>
         </div>
 
-        <div className="my-auto flex flex-col items-center">
-          <div className="w-[240px] h-[380px] rounded overflow-hidden border border-[#A89884] shadow-lg bg-white">
-            <img src={card2Img} alt={card2.name} className="w-full h-full object-cover" />
+        <div className="my-auto flex flex-col items-center justify-center w-full py-1">
+          <div className="w-[240px] max-w-[240px] aspect-[2/3] p-2 bg-[#FAF7EE] rounded border border-[#A89884]/80 shadow-lg flex items-center justify-center">
+            <div className="w-full h-full rounded-sm overflow-hidden border border-[#D8CEBE] bg-[#F7F3EB] flex items-center justify-center">
+              <img
+                src={card2Img}
+                alt={card2.name}
+                className="w-full h-full object-contain"
+                style={{ objectFit: 'contain' }}
+              />
+            </div>
           </div>
         </div>
 
@@ -799,9 +839,16 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           </p>
         </div>
 
-        <div className="my-auto flex flex-col items-center">
-          <div className="w-[240px] h-[380px] rounded overflow-hidden border border-[#A89884] shadow-lg bg-white">
-            <img src={card3Img} alt={card3.name} className="w-full h-full object-cover" />
+        <div className="my-auto flex flex-col items-center justify-center w-full py-1">
+          <div className="w-[240px] max-w-[240px] aspect-[2/3] p-2 bg-[#FAF7EE] rounded border border-[#A89884]/80 shadow-lg flex items-center justify-center">
+            <div className="w-full h-full rounded-sm overflow-hidden border border-[#D8CEBE] bg-[#F7F3EB] flex items-center justify-center">
+              <img
+                src={card3Img}
+                alt={card3.name}
+                className="w-full h-full object-contain"
+                style={{ objectFit: 'contain' }}
+              />
+            </div>
           </div>
         </div>
 
@@ -1040,9 +1087,11 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                 <span className="text-[8pt] uppercase tracking-[0.28em] font-sans font-bold text-[#6B5E51] block text-left">
                   ✦ Primary Oracle Transmission:
                 </span>
-                <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
-                  {item.oracleTransmission}
-                </p>
+                <div className="text-[10pt] leading-[1.6] text-[#1F1914] text-justify font-serif space-y-2">
+                  {item.oracleTransmission.split('\n\n').map((pStr, pIdx) => (
+                    <p key={pIdx}>{pStr}</p>
+                  ))}
+                </div>
               </div>
 
               <div className="w-full border-t border-[#E8E1D5] pt-2 text-center">
@@ -1067,7 +1116,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
             <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
               <div className="text-center space-y-1.5 pt-2">
                 <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-                  Deep Subconscious Architecture & Alignment
+                  Subconscious Architecture & Aligned Action
                 </span>
                 <h1 className="text-[20pt] font-serif font-bold text-[#1F1914]">
                   Inquiry {item.questionNumber}: Realization & Action
@@ -1075,21 +1124,21 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                 <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
               </div>
 
-              <div className="space-y-[20px] my-auto max-w-2xl mx-auto">
+              <div className="space-y-[18px] my-auto max-w-2xl mx-auto">
                 <div className="space-y-1.5">
-                  <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                    ✦ Subconscious Energetic Undercurrents
+                  <h2 className="font-serif font-bold text-[12.5pt] text-[#1F1914]">
+                    ✦ Subconscious Energetic Undercurrents & Defense Mechanism
                   </h2>
-                  <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
+                  <p className="text-[10pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
                     {item.subconsciousArchitecture}
                   </p>
                 </div>
 
                 <div className="space-y-1.5 pt-2 border-t border-[#E8E1D5]">
-                  <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                    ✦ Sovereign Alignment & Aligned Action
+                  <h2 className="font-serif font-bold text-[12.5pt] text-[#1F1914]">
+                    ✦ Sovereign Alignment & Concrete Aligned Action
                   </h2>
-                  <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
+                  <p className="text-[10pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
                     {item.sovereignRealignment}
                   </p>
                 </div>
@@ -1262,25 +1311,25 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           <div className="space-y-[20px] my-auto">
             <div className="space-y-1.5 border-b border-[#E8E1D5] pb-3.5">
               <span className="text-[8pt] font-sans font-bold uppercase tracking-[0.25em] text-[#6B5E51] block">
-                {step1Parsed.phase}
+                {cleanHeadingText(step1Parsed.phase, 'Phase I')}
               </span>
               <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                {step1Parsed.title}
+                {cleanHeadingText(step1Parsed.title)}
               </h2>
               <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify">
-                {step1Parsed.body}
+                {cleanMarkdownText(step1Parsed.body)}
               </p>
             </div>
 
             <div className="space-y-1.5">
               <span className="text-[8pt] font-sans font-bold uppercase tracking-[0.25em] text-[#6B5E51] block">
-                {step2Parsed.phase}
+                {cleanHeadingText(step2Parsed.phase, 'Phase II')}
               </span>
               <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                {step2Parsed.title}
+                {cleanHeadingText(step2Parsed.title)}
               </h2>
               <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify">
-                {step2Parsed.body}
+                {cleanMarkdownText(step2Parsed.body)}
               </p>
             </div>
           </div>
@@ -1320,25 +1369,25 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           <div className="space-y-[20px] my-auto">
             <div className="space-y-1.5 border-b border-[#E8E1D5] pb-3.5">
               <span className="text-[8pt] font-sans font-bold uppercase tracking-[0.25em] text-[#6B5E51] block">
-                {step3Parsed.phase}
+                {cleanHeadingText(step3Parsed.phase, 'Phase III')}
               </span>
               <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                {step3Parsed.title}
+                {cleanHeadingText(step3Parsed.title)}
               </h2>
               <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify">
-                {step3Parsed.body}
+                {cleanMarkdownText(step3Parsed.body)}
               </p>
             </div>
 
             <div className="space-y-1.5">
               <span className="text-[8pt] font-sans font-bold uppercase tracking-[0.25em] text-[#6B5E51] block">
-                {step4Parsed.phase}
+                {cleanHeadingText(step4Parsed.phase, 'Phase IV')}
               </span>
               <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                {step4Parsed.title}
+                {cleanHeadingText(step4Parsed.title)}
               </h2>
               <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify">
-                {step4Parsed.body}
+                {cleanMarkdownText(step4Parsed.body)}
               </p>
             </div>
           </div>
@@ -1358,6 +1407,15 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
   // =========================================================================
   // Elemental & Archetypal Blueprint
   if (blueprint.moduleERange[1] - blueprint.moduleERange[0] + 1 >= 8) {
+    const cleanQuerentName = inputs.name || 'Seeker';
+    const cleanProblemDesc = inputs.problem ? inputs.problem.trim() : 'your sacred crossroads';
+
+    const elementalCard1Text = `${card1.name} channels the active current of ${card1.element || 'Water'}, serving as a vibrational mirror for your current emotional atmosphere and energetic presence. In the context of ${cleanProblemDesc}, this element reveals where your intuitive senses and subconscious feelings are actively guiding your decisions. Rather than relying solely on surface logic or external approval, ${card1.name} asks ${cleanQuerentName} to tune into your visceral bodily signals and emotional cues. By honoring this elemental current, you create internal coherence between your conscious mind and your heart, building a grounded foundation of self-trust that directly aligns with your Life Path ${calculatedLpNumber} potential.`;
+
+    const elementalCard2Text = `${card2.name} illuminates the shadow tension of ${card2.element || 'Air'}, exposing the psychological barriers and emotional defense mechanisms currently stalling your momentum. When navigating ${cleanProblemDesc}, this elemental friction manifests as repetitive mental loops, hesitation, or fear of emotional exposure. Rather than treating this blockage as a permanent obstacle, recognize it as an essential evolutionary catalyst. By consciously witnessing how ${card2.name} reflects outdated self-protection habits, you can discharge accumulated nervous system tension and dismantle the fear of conflict. Integrating this elemental lesson restores your sovereignty, allowing you to reclaim your emotional equilibrium and move forward with unshakeable clarity.`;
+
+    const elementalCard3Text = `${card3.name} ignites the transformative medicine of ${card3.element || 'Fire'}, establishing the sovereign pathway toward breakthrough and lasting fulfillment. This element provides the courageous motivation, vitality, and creative focus necessary to translate your inner clarity into tangible, real-world choices. Under the elevated guidance of ${card3.name}, you are invited to shed lingering doubts and step boldly into your innate Life Path ${calculatedLpNumber} majesty. As you align your daily actions with this radiant frequency, external circumstances will naturally reorganize to support your highest good, unlocking profound peace, reciprocal harmony, and victorious realization across your journey.`;
+
     pages.push({
       key: 'elemental-blueprint',
       headerTitle: 'ELEMENTAL & ARCHETYPAL BLUEPRINT',
@@ -1376,53 +1434,53 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
             </p>
           </div>
 
-          <div className="space-y-[18px] my-auto">
-            <div className="space-y-1.5 border-b border-[#E8E1D5] pb-3">
-              <div className="flex items-center justify-between pb-1">
-                <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
+          <div className="space-y-[16px] my-auto">
+            <div className="space-y-1 border-b border-[#E8E1D5] pb-2.5">
+              <div className="flex items-center justify-between pb-0.5">
+                <h2 className="font-serif font-bold text-[12pt] text-[#1F1914]">
                   1. {card1.name} — Element: {card1.element || 'Water'}
                 </h2>
                 <span className="text-[8pt] font-sans font-semibold uppercase tracking-wider text-[#6B5E51]">
                   Archetype: {card1.archetype || 'Intuitive Oracle'}
                 </span>
               </div>
-              <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify">
-                {card1.name} introduces the fluid, intuitive currents of {card1.element || 'Water'}. It asks you to tune into your visceral gut feelings and emotional signals rather than second-guessing your initial instinct.
+              <p className="text-[9.5pt] leading-[1.55] text-[#1F1914] text-justify">
+                {elementalCard1Text}
               </p>
             </div>
 
-            <div className="space-y-1.5 border-b border-[#E8E1D5] pb-3">
-              <div className="flex items-center justify-between pb-1">
-                <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
+            <div className="space-y-1 border-b border-[#E8E1D5] pb-2.5">
+              <div className="flex items-center justify-between pb-0.5">
+                <h2 className="font-serif font-bold text-[12pt] text-[#1F1914]">
                   2. {card2.name} — Element: {card2.element || 'Air'}
                 </h2>
                 <span className="text-[8pt] font-sans font-semibold uppercase tracking-wider text-[#6B5E51]">
                   Archetype: {card2.archetype || 'Mindful Guardian'}
                 </span>
               </div>
-              <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify">
-                {card2.name} represents the mental, communicative realm of {card2.element || 'Air'}. It cautions against becoming trapped in excessive rumination or cognitive loops, reminding you to ground your thoughts in objective truth.
+              <p className="text-[9.5pt] leading-[1.55] text-[#1F1914] text-justify">
+                {elementalCard2Text}
               </p>
             </div>
 
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between pb-1">
-                <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between pb-0.5">
+                <h2 className="font-serif font-bold text-[12pt] text-[#1F1914]">
                   3. {card3.name} — Element: {card3.element || 'Fire'}
                 </h2>
                 <span className="text-[8pt] font-sans font-semibold uppercase tracking-wider text-[#6B5E51]">
                   Archetype: {card3.archetype || 'Cosmic Healer'}
                 </span>
               </div>
-              <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify">
-                {card3.name} ignites the transformative inspiration of {card3.element || 'Fire'}. It fuels your sovereign forward movement, ensuring that clarity translates into empowered daily choices and triumphant destiny.
+              <p className="text-[9.5pt] leading-[1.55] text-[#1F1914] text-justify">
+                {elementalCard3Text}
               </p>
             </div>
           </div>
 
           <div className="text-center border-t border-[#E8E1D5] pt-2">
             <p className="text-[8.5pt] font-sans text-[#6B5E51] uppercase tracking-wider">
-              ✦ Elemental balance unlocks effortless flow and clarity across your path ✦
+              ✦ Elemental balance unlocks effortless flow, sovereign clarity, and evolutionary soul growth ✦
             </p>
           </div>
         </div>
@@ -1477,6 +1535,9 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
 
   // Soul Inquiries Part I
   if (inquiriesList.length >= 1) {
+    const cue1 = "✦ Guiding Reflection Cue: Close your eyes, place a hand over your heart center, and notice what subtle emotion or somatic tension arises. What truth is your intuition whispering that your mind has hesitated to acknowledge?";
+    const cue2 = "✦ Guiding Reflection Cue: Observe where fear of conflict, judgment, or self-doubt has caused you to compromise your peace. How does meeting this fear with kindness help you reclaim sovereign clarity?";
+
     pages.push({
       key: 'soul-inquiries-p1',
       headerTitle: 'SOUL INQUIRIES · PART I',
@@ -1497,13 +1558,15 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
 
           <div className="space-y-6 my-auto">
             {inquiriesList.slice(0, 2).map((inq, idx) => (
-              <div key={idx} className="space-y-3">
+              <div key={idx} className="space-y-2.5">
                 <div className="flex items-start gap-2">
-                  <span className="font-serif font-bold text-[13pt] text-[#6B5E51]">{idx + 1}.</span>
-                  <p className="font-serif font-bold text-[12.5pt] text-[#1F1914] leading-snug">{inq}</p>
+                  <span className="font-serif font-bold text-[12pt] text-[#6B5E51]">{idx + 1}.</span>
+                  <p className="font-serif font-bold text-[11.5pt] text-[#1F1914] leading-snug">{inq}</p>
                 </div>
-                <div className="space-y-4 pt-1">
-                  <div className="border-b border-[#E8E1D5]"></div>
+                <p className="text-[9pt] font-serif italic text-[#6B5E51] pl-5 leading-relaxed">
+                  {idx === 0 ? cue1 : cue2}
+                </p>
+                <div className="space-y-3.5 pt-1 pl-5">
                   <div className="border-b border-[#E8E1D5]"></div>
                   <div className="border-b border-[#E8E1D5]"></div>
                   <div className="border-b border-[#E8E1D5]"></div>
@@ -1524,6 +1587,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
 
   // Soul Inquiries Part II
   if (inquiriesList.length >= 3) {
+    const cue3 = "✦ Guiding Reflection Cue: Envision your path when this crossroad is triumphantly resolved. What does true emotional freedom, peace, and reciprocal alignment feel like in your daily reality?";
+
     pages.push({
       key: 'soul-inquiries-p2',
       headerTitle: 'SOUL INQUIRIES · PART II',
@@ -1534,44 +1599,78 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
               Introspective Journaling · Part II
             </span>
             <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              Soul Realization & Notes
+              Soul Realization & Guided Reflection
             </h1>
             <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
             <p className="text-[10pt] font-serif text-[#4A3F35]">
-              Deepening your inner inquiry and capturing breakthrough insights
+              Structured integration framework to anchor your core breakthrough into daily life
             </p>
           </div>
 
-          <div className="space-y-6 my-auto">
-            <div className="space-y-3">
+          <div className="space-y-4 my-auto">
+            {/* Inquiry 3 */}
+            <div className="space-y-2 pb-2 border-b border-[#E8E1D5]">
               <div className="flex items-start gap-2">
-                <span className="font-serif font-bold text-[13pt] text-[#6B5E51]">3.</span>
-                <p className="font-serif font-bold text-[12.5pt] text-[#1F1914] leading-snug">
+                <span className="font-serif font-bold text-[12pt] text-[#6B5E51]">3.</span>
+                <p className="font-serif font-bold text-[11.5pt] text-[#1F1914] leading-snug">
                   {inquiriesList[2]}
                 </p>
               </div>
-              <div className="space-y-4 pt-1">
-                <div className="border-b border-[#E8E1D5]"></div>
+              <p className="text-[9pt] font-serif italic text-[#6B5E51] pl-5 leading-relaxed">
+                {cue3}
+              </p>
+              <div className="space-y-3 pt-0.5 pl-5">
                 <div className="border-b border-[#E8E1D5]"></div>
                 <div className="border-b border-[#E8E1D5]"></div>
               </div>
             </div>
 
-            <div className="space-y-2 pt-1">
-              <span className="text-[8.5pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block">
-                My Core Soul Breakthrough & Epiphany:
-              </span>
-              <div className="space-y-4 pt-1">
-                <div className="border-b border-[#E8E1D5]"></div>
-                <div className="border-b border-[#E8E1D5]"></div>
-                <div className="border-b border-[#E8E1D5]"></div>
+            {/* Guided Structured Framework */}
+            <div className="space-y-3 pt-1">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[8.5pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51]">
+                    ✦ 1. Core Breakthrough & Sovereign Epiphany
+                  </span>
+                  <span className="text-[7.5pt] font-serif italic text-[#8C7E70]">What truth has fundamentally clicked into place?</span>
+                </div>
+                <div className="space-y-3 pt-1">
+                  <div className="border-b border-[#E8E1D5]"></div>
+                  <div className="border-b border-[#E8E1D5]"></div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[8.5pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51]">
+                    ✦ 2. Shadow Realization & Pattern Release
+                  </span>
+                  <span className="text-[7.5pt] font-serif italic text-[#8C7E70]">What defensive habit or fear are you letting go of?</span>
+                </div>
+                <div className="space-y-3 pt-1">
+                  <div className="border-b border-[#E8E1D5]"></div>
+                  <div className="border-b border-[#E8E1D5]"></div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[8.5pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51]">
+                    ✦ 3. Aligned Action & Next Sacred Steps
+                  </span>
+                  <span className="text-[7.5pt] font-serif italic text-[#8C7E70]">What non-negotiable step will you take in the next 48h?</span>
+                </div>
+                <div className="space-y-3 pt-1">
+                  <div className="border-b border-[#E8E1D5]"></div>
+                  <div className="border-b border-[#E8E1D5]"></div>
+                </div>
               </div>
             </div>
           </div>
 
           <div className="text-center border-t border-[#E8E1D5] pt-2">
             <p className="text-[8.5pt] font-sans text-[#6B5E51] uppercase tracking-wider">
-              There are no wrong answers; allow your subconscious intuition to write freely.
+              ✦ Trust your hand and heart; allow your soul to write its new chapter with total certainty ✦
             </p>
           </div>
         </div>

@@ -796,46 +796,55 @@ export const UniversalPageDecorations: React.FC<{
   totalPages?: number;
   headerTitle?: string;
   className?: string;
-}> = ({ pageNumber, totalPages = 28, headerTitle = 'PERSONALIZED INTUITIVE GUIDANCE', className = '' }) => (
-  <div className={`absolute inset-0 pointer-events-none z-0 overflow-hidden select-none ${className}`}>
-    {/* Subtle Centered Watermark */}
-    <div className="absolute inset-0 z-0 flex items-center justify-center">
-      <MinimalChakraWatermark className="w-full h-full text-[#6B5E51]" opacity={0.06} />
-    </div>
+  hideHeader?: boolean;
+}> = ({ pageNumber, totalPages = 28, headerTitle = 'PERSONALIZED INTUITIVE GUIDANCE', className = '', hideHeader }) => {
+  const isCover = pageNumber === 1 || hideHeader;
 
-    {/* Single Clean Editorial Hairline Border */}
-    <div className="absolute inset-[24px] border border-[#D8CEBE]/70 z-10" />
-
-    {/* Minimal Corner Accents */}
-    <div className="absolute top-[21px] left-[21px] text-[#A89884] opacity-60 z-10 text-[8pt] font-sans">
-      +
-    </div>
-    <div className="absolute top-[21px] right-[21px] text-[#A89884] opacity-60 z-10 text-[8pt] font-sans">
-      +
-    </div>
-    <div className="absolute bottom-[21px] left-[21px] text-[#A89884] opacity-60 z-10 text-[8pt] font-sans">
-      +
-    </div>
-    <div className="absolute bottom-[21px] right-[21px] text-[#A89884] opacity-60 z-10 text-[8pt] font-sans">
-      +
-    </div>
-
-    {/* Clean Editorial Top Header bar */}
-    <div className="absolute top-[34px] left-[40px] right-[40px] flex items-center justify-between text-[#7A6B5B] font-sans text-[8pt] tracking-[0.26em] uppercase border-b border-[#E8E1D5] pb-2 z-10">
-      <span className="font-semibold">Daisy Medium Studio</span>
-      <span className="text-[#8C7D6D]">{headerTitle}</span>
-    </div>
-
-    {/* Clean Editorial Bottom Footer */}
-    <div className="absolute bottom-[36px] left-[40px] right-[40px] flex items-center justify-between text-[#7A6B5B] font-sans text-[8pt] tracking-[0.22em] uppercase border-t border-[#E8E1D5] pt-2 z-10">
-      <span className="text-[#8C7D6D]">Daisy Medium Studio</span>
-      <div className="flex items-center gap-2 text-[#8C7D6D]">
-        <span className="text-[7pt]">✦</span>
-        <span className="tracking-[0.24em] text-[8pt]">Sacred Intuitive Guidance</span>
-        <span className="text-[7pt]">✦</span>
+  return (
+    <div className={`absolute inset-0 pointer-events-none z-0 overflow-hidden select-none ${className}`}>
+      {/* Subtle Centered Watermark */}
+      <div className="absolute inset-0 z-0 flex items-center justify-center">
+        <MinimalChakraWatermark className="w-full h-full text-[#6B5E51]" opacity={0.06} />
       </div>
-      <span className="text-[#8C7D6D]">{pageNumber ? `Page ${pageNumber} of ${totalPages}` : 'Tarot & Numerology'}</span>
+
+      {/* Single Clean Editorial Hairline Border */}
+      <div className="absolute inset-[24px] border border-[#D8CEBE]/70 z-10" />
+
+      {/* Minimal Corner Accents */}
+      <div className="absolute top-[21px] left-[21px] text-[#A89884] opacity-60 z-10 text-[8pt] font-sans">
+        +
+      </div>
+      <div className="absolute top-[21px] right-[21px] text-[#A89884] opacity-60 z-10 text-[8pt] font-sans">
+        +
+      </div>
+      <div className="absolute bottom-[21px] left-[21px] text-[#A89884] opacity-60 z-10 text-[8pt] font-sans">
+        +
+      </div>
+      <div className="absolute bottom-[21px] right-[21px] text-[#A89884] opacity-60 z-10 text-[8pt] font-sans">
+        +
+      </div>
+
+      {/* Clean Editorial Top Header bar - Suppressed on Page 1 to prevent stutter-repeating brand headers */}
+      {!isCover && (
+        <div className="absolute top-[34px] left-[40px] right-[40px] flex items-center justify-between text-[#7A6B5B] font-sans text-[8pt] tracking-[0.26em] uppercase border-b border-[#E8E1D5] pb-2 z-10">
+          <span className="font-semibold">Daisy Medium Studio</span>
+          <span className="text-[#8C7D6D]">{headerTitle}</span>
+        </div>
+      )}
+
+      {/* Clean Editorial Bottom Footer - Suppressed on Page 1 */}
+      {!isCover && (
+        <div className="absolute bottom-[36px] left-[40px] right-[40px] flex items-center justify-between text-[#7A6B5B] font-sans text-[8pt] tracking-[0.22em] uppercase border-t border-[#E8E1D5] pt-2 z-10">
+          <span className="text-[#8C7D6D]">Daisy Medium Studio</span>
+          <div className="flex items-center gap-2 text-[#8C7D6D]">
+            <span className="text-[7pt]">✦</span>
+            <span className="tracking-[0.24em] text-[8pt]">Sacred Intuitive Guidance</span>
+            <span className="text-[7pt]">✦</span>
+          </div>
+          <span className="text-[#8C7D6D]">{pageNumber ? `Page ${pageNumber} of ${totalPages}` : 'Tarot & Numerology'}</span>
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 

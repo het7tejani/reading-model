@@ -450,7 +450,8 @@ export const buildDeepDiveItems = (
   const querentName = inputs.name || 'Seeker';
   const personName = inputs.categoryData?.personName || 'the other party';
   const petName = inputs.categoryData?.petName || 'your pet companion';
-  const cleanProblem = inputs.problem ? inputs.problem.trim() : 'navigating your crossroads';
+  const cleanProblem = inputs.problem ? inputs.problem.trim() : 'navigating your sacred crossroads';
+  const cleanQuestion = inputs.question ? inputs.question.trim() : 'What is the highest alignment for my path?';
 
   // Base list of inquiries tailored to each topic
   const baseQuestions: {
@@ -468,16 +469,24 @@ export const buildDeepDiveItems = (
   if (parsedQaInsights && parsedQaInsights.length > 0) {
     return parsedQaInsights.slice(0, bp.questionCount).map((qa, idx) => {
       const qNum = idx + 1;
+      const cardRef = idx % 3 === 0 ? card1Name : (idx % 3 === 1 ? card2Name : card3Name);
+      
+      // Ensure transmission reaches 200-250 words of rich, intuitive depth
+      let richTransmission = qa.answer;
+      if (richTransmission.length < 500) {
+        richTransmission = `${qa.answer} Within your energetic field, this inquiry marks a profound turning point in your spiritual development. Reflecting the vibrational medicine of ${cardRef} and the sovereign wisdom of Life Path ${lpNumber}, you are being urged to look beyond immediate surface appearances. When you stop bargaining with ambiguity and allow your intuition to guide your choices, the underlying friction dissolves. Trust that your nervous system knows what true peace feels like; do not second-guess the quiet clarity whispering in your core. The universe is actively aligning external circumstances to match your internal standard of self-respect.`;
+      }
+
       return {
         questionNumber: qNum,
         question: qa.question,
         subTitle: `${categorySpec.title} • Channeled Inquiry ${qNum} of ${bp.questionCount}`,
-        oracleTransmission: qa.answer,
-        somaticKey: `✦ Somatic Anchor: Notice where tension softens in your chest as this truth is accepted.`,
-        subconsciousArchitecture: `Beneath the conscious narrative lies a habitual defense pattern. Your energetic field has been working overtime to protect you from vulnerability, causing you to hold back your full authentic expression.`,
-        sovereignRealignment: `To bring this into physical alignment, release the need for external permission. Ground yourself in Life Path ${lpNumber} sovereignty and let your actions reflect quiet self-assurance.`,
+        oracleTransmission: richTransmission,
+        somaticKey: `✦ Somatic Anchor: Notice where tension softens in your chest and throat as this truth is accepted.`,
+        subconsciousArchitecture: `Beneath the conscious narrative lies an ingrained defense pattern developed to guard against vulnerability or disappointment. Your energetic system has reflexively braced for friction, leading to subconscious hypervigilance, over-analysis, and an urge to control outcomes rather than resting in receptive trust.`,
+        sovereignRealignment: `To bring this into physical reality, release the exhausting need for external validation or permission. Ground into your Life Path ${lpNumber} sovereignty through three deep belly breaths, establish one non-negotiable emotional boundary, and let your daily actions reflect quiet, unshakeable self-assurance.`,
         tag: `Inquiry ${qNum} Alignment`,
-        anchor: `Truth brings an immediate sense of relief and spaciousness into your core.`,
+        anchor: `Truth brings an immediate sense of relief, spaciousness, and authentic sovereignty into your core.`,
       };
     });
   }
@@ -490,52 +499,52 @@ export const buildDeepDiveItems = (
         {
           q: 'What is the true soulmate frequency currently connecting you both?',
           sub: 'Soulmate Connection & Mutual Resonance',
-          trans: `The cosmic cards reveal a profound telepathic and energetic tether connecting your hearts. While surface circumstances may have felt complicated, the underlying soul connection remains vibrant and active. ${card1Name} shows that when you honor your authentic truth, the mutual resonance expands exponentially.`,
-          som: '✦ Somatic Key: Place your left hand on your heart; feel the steady, warm pulse of unconditional love.',
-          subc: `Subconsciously, both of you have experienced past heart wounds that trigger hypervigilance when intimacy deepens. The hesitation you sense is fear of vulnerability, not lack of love.`,
-          sovr: `Release anxiety about the future. Embody the joyful radiance of ${card3Name} and trust that divine timing is orchestrating reciprocal clarity.`,
-          tag: 'Soulmate Alignment',
-          anc: 'Authentic love never requires you to diminish your worth to be received.',
+          trans: `The cosmic cards reveal a profound telepathic and energetic tether connecting your hearts on a multi-dimensional level. While surface circumstances may have felt complicated, guarded, or stalled, the underlying soul resonance remains vibrant, sensitive, and actively communicating in the unseen realms. ${card1Name} shows that whenever you step out of anxiety and honor your authentic truth, the mutual resonance expands exponentially between you. You are dealing with a connection that has acted as a spiritual mirror, reflecting back to you your deepest capacities for unconditional love alongside your core vulnerabilities. This person frequently feels your presence during moments of quiet solitude, recognizing that the emotional depth shared between you is rare, unmistakable, and impossible to replace with superficial substitutes. The current cosmic transit is asking you to anchor your heart in serene self-reverence rather than fearful grasping, allowing the pure frequency of authentic affection to dissolve lingering emotional armor.`,
+          som: '✦ Somatic Key: Place your left hand on your heart; feel the steady, warm pulse of unconditional love and sovereign safety.',
+          subc: `Subconsciously, both of you carry past heart wounds that trigger automatic emotional withdraw or hypervigilance whenever intimacy deepens. The hesitation you sense from them is an internal fear of inadequacy and emotional exposure, not a lack of love.`,
+          sovr: `Release the urge to micromanage their timeline. Embody the joyful radiance of ${card3Name}, step into your Life Path ${lpNumber} magnetic center, and trust that divine timing is orchestrating reciprocal clarity and mature vulnerability.`,
+          tag: 'Soulmate Resonance',
+          anc: 'Authentic love never requires you to diminish your worth or beg to be received.',
         },
         {
           q: 'What emotional or karmic blockage is currently stalling deeper intimacy?',
           sub: 'Karmic Obstacles & Vulnerability Shields',
-          trans: `Reflecting the tension of ${card2Name}, the current stall is rooted in unexpressed expectations and assumptions. You have been waiting for clear confirmation, while the other party is grappling with their own perceived inadequacies.`,
-          som: '✦ Somatic Key: Exhale slowly for 6 counts, releasing the impulse to over-analyze their subtle moods.',
-          subc: `A fear of abandonment has created an urge to micromanage the connection. When you grip tightly out of fear, it blocks the natural organic flow of affection.`,
-          sovr: `Step back into your sovereign container. Let the other party experience the space required to step up and meet you halfway.`,
-          tag: 'Karmic Resolution',
-          anc: 'Space creates the sacred vacuum where true desire and mutual effort can flourish.',
+          trans: `Reflecting the acute tension of ${card2Name}, the current stall in this romantic journey is rooted in unspoken expectations, guarded assumptions, and protective walls erected after past disappointments. You have been waiting for unequivocal confirmation and safety, while the other party is quietly wrestling with their own perceived inadequacies and fear of failing to meet your standards. This mutual hesitation creates an energetic standoff where both souls desire closer union yet fear the risk of total emotional exposure. ${card2Name} reminds you that vulnerability is not weakness; it is the prerequisite for authentic intimacy. The blockage is not a permanent barrier, but rather a temporary threshold requiring conscious communication and the dissolution of outdated self-defense mechanisms that no longer serve either of your spirits.`,
+          som: '✦ Somatic Key: Exhale slowly for 6 counts through your mouth, consciously releasing the reflex to analyze their subtle moods.',
+          subc: `A deeply rooted fear of abandonment has created an urge to over-analyze every gesture or text message. When you grip tightly out of anxiety, you inadvertently project tension into the connection, stifling the natural, organic flow of affection.`,
+          sovr: `Step back into your sovereign energetic container. Grant them the space required to step forward under their own volition, and hold your high standards with quiet, compassionate firmness rather than desperate pleading.`,
+          tag: 'Karmic Dissolution',
+          anc: 'Spaciousness creates the sacred vacuum where genuine desire, mutual effort, and lasting commitment flourish.',
         },
         {
           q: 'What unspoken romantic feelings and desires are they holding for you?',
-          sub: 'Unspoken Heart Confessions',
-          trans: `Deep in their heart, they hold profound admiration for your grace, emotional depth, and resilience. They often think about moments of ease and warmth shared between you, even when they struggle to articulate it verbally.`,
-          som: '✦ Somatic Key: Feel a wave of warmth radiating through your solar plexus; accept their silent admiration.',
-          subc: `They fear they might not measure up to your standards or that revealing their full feelings will make them overly vulnerable to rejection.`,
-          sovr: `Remain in your magnetic feminine/masculine receptivity. You do not need to coax their feelings; allow them to speak through consistent action.`,
+          sub: 'Unspoken Heart Confessions & Desires',
+          trans: `Deep within their private emotional sanctuary, they hold an intense reverence and admiration for your grace, emotional intelligence, resilience, and magnetic beauty. They frequently replay shared moments of ease, laughter, and genuine comfort in their mind, recognizing that being in your presence feels like coming home to a sanctuary they rarely experience in the outside world. However, their ego and past conditioning have created a hesitation to articulate these feelings aloud, fearing that fully confessing their depth will leave them disempowered or vulnerable to rejection. The intuitive frequency of ${card1Name} assures you that what you feel intuitively in your gut regarding their unspoken affection is completely real and accurate.`,
+          som: '✦ Somatic Key: Feel a wave of golden warmth radiating through your solar plexus; accept their silent admiration without urgency.',
+          subc: `They fear they might not measure up to your elevated standards or that revealing their full emotional dependence will jeopardize their autonomy. Their silence is a protective mask, not indifference.`,
+          sovr: `Remain in your magnetic receptivity. You do not need to coax or interrogate their feelings; allow their authentic feelings to reveal themselves through consistent, aligned actions and steady presence over time.`,
           tag: 'Heart Revelation',
-          anc: 'Real feelings naturally find their way to expression when met with calm emotional safety.',
+          anc: 'Real feelings naturally find their way into physical expression when met with patience and emotional safety.',
         },
         {
           q: 'What pivotal turning point will unfold in this love connection over the next 3 months?',
           sub: 'Romantic Turning Point & Catalyst',
-          trans: `A decisive breakthrough is approaching. A sincere, vulnerable conversation will dissolve lingering misunderstandings, allowing you both to reset the foundation with mature transparency and renewed affection.`,
-          som: '✦ Somatic Key: Breathe in quiet clarity; trust that what is meant for you will not pass you by.',
-          subc: `The old dynamic of mixed signals is completing its cycle. Both spirits are ready for stability over emotional turbulence.`,
-          sovr: `Set clear standards for what you require in a partnership. Your willingness to walk away from breadcrumbs ensures you receive the whole feast.`,
-          tag: 'Breakthrough Milestone',
-          anc: 'A turning point begins the moment you decide you will only accept full emotional presence.',
+          trans: `A decisive breakthrough and vibrational turning point is rapidly approaching in your romantic timeline. The repetitive cycles of ambiguity, mixed signals, and emotional distance are exhausting their karmic lease. An unexpected, vulnerable conversation will shatter the superficial silence, allowing both of you to lay your cards on the table with mature transparency and genuine emotional honesty. This conversation will clear away months of accumulated misunderstandings and reset the energetic foundation of your partnership upon mutual reverence, shared boundaries, and clear commitments. Under the forward momentum of ${card3Name}, what once felt confusing or unmanageable will suddenly snap into clear focus.`,
+          som: '✦ Somatic Key: Breathe in steady, crisp clarity; trust that what is divinely meant for you will never pass you by.',
+          subc: `The subconscious dynamic of hot-and-cold interaction is completing its karmic cycle. Both of your nervous systems are ready to graduate from dramatic turbulence into grounded emotional stability.`,
+          sovr: `Prepare for this turning point by clarifying your non-negotiables. Refuse to settle for breadcrumbs of affection when you are fully worthy of a devoted, passionate, and consistent romantic partnership.`,
+          tag: 'Breakthrough Catalyst',
+          anc: 'A monumental turning point begins the exact moment you decide you will only accept full emotional presence.',
         },
         {
           q: 'What is the highest romantic destiny and potential available to you?',
-          sub: 'Ultimate Love Manifestation',
-          trans: `Under the triumphant blessing of ${card3Name}, your romantic destiny is anchored in deep mutual reverence, laughter, shared vision, and effortless companionship. You are stepping into a union that feels like true sanctuary.`,
-          som: '✦ Somatic Key: Smile gently and feel your spine lengthen in joyful, magnetic confidence.',
-          subc: `You are permanently retiring the belief that love must be painful, dramatic, or earned through suffering.`,
-          sovr: `Embody your Life Path ${lpNumber} sovereignty. Radiate unconditional self-worth and watch reciprocal love meet you at your elevated standard.`,
+          sub: 'Ultimate Love Manifestation & Sanctuary',
+          trans: `Under the triumphant, radiant blessing of ${card3Name}, your ultimate romantic destiny is anchored in deep mutual devotion, infectious laughter, spiritual companionship, and unshakeable emotional security. You are stepping into a chapter where love no longer feels like a battlefield, a puzzle to solve, or an emotional sacrifice. Instead, your partnership will serve as a fertile sanctuary that nourishes your personal dreams, celebrates your authentic individuality, and reflects back your highest divine potential. As you align with your Life Path ${lpNumber} destiny, you magnetize a union characterized by effortless reciprocity, shared spiritual growth, and profound lifelong peace.`,
+          som: '✦ Somatic Key: Smile gently, drop your shoulders away from your ears, and feel your spine lengthen in radiant, joyful confidence.',
+          subc: `You are permanently retiring the outdated belief that love must be painful, hard-earned, or accompanied by constant emotional anxiety in order to be deep and meaningful.`,
+          sovr: `Embody your full Life Path ${lpNumber} sovereign majesty. Radiate unconditional self-worth, celebrate your sacred boundaries, and allow reciprocal love to meet you at your elevated standard.`,
           tag: 'Highest Destiny',
-          anc: 'You are worthy of a love that feels like peace, reciprocity, and coming home.',
+          anc: 'You are worthy of a love that feels like deep peace, reciprocal passion, and coming home to yourself.',
         }
       );
       break;
@@ -546,58 +555,59 @@ export const buildDeepDiveItems = (
         {
           q: 'The Unvarnished Reality: What truth are you actively avoiding or romanticizing?',
           sub: 'Uncompromising Truth & Illusion Shattered',
-          trans: `The cards show clearly that you have been rationalizing lukewarm behavior and minimizing glaring red flags to protect an emotional fantasy. ${card1Name} warns that staying in denial will only prolong your exhaustion and deplete your self-respect.`,
-          som: '✦ Somatic Key: Breathe out the knot in your stomach; face what is real without fear.',
-          subc: `You have associated admitting the truth with admitting failure. In reality, acknowledging the truth is your first step to liberation.`,
-          sovr: `Stop negotiating with ambiguity. Accept people for how they treat you today, not how they might treat you in a hypothetical future.`,
-          tag: 'Reality Check',
-          anc: 'Refusing to see reality does not change it; it only keeps you captive to illusion.',
+          trans: `The cosmic cards reveal with zero sugar-coating that you have been rationalizing inconsistent behavior, minimizing glaring red flags, and investing emotional capital into potential rather than reality. ${card1Name} warns that staying in romanticized denial or making excuses for another's lack of effort will only prolong your internal exhaustion and deplete your self-respect. You have known the truth in your gut for weeks, yet your mind has constructed elaborate justifications to avoid the immediate discomfort of setting a boundary or walking away. The universe is removing your rose-colored glasses so that you can finally reclaim your sovereignty and stop pouring your vital life force into an emotional black hole that gives nothing in return.`,
+          som: '✦ Somatic Key: Breathe out the heavy knot in your stomach; look at what is real right now without flinching.',
+          subc: `You have subconsciously associated admitting the truth with admitting personal failure or facing terrifying loneliness. In truth, acknowledging reality is your very first step toward total spiritual liberation.`,
+          sovr: `Stop negotiating with ambiguity. Accept people for who they prove themselves to be through their daily actions, not who you hope they might become in an imaginary future.`,
+          tag: 'Unfiltered Truth',
+          anc: 'Refusing to acknowledge reality does not change it; it only keeps you captive to an exhausting illusion.',
         },
         {
           q: 'The Uncomfortable Mirror: Where is your fear of conflict keeping you disempowered?',
           sub: 'Shadow Integration & Self-Accountability',
-          trans: `Through the sharp lens of ${card2Name}, you have been playing small and tiptoeing around uncomfortable conversations to maintain a false sense of peace. That peace is counterfeit because it comes at the direct expense of your inner harmony.`,
-          som: '✦ Somatic Key: Feel your feet firmly planted on the ground; claim your right to speak without apology.',
-          subc: `You have an outdated subconscious fear that if you are completely honest about your needs, everyone will leave you.`,
-          sovr: `Let anyone who is offended by your boundaries leave. You do not need connections that require you to silence your voice.`,
-          tag: 'Shadow Illumination',
-          anc: 'A boundary without consequences is merely a suggestion; stand firmly behind your words.',
+          trans: `Through the piercing mirror of ${card2Name}, it is evident that your desire to keep the peace has become an act of self-betrayal. You have been biting your tongue, swallowing your genuine grievances, and accommodating poor treatment because you fear that speaking your unfiltered truth will trigger conflict, rejection, or abandonment. This counterfeit peace comes at the direct cost of your internal harmony and nervous system health. The resentment and exhaustion you feel are not signs that you are broken; they are warning sirens signaling that your boundaries have been violated and that you have abandoned yourself to protect another person's fragile comfort.`,
+          som: '✦ Somatic Key: Plant both feet firmly on the earth; unclench your jaw and claim your right to take up space without apology.',
+          subc: `You carry an outdated childhood belief that your worth is tied to being agreeable and easy to manage, fearing that having firm boundaries makes you unlovable.`,
+          sovr: `Let anyone who is inconvenienced by your boundaries exit your life. You do not need connections that require you to silence your voice or diminish your dignity to survive.`,
+          tag: 'Sovereign Shadow',
+          anc: 'A boundary without real-world consequences is merely an empty suggestion; stand firmly behind your words.',
         },
         {
           q: 'The Tough Cosmic Medicine: What toxic dynamic must be severed immediately?',
-          sub: 'Radical Boundary & Energetic Cut',
-          trans: `You must immediately withdraw your energetic investment from one-sided relationships, unreciprocated effort, and repetitive emotional cycles. Close the door to 'almost' connections and half-hearted commitments.`,
-          som: '✦ Somatic Key: Place hands over your solar plexus; feel your power returning to your core.',
-          subc: `You have been seeking closure from the very person or circumstance that caused the wound. True closure is an internal decision.`,
-          sovr: `Declare your energetic independence. As a Life Path ${lpNumber}, you deserve relationships that match your loyalty and depth.`,
+          sub: 'Radical Boundary & Energetic Severance',
+          trans: `You must immediately withdraw your energy, time, and emotional availability from one-sided dynamics, endless explanations, and cyclical guilt trips. Close the door permanently to half-hearted commitments, situationships that lead nowhere, and people who only show up when they need something from you. Under the uncompromising light of ${card2Name}, continuing to participate in this dynamic is an active choice to prolong your own suffering. The universe will not rescue you from situations you refuse to walk away from. Reclaim your energetic investment and allow the silence to communicate what words have failed to teach.`,
+          som: '✦ Somatic Key: Place both hands firmly over your solar plexus; feel your power, dignity, and life force returning to your core.',
+          subc: `You have been chasing closure or an apology from the very source of the wound. True closure is never granted by the person who hurt you; it is an internal decision to stop engaging.`,
+          sovr: `Declare your energetic independence today. As a Life Path ${lpNumber}, your loyalty and emotional depth are sacred treasures that must be earned through consistent reciprocity.`,
           tag: 'Radical Severance',
-          anc: 'True closure does not come from a conversation; it comes from deciding you are done.',
+          anc: 'True closure does not come from a conversation; it arrives the moment you decide you are permanently finished.',
         },
         {
           q: 'The Sovereign Breakthrough: What abundant reality opens when you stop settling?',
           sub: 'Empowered Liberation & Triumph',
-          trans: `The exact moment you stop tolerating bare-minimum treatment and step into the radiant power of ${card3Name}, your energetic field instantly clears. True opportunities, deep respect, and aligned partnerships will immediately enter the vacuum.`,
-          som: '✦ Somatic Key: Inhale deeply and feel your ribcage expand with pure sovereign liberation.',
-          subc: `Your subconscious now knows that you are your own primary protector and that you will never abandon yourself again.`,
-          sovr: `Walk with your head high and your heart protected by healthy standards. Your future is too expansive to be spent begging for scraps.`,
+          trans: `The exact second you stop tolerating bare-minimum treatment and step into the radiant power of ${card3Name}, your vibrational field instantly clears. The exhaustion lifts, your creative vitality returns, and your aura becomes an irresistible magnet for authentic opportunities, deep mutual respect, and reciprocal partnerships. By removing what is toxic, you create the sacred space necessary for the universe to bless you with the abundance you have always deserved. Stepping into this new chapter is your declaration that you will never settle for less than total alignment again.`,
+          som: '✦ Somatic Key: Inhale deeply through your nose and feel your entire ribcage expand with pure, exhilarating liberation.',
+          subc: `Your subconscious mind now recognizes that you are your own primary protector and that you will never sacrifice your well-being for anyone else again.`,
+          sovr: `Walk with your head high and your heart shielded by healthy discernment. Your destiny is far too expansive to spend another minute begging for scraps.`,
           tag: 'Sovereign Triumph',
-          anc: 'The universe cannot fill your hands with abundance until you drop what does not serve you.',
+          anc: 'The universe cannot fill your hands with true abundance until you have the courage to drop what drains you.',
         }
       );
       break;
 
-    // Default generator for any other topic
+    // Default generator for any other topic (Topics 2-10, 12-32)
     default:
       for (let i = 1; i <= bp.questionCount; i++) {
+        const activeCardName = i === 1 ? card1Name : (i === 2 ? card2Name : card3Name);
         baseQuestions.push({
           q: `Inquiry ${i}: Channeled Guidance regarding ${cleanProblem}`,
           sub: `${categorySpec.title} • Dimension ${i} of ${bp.questionCount}`,
-          trans: `The channeled oracle reveals that this phase is activating deep soul mastery within you. Reflecting ${i === 1 ? card1Name : i === 2 ? card2Name : card3Name}, you are learning to anchor clarity within your own center, refusing to let external hesitation dictate your inner state.`,
-          som: `✦ Somatic Key: Take three slow breaths into your lower belly; allow clarity to settle into your nervous system.`,
-          subc: `Subconsciously, an old belief pattern is being dismantled. You are moving from a fear of making the wrong choice into a sovereign realization that every experience builds your spiritual authority.`,
-          sovr: `Align your daily actions with your highest values. Speak your truth with dignity, establish boundaries that protect your peace, and welcome the divine abundance awaiting you.`,
+          trans: `The channeled oracle reveals that this phase of your life is activating profound soul mastery and conscious elevation. Reflecting the sacred medicine of ${activeCardName}, you are learning to anchor unshakeable clarity within your own center, refusing to let external doubt, delays, or ambiguity dictate your emotional equilibrium. In navigating "${cleanProblem}", your spiritual guides emphasize that every obstacle you have encountered has served to dismantle outdated illusions and strengthen your sovereign discernment. You are being called to trust the wisdom of your lived experience and step forward with quiet, unwavering authority. As you align your mindset with the vibrational frequency of Life Path ${lpNumber}, you will discover that solutions and opportunities begin to manifest with remarkable synchronicity, clearing the path toward lasting peace, creative fulfillment, and empowered self-expression.`,
+          som: `✦ Somatic Key: Take three slow, grounding breaths deep into your lower belly; allow tension to melt into the earth as clarity anchors in your core.`,
+          subc: `Subconsciously, an outdated defensive belief pattern is being dismantled. You are transitioning out of an old fear of making mistakes or being judged, moving into the grounded understanding that your worth is inherent and unconditional.`,
+          sovr: `Align your daily habits with your highest values. Speak your truth with dignity, establish boundaries that fiercely protect your peace, and step boldly into the triumphant expansion awaiting you in ${categorySpec.title}.`,
           tag: `Dimension ${i} Realization`,
-          anc: `Clarity and peace are your birthright; step forward with unwavering confidence.`,
+          anc: `Clarity, sovereignty, and profound inner peace are your divine birthright; walk forward with unwavering trust.`,
         });
       }
       break;

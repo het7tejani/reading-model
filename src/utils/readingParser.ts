@@ -34,6 +34,34 @@ export interface ParsedReadingData {
   };
 }
 
+/**
+ * Strips all stray leading/trailing markdown characters (*, **, _, #, bullets, numbers, colons)
+ */
+export const cleanHeadingText = (text: string | undefined, defaultVal = ''): string => {
+  if (!text) return defaultVal;
+  const cleaned = text
+    .replace(/^[\s*#_~•\-–—\d\.\)\]\[:]+/g, '')
+    .replace(/[\s*#_~:]+$/g, '')
+    .replace(/\*+/g, '')
+    .replace(/_+/g, '')
+    .trim();
+  return cleaned || defaultVal;
+};
+
+/**
+ * Strips markdown asterisks, underscores, and leading list markers from body text while preserving sentences
+ */
+export const cleanMarkdownText = (text: string | undefined, defaultVal = ''): string => {
+  if (!text) return defaultVal;
+  const cleaned = text
+    .replace(/^[\s*#_~•\-–—:]+/g, '')
+    .replace(/[\s*#_~:]+$/g, '')
+    .replace(/\*+/g, '')
+    .replace(/_{2,}/g, '')
+    .trim();
+  return cleaned || defaultVal;
+};
+
 export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): ParsedReadingData => {
   const lines = markdown.split('\n');
 
@@ -41,7 +69,7 @@ export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): 
   let mainHeadline = fallbackTopic || 'SACRED TAROT & NUMEROLOGY ORACLE';
   const h1Match = markdown.match(/^#\s+(.+)$/m);
   if (h1Match) {
-    mainHeadline = h1Match[1].trim();
+    mainHeadline = cleanHeadingText(h1Match[1], fallbackTopic || 'SACRED TAROT & NUMEROLOGY ORACLE');
   }
 
   // Split into sections by H2 (## )
@@ -259,7 +287,9 @@ export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): 
   if (rawActionBlocks.length > 0) {
     for (const block of rawActionBlocks) {
       // Normalize line breaks within a single step to preserve paragraph continuity
-      const cleanBlock = block.replace(/\r\n/g, '\n').replace(/\n+/g, ' ').trim();
+      let cleanBlock = block.replace(/\r\n/g, '\n').replace(/\n+/g, ' ').trim();
+      // Strip any stray markdown asterisks or underscores from the whole block
+      cleanBlock = cleanBlock.replace(/^[\s*#_~•\-–—\d\.\)\]\[:]+/g, '').replace(/[\s*#_~]+$/g, '').trim();
       if (cleanBlock.length > 15) {
         parsedActionSteps.push(cleanBlock);
       }
@@ -271,7 +301,7 @@ export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): 
   const mantras = mantraRaw
     .split('\n')
     .filter(l => l.trim().length > 3)
-    .map(l => l.replace(/^[\d.*"'-•]+\s*/, '').replace(/["']/g, '').replace(/\*\*/g, '').trim())
+    .map(l => l.replace(/^[\d.*"'_~•\-–—]+\s*/, '').replace(/["']/g, '').replace(/\*+/g, '').replace(/_+/g, '').trim())
     .filter(l => l.length > 5 && !l.toLowerCase().startsWith('repeat'));
 
   // 7. Soul Inquiries
@@ -279,7 +309,7 @@ export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): 
   const soulInquiries = inquiriesRaw
     .split('\n')
     .filter(l => l.match(/^(\d+[\.\)]|\*|-|•)/) || l.includes('?'))
-    .map(l => l.replace(/^[\d.*-•\)]+\s*/, '').replace(/\*\*/g, '').trim())
+    .map(l => l.replace(/^[\d.*_~•\-–—\)]+\s*/, '').replace(/\*+/g, '').replace(/_+/g, '').trim())
     .filter(l => l.length > 10);
 
   // 8. Spiritual Prescription
@@ -290,11 +320,11 @@ export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): 
     return presLines
       .filter(l => l.toLowerCase().includes(keyword.toLowerCase()))
       .map(l => {
-        const clean = l.replace(/^[\d.*-]+\s*/, '').trim();
+        const clean = l.replace(/^[\d.*_~•\-–—]+\s*/, '').replace(/\*+/g, '').replace(/_+/g, '').trim();
         const parts = clean.split(/[-–:]/);
         return {
-          name: parts[0]?.replace(/\*\*/g, '').trim() || clean,
-          description: parts.slice(1).join(': ').replace(/\*\*/g, '').trim() || 'Provides energetic alignment and clearing.'
+          name: parts[0]?.replace(/\*+/g, '').replace(/_+/g, '').trim() || clean,
+          description: parts.slice(1).join(': ').replace(/\*+/g, '').replace(/_+/g, '').trim() || 'Provides energetic alignment and clearing.'
         };
       });
   };

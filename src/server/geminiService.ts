@@ -201,8 +201,9 @@ The reading topic chosen is: "${safeTopicTitle}" with Main Headline: "${mainHead
 - For Section 1 (Numerology): Exactly 2 substantial paragraphs (~90-110 words each) exploring the core essence, sovereign gifts, and real-life guidance of Life Path ${lpNumber}.
 - For Section 2 (3-Card Energy Overview): For each of the 3 cards, write EXACTLY 2 substantial, deeply tailored paragraphs (~90-110 words per paragraph, ~180-220 words total per card). Delve into the card's traditional symbolism, elemental nuances, psychological reflection, and actionable wisdom.
 - For Section 3 (Synthesis): Exactly 4 to 5 substantial, deeply insightful paragraphs (~90 to 120 words each).
-- For Section 4 (Q&A): ${isTenQuestions ? "Answer ALL 10 specific questions individually with 4 to 6 profound, compassionate sentences per question (~90-130 words each). Every single one of the 10 questions MUST be answered with a bold header followed by its channeled answer." : "Answer 5 profound questions with 4 to 6 profound, compassionate sentences per question (~100-140 words each)."}
+- For Section 4 (Q&A Inquiries): ${isTenQuestions ? "Answer ALL 10 specific inquiries with 200–250 words of rich, intuitive prose per question unpacking the psychological and spiritual layers thoroughly, followed by clear subconscious defense and somatic alignment guidance." : "Answer 5 profound questions with 200–250 words of rich, intuitive prose per question unpacking the psychological, emotional, and spiritual layers thoroughly, followed by clear subconscious defense and somatic alignment guidance."}
 - For Section 5 (Action Steps): Exactly 1 comprehensive, actionable paragraph per step (~90-120 words each).
+- For Section 7 (Soul Inquiries): 3 deep, evocative journaling inquiries, each accompanied by a reflective guiding sub-prompt.
 - For Section 8 (Spiritual Prescription): 2 to 3 rich sentences per recommendation detailing energetic and metaphysical benefits.
 
 ### STRUCTURE (8 CLEAN NUMBERED SECTIONS IN MARKDOWN) ###
