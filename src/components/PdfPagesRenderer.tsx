@@ -12,6 +12,8 @@ import {
 } from '../utils/categoryPageHelper';
 import {
   AstrologicalWheelSvg,
+  TarotCoverEmblemSvg,
+  TarotWelcomeEmblemSvg,
   DaisyFlowerSvg,
   DaisyStemSvg,
   TripleArchOverCardsSvg,
@@ -296,15 +298,9 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({ inputs, mark
             </p>
           </div>
 
-          {/* Central Artwork */}
-          <div className="relative flex flex-col items-center justify-center my-auto">
-            <AstrologicalWheelSvg className="w-[270px] h-[270px] text-[#2C241E] opacity-90 animate-spin-slow" />
-            <div className="absolute flex flex-col items-center justify-center pointer-events-none">
-              <DaisyFlowerSvg className="w-12 h-12 text-[#2C241E] opacity-95 mb-1" />
-              <span className="text-[8.5pt] tracking-[0.28em] uppercase font-sans font-bold text-[#6B5E51]">
-                Master Reading
-              </span>
-            </div>
+          {/* Central Tarot Artwork */}
+          <div className="relative flex flex-col items-center justify-center my-auto w-full max-w-[460px]">
+            <TarotCoverEmblemSvg className="w-[430px] h-[310px] text-[#2C241E]" />
           </div>
 
           {/* Title and Client Details */}
@@ -364,9 +360,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({ inputs, mark
           </div>
 
           <div className="relative flex flex-col items-center justify-center my-3">
-            <div className="w-16 h-16 rounded-full border border-[#D8CEBE] flex items-center justify-center">
-              <DaisyFlowerSvg className="w-10 h-10 text-[#4A3F35]" />
-            </div>
+            <TarotWelcomeEmblemSvg className="w-[200px] h-[48px] text-[#4A3F35]" />
           </div>
 
           <div className="max-w-xl text-justify space-y-4 my-auto">

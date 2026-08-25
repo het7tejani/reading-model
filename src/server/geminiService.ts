@@ -112,11 +112,15 @@ export async function generateReading(payload: ReadingRequestPayload) {
   let categoryContextStr = "";
   const catData = { ...(categoryData || {}) };
 
-  // If customQuestions is empty but the topic config defines default items (e.g. Topic 32 with 10 questions), populate it!
-  if ((!catData.customQuestions || !Array.isArray(catData.customQuestions) || catData.customQuestions.length === 0) && categorySpec?.customFields) {
-    const qField = categorySpec.customFields.find((f: any) => f.key === 'customQuestions');
-    if (qField && qField.defaultItems && qField.defaultItems.length > 0) {
-      catData.customQuestions = [...qField.defaultItems];
+  // If customQuestions is empty, populate from categorySpec suggestedQuestions or customFields defaults
+  if ((!catData.customQuestions || !Array.isArray(catData.customQuestions) || catData.customQuestions.length === 0)) {
+    if (categorySpec?.suggestedQuestions && categorySpec.suggestedQuestions.length > 0) {
+      catData.customQuestions = [...categorySpec.suggestedQuestions];
+    } else if (categorySpec?.customFields) {
+      const qField = categorySpec.customFields.find((f: any) => f.key === 'customQuestions');
+      if (qField && qField.defaultItems && qField.defaultItems.length > 0) {
+        catData.customQuestions = [...qField.defaultItems];
+      }
     }
   }
 

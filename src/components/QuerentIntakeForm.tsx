@@ -74,8 +74,13 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
       }
     });
 
+    const isCurrentProblemEmptyOrAuto = !inputs.problem.trim() || inputs.problem.startsWith('Navigating') || inputs.problem.startsWith('Seeking') || inputs.problem.startsWith('Feeling') || inputs.problem.startsWith('Tired') || inputs.problem.startsWith('Sensing') || inputs.problem.startsWith('Unsure') || inputs.problem.startsWith('Caught') || inputs.problem.startsWith('Experiencing') || inputs.problem.startsWith('Anticipating') || inputs.problem.startsWith('Desiring') || inputs.problem.startsWith('Pure');
+    const isCurrentQuestionEmptyOrAuto = !inputs.question.trim() || inputs.question.startsWith('What is the true') || inputs.question.startsWith('What are their') || inputs.question.startsWith('Where is this') || inputs.question.startsWith('Will they') || inputs.question.startsWith('What is the exact') || inputs.question.startsWith('What are the major') || inputs.question.startsWith('What are the 8') || inputs.question.startsWith('What is the highest') || inputs.question.startsWith('What is my true') || inputs.question.startsWith('What does the universe') || inputs.question.startsWith('What is the brutal') || inputs.question.startsWith('What are the 3') || inputs.question.startsWith('Who are my primary') || inputs.question.startsWith('What past life') || inputs.question.startsWith('What or who') || inputs.question.startsWith('What is my pet') || inputs.question.startsWith('Where is my lost') || inputs.question.startsWith('What are the in-depth') || inputs.question.startsWith('What spiritual blockage') || inputs.question.startsWith('What subconscious or energetic') || inputs.question.startsWith('What emotional barrier') || inputs.question.startsWith('What is the karmic') || inputs.question.startsWith('What was the higher') || inputs.question.startsWith('What are the exact words') || inputs.question.startsWith('What is their true') || inputs.question.startsWith('What critical truth') || inputs.question.startsWith('How can I permanently sever') || inputs.question.startsWith('What comprehensive soul') || inputs.question.startsWith('What psychic visions') || inputs.question.startsWith('What is the prophetic') || inputs.question.startsWith('What secret feelings') || inputs.question.startsWith('What is the complete psychic');
+
     onUpdateInputs({
       topic: topic.title,
+      problem: isCurrentProblemEmptyOrAuto && spec.suggestedProblem ? spec.suggestedProblem : inputs.problem,
+      question: isCurrentQuestionEmptyOrAuto && spec.suggestedQuestion ? spec.suggestedQuestion : inputs.question,
       categoryData: initialCategoryData,
     });
   };
@@ -315,11 +320,22 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
         )}
 
         {/* Current Problem Description */}
-        <div>
-          <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest mb-1.5 flex items-center justify-between">
-            <span>Current Problem / Situation Context {isBlindReading ? '(Optional for Blind Reading)' : '*'}</span>
-            <span className="text-[10px] text-[#8C7B6A] font-normal lowercase italic">enter situation details</span>
-          </label>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest">
+              Current Problem / Situation Context {isBlindReading ? '(Optional for Blind Reading)' : '*'}
+            </label>
+            {categorySpec?.suggestedProblem && (
+              <button
+                type="button"
+                onClick={() => onUpdateInputs({ problem: categorySpec.suggestedProblem })}
+                className="text-[10px] text-[#BC6C25] hover:text-[#8C7B6A] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <Sparkles className="w-2.5 h-2.5" />
+                <span>Use Category Focus</span>
+              </button>
+            )}
+          </div>
           <textarea
             required={!isBlindReading}
             rows={3}
@@ -335,11 +351,13 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
         </div>
 
         {/* Sacred Question */}
-        <div>
-          <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest mb-1.5 flex items-center justify-between">
-            <span>Sacred Question to the Oracle {isBlindReading ? '(Optional for Blind Reading)' : '*'}</span>
-            <span className="text-[10px] text-[#8C7B6A] font-normal lowercase italic">enter question</span>
-          </label>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest">
+              Sacred Question to the Oracle {isBlindReading ? '(Optional for Blind Reading)' : '*'}
+            </label>
+            <span className="text-[10px] text-[#8C7B6A] font-normal lowercase italic">select or customize</span>
+          </div>
           <input
             type="text"
             required={!isBlindReading}
@@ -350,8 +368,36 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
             }
             value={inputs.question}
             onChange={(e) => onUpdateInputs({ question: e.target.value })}
-            className="w-full px-3.5 py-2.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm text-[#2C2C2C] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 font-sans transition-all"
+            className="w-full px-3.5 py-2.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm text-[#2C2C2C] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 font-sans transition-all font-medium text-[#4A3F35]"
           />
+
+          {/* Quick Category Question Selector Chips */}
+          {categorySpec?.suggestedQuestions && categorySpec.suggestedQuestions.length > 0 && !isBlindReading && (
+            <div className="pt-1.5 space-y-1.5">
+              <div className="text-[10px] uppercase font-mono tracking-wider text-[#8C7B6A] flex items-center gap-1">
+                <span>✦ Suggested Questions for {categorySpec.title}:</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {categorySpec.suggestedQuestions.map((q, idx) => {
+                  const isSelected = inputs.question.trim().toLowerCase() === q.trim().toLowerCase();
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => onUpdateInputs({ question: q })}
+                      className={`text-left text-[11px] px-2.5 py-1.5 rounded-xs border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#4A3F35] text-white border-[#4A3F35] font-semibold shadow-xs'
+                          : 'bg-[#FCFAF7] border-[#E0D7CC] text-[#6B5E51] hover:border-[#BC6C25] hover:bg-[#F2EDE8] hover:text-[#4A3F35]'
+                      }`}
+                    >
+                      {isSelected ? '✓ ' : ''}{q}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

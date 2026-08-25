@@ -1,6 +1,7 @@
 import { ReadingInputs, TarotCard } from '../types';
 import { calculateLifePath, LIFE_PATH_ARCHETYPES } from './numerology';
 import { READING_TOPICS, cleanTopicTitle } from '../data/readingTopics';
+import { getCategorySpecByTopic } from '../data/categoryConfig';
 
 // Elemental mappings for dynamic prescription based on the cards drawn
 const ELEMENT_CRYSTALS: Record<string, { primary: string; reason: string }> = {
@@ -20,7 +21,7 @@ const ELEMENT_BOTANICALS: Record<string, { primary: string; reason: string }> = 
 };
 
 export function generateTarotNumerologyReadingMarkdown(inputs: ReadingInputs): string {
-  const { name, age, dob, problem, question, topic, cards } = inputs;
+  const { name, age, dob, problem, question, topic, cards, categoryData } = inputs;
   const safeTopicTitle = cleanTopicTitle(topic);
   const card1 = cards[0] || ({ name: 'The Star', keywords: ['Hope', 'Renewal', 'Serenity', 'Healing'], element: 'Air', archetype: 'The Guiding Light' } as TarotCard);
   const card2 = cards[1] || ({ name: 'Eight of Swords', keywords: ['Overthinking', 'Mental Cage', 'Hesitation'], element: 'Air', archetype: 'The Bound Seeker' } as TarotCard);
@@ -62,33 +63,36 @@ export function generateTarotNumerologyReadingMarkdown(inputs: ReadingInputs): s
   );
   const mainHeadline = matchedTopic ? matchedTopic.headline : safeTopicTitle.toUpperCase() || 'SACRED TAROT & NUMEROLOGY ORACLE';
 
-  // Clean problem & question snippet for natural prose
-  const cleanProblem = (problem || 'seeking divine clarity').trim().replace(/[.\n]+$/, '');
-  const cleanQuestion = (question || 'What is the highest wisdom for my path?').trim().replace(/[?\n]+$/, '');
+  const categorySpec = getCategorySpecByTopic(matchedTopic?.id || (typeof topic === 'number' ? topic : 1));
 
-  // Build dynamic Q&A section based on category custom questions if provided
-  let qaSectionContent = '';
-  let customQs = inputs.categoryData?.customQuestions;
-  if ((!customQs || !Array.isArray(customQs) || customQs.length === 0) && (safeTopicTitle.toLowerCase().includes('10 question') || Number(topic) === 32)) {
-    customQs = [
-      '1. What is the hidden lesson in my current situation?',
-      '2. What energy should I embody to attract my desired outcome?',
-      '3. What subconscious block do I need to release right now?',
-      '4. How will I recognize the right path when it arrives?',
-      '5. What is the ultimate potential of this journey?',
-      '6. What is the true energetic intention of those around me?',
-      '7. What impending financial or career breakthrough is forming?',
-      '8. What spiritual protection or guide is watching over me?',
-      '9. What major milestone will arrive within the next 6 months?',
-      '10. What final advice does the universe have for my soul peace?',
-    ];
+  // Category specific variables
+  const catPerson = categoryData?.personName ? `regarding ${categoryData.personName}` : '';
+  const catPet = categoryData?.petName ? `for your beloved ${categoryData.petSpecies || 'companion'} ${categoryData.petName}` : '';
+  const catCareer = categoryData?.careerField ? `within your professional field of ${categoryData.careerField}` : '';
+  const catItem = categoryData?.lostItem ? `for the recovery of your ${categoryData.lostItem}` : '';
+  const catTime = categoryData?.timeframeEvent ? `concerning the timing of ${categoryData.timeframeEvent}` : '';
+  const catDream = categoryData?.dreamDescription ? `decoding your sacred dream` : '';
+
+  // Clean problem & question snippet for natural prose
+  const baseProblem = problem || categorySpec.suggestedProblem || 'seeking divine clarity';
+  const cleanProblem = baseProblem.trim().replace(/[.\n]+$/, '');
+  const baseQuestion = question || categorySpec.suggestedQuestion || 'What is the highest wisdom for my path?';
+  const cleanQuestion = baseQuestion.trim().replace(/[?\n]+$/, '');
+
+  // Build dynamic Q&A section based on category custom questions if provided or category defaults
+  let customQs = categoryData?.customQuestions;
+  if (!customQs || !Array.isArray(customQs) || customQs.length === 0) {
+    if (categorySpec.suggestedQuestions && categorySpec.suggestedQuestions.length > 0) {
+      customQs = categorySpec.suggestedQuestions;
+    }
   }
 
+  let qaSectionContent = '';
   if (customQs && Array.isArray(customQs) && customQs.length > 0) {
     qaSectionContent = customQs.map((q, idx) => {
       const cleanQ = q.replace(/^\d+\.\s*/, '').trim();
       const cardRef = idx % 3 === 0 ? card1.name : (idx % 3 === 1 ? card2.name : card3.name);
-      return `**${cleanQ}**\nChanneled under the vibrational resonance of ${cardRef} and Life Path ${lpNumber}, the answer reveals that authentic alignment is already unfolding for ${name}. Trust your intuitive discernment and allow conscious self-honoring decisions to lead your path forward with peace, boundary integrity, and sovereign clarity.`;
+      return `**${cleanQ}**\nChanneled under the vibrational resonance of ${cardRef} and your Life Path ${lpNumber} blueprint, the cosmic cards reveal clear and decisive insight for ${name}. In the context of ${safeTopicTitle} ${catPerson || catPet || catCareer || catItem || catTime || catDream}, authentic alignment is already taking shape beneath the surface. Trust your intuitive discernment and allow conscious, self-honoring decisions to guide your next moves forward with unshakable sovereignty and peace.`;
     }).join('\n\n');
   } else {
     qaSectionContent = `**What is the hidden lesson in my current situation?**
@@ -115,7 +119,7 @@ ${numerology.mathBreakdown}
 
 At ${age} years old, born under the celestial blueprint of ${dob}, you channel the vibrational frequency of Life Path ${lpNumber}—embodying ${lpInfo.coreEnergyTitle} governed by ${lpInfo.governingPlanet}. Your soul's fundamental strength lies in ${lpInfo.description.toLowerCase()} You are wired for genuine depth, conscious integrity, and meaningful purpose, which explains why unresolved tensions, superficial compromises, or unreciprocated dynamics weigh so heavily upon your spirit.
 
-In addressing what you are navigating right now—specifically regarding "${cleanProblem}" within ${safeTopicTitle}—this Life Path ${lpNumber} energy serves as an essential compass. The friction and emotional weight you have been experiencing is not a sign of failure; rather, it is a sacred catalyst calling you to step out of people-pleasing and realign with your authentic sovereignty as ${lpInfo.archetype}. When you stand firmly in your core vibrational frequency, you naturally access the clarity, discernment, and spiritual authority needed to resolve this chapter with grace and confidence.
+In addressing what you are navigating right now—specifically regarding "${cleanProblem}" within ${safeTopicTitle} ${catPerson || catPet || catCareer || catItem || catTime || catDream}—this Life Path ${lpNumber} energy serves as an essential compass. The friction and emotional weight you have been experiencing is not a sign of failure; rather, it is a sacred catalyst calling you to step out of people-pleasing and realign with your authentic sovereignty as ${lpInfo.archetype}. When you stand firmly in your core vibrational frequency, you naturally access the clarity, discernment, and spiritual authority needed to resolve this chapter with grace and confidence.
 
 ---
 
