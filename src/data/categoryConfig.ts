@@ -1069,6 +1069,45 @@ export const CATEGORY_SPECS: Record<number, CategorySpec> = {
   },
 };
 
+export function createDynamicCustomTopicSpec(topicTitle: string): CategorySpec {
+  const cleanTitle = topicTitle
+    .trim()
+    .replace(/^topic\s*\d+[:.\s]*/i, '')
+    .replace(/^\d+[\.\)]\s*/, '') || 'Sacred Life Transition & Choice';
+  const capTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
+  return {
+    id: 999,
+    title: capTitle,
+    headline: `${capTitle.toUpperCase()} BLUEPRINT`,
+    categoryType: 'standard',
+    description: `Deep intuitive guidance, domain insights, and strategic clarity for ${capTitle}.`,
+    suggestedProblem: `Seeking clarity and aligned direction regarding ${capTitle}.`,
+    suggestedQuestion: `What is the highest wisdom, hidden factors, and path forward for ${capTitle}?`,
+    suggestedQuestions: [
+      `What is the underlying energetic and practical reality of ${capTitle}?`,
+      `What hidden friction, hesitation, or external obstacle needs immediate attention?`,
+      `What practical mindset shift and tangible action will ensure successful alignment?`,
+      `How will the energetic timeline and catalyst windows unfold for ${capTitle}?`,
+      `What is the ultimate sovereign outcome when fully stepping into clarity on this path?`,
+    ],
+    customFields: [
+      {
+        key: 'customQuestions',
+        label: 'Channeled Inquiries (5 Questions)',
+        type: 'list',
+        defaultItems: [
+          `What is the underlying energetic and practical reality of ${capTitle}?`,
+          `What hidden friction, hesitation, or external obstacle needs immediate attention?`,
+          `What practical mindset shift and tangible action will ensure successful alignment?`,
+          `How will the energetic timeline and catalyst windows unfold for ${capTitle}?`,
+          `What is the ultimate sovereign outcome when fully stepping into clarity on this path?`,
+        ],
+      },
+    ],
+    pdfSectionTitle: `${capTitle.toUpperCase()} DEEP DIVE`,
+  };
+}
+
 export const getCategorySpecByTopic = (topic: string | number): CategorySpec => {
   // Check if browser environment has custom categories or overrides saved
   if (typeof window !== 'undefined') {
@@ -1124,7 +1163,7 @@ export const getCategorySpecByTopic = (topic: string | number): CategorySpec => 
   }
 
   if (typeof topic === 'number') {
-    return CATEGORY_SPECS[topic] || CATEGORY_SPECS[1];
+    return CATEGORY_SPECS[topic] || createDynamicCustomTopicSpec(`Topic ${topic}`);
   }
   const clean = topic
     .trim()
@@ -1141,5 +1180,9 @@ export const getCategorySpecByTopic = (topic: string | number): CategorySpec => 
     );
   });
 
-  return found || CATEGORY_SPECS[1];
+  if (found) return found;
+  if (typeof topic === 'string' && topic.trim().length > 0) {
+    return createDynamicCustomTopicSpec(topic);
+  }
+  return CATEGORY_SPECS[1];
 };
