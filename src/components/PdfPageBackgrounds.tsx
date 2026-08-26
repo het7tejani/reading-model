@@ -797,8 +797,17 @@ export const UniversalPageDecorations: React.FC<{
   headerTitle?: string;
   className?: string;
   hideHeader?: boolean;
-}> = ({ pageNumber, totalPages = 28, headerTitle = 'PERSONALIZED INTUITIVE GUIDANCE', className = '', hideHeader }) => {
+  brandName?: string;
+}> = ({
+  pageNumber,
+  totalPages = 28,
+  headerTitle = 'PERSONALIZED INTUITIVE GUIDANCE',
+  className = '',
+  hideHeader,
+  brandName = 'Daisy Medium Studio',
+}) => {
   const isCover = pageNumber === 1 || hideHeader;
+  const effectiveBrandName = (brandName || '').trim() || 'Daisy Medium Studio';
 
   return (
     <div className={`absolute inset-0 pointer-events-none z-0 overflow-hidden select-none ${className}`}>
@@ -827,7 +836,7 @@ export const UniversalPageDecorations: React.FC<{
       {/* Clean Editorial Top Header bar - Suppressed on Page 1 to prevent stutter-repeating brand headers */}
       {!isCover && (
         <div className="absolute top-[34px] left-[40px] right-[40px] flex items-center justify-between text-[#7A6B5B] font-sans text-[8pt] tracking-[0.26em] uppercase border-b border-[#E8E1D5] pb-2 z-10">
-          <span className="font-semibold">Daisy Medium Studio</span>
+          <span className="font-semibold">{effectiveBrandName}</span>
           <span className="text-[#8C7D6D]">{headerTitle}</span>
         </div>
       )}
@@ -835,7 +844,7 @@ export const UniversalPageDecorations: React.FC<{
       {/* Clean Editorial Bottom Footer - Suppressed on Page 1 */}
       {!isCover && (
         <div className="absolute bottom-[36px] left-[40px] right-[40px] flex items-center justify-between text-[#7A6B5B] font-sans text-[8pt] tracking-[0.22em] uppercase border-t border-[#E8E1D5] pt-2 z-10">
-          <span className="text-[#8C7D6D]">Daisy Medium Studio</span>
+          <span className="text-[#8C7D6D]">{effectiveBrandName}</span>
           <div className="flex items-center gap-2 text-[#8C7D6D]">
             <span className="text-[7pt]">✦</span>
             <span className="tracking-[0.24em] text-[8pt]">Sacred Intuitive Guidance</span>

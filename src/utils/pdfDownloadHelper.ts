@@ -9,7 +9,8 @@ export interface PdfGenerationProgress {
 
 export const generateAndDownloadPdf = async (
   querentName: string,
-  onProgress?: (progress: PdfGenerationProgress) => void
+  onProgress?: (progress: PdfGenerationProgress) => void,
+  shopName?: string
 ): Promise<void> => {
   const pageElements = Array.from(document.querySelectorAll<HTMLElement>('.pdf-page'));
   const totalPages = pageElements.length;
@@ -66,5 +67,6 @@ export const generateAndDownloadPdf = async (
   }
 
   const cleanName = querentName.trim().replace(/\s+/g, '_') || 'Querent';
-  pdf.save(`Tarot_Numerology_Reading_${cleanName}.pdf`);
+  const cleanShop = shopName?.trim() ? `${shopName.trim().replace(/[^a-zA-Z0-9_-]/g, '_')}_` : '';
+  pdf.save(`${cleanShop}Tarot_Numerology_Reading_${cleanName}.pdf`);
 };

@@ -14,6 +14,7 @@ export const PRESET_READINGS: { id: string; title: string; subtitle: string; ico
       age: '28',
       dob: '11/05/1997',
       topic: '1. Deep Love Reading',
+      shopName: 'Daisy Medium Studio',
       problem: 'After a painful betrayal two years ago, I keep keeping potential partners at arm\'s length. I have met someone wonderful with whom I feel deep soul resonance, but my unconscious instinct is to withdraw or find flaws before they can hurt me.',
       question: 'What must I heal within my heart center to allow deep emotional intimacy without fear of abandonment?',
       cards: [
@@ -33,6 +34,7 @@ export const PRESET_READINGS: { id: string; title: string; subtitle: string; ico
       age: '31',
       dob: '05/14/1994',
       topic: '8. Career & Job Reading',
+      shopName: 'Daisy Medium Studio',
       problem: 'I feel deeply unfulfilled in my current corporate executive role despite external success. I dream of launching my own conscious consultancy and creative studio, but I am paralyzed by imposter syndrome, fear of losing financial security, and dread of disappointing my family expectations.',
       question: 'How can I release the fear of stepping into my true creative vocation and build financial stability in my new venture?',
       cards: [
@@ -52,6 +54,7 @@ export const PRESET_READINGS: { id: string; title: string; subtitle: string; ico
       age: '35',
       dob: '09/27/1990',
       topic: '9. Life Compass & Path',
+      shopName: 'Celestial Path Sanctuary',
       problem: 'I am experiencing a massive spiritual shift where old friendships, habits, and life structures no longer resonate. I feel isolated in the void between who I was and who I am becoming, questioning if I am making the right choices.',
       question: 'What is the higher cosmic purpose of this solitude and how do I navigate this initiation into my sovereign power?',
       cards: [
@@ -71,6 +74,7 @@ export const PRESET_READINGS: { id: string; title: string; subtitle: string; ico
       age: '26',
       dob: '03/18/1999',
       topic: '2. Exact Thoughts & Feelings',
+      shopName: 'Luna & Light Tarot',
       problem: 'My partner has become distant and emotionally withdrawn lately. We haven\'t argued, but there is an unspoken silence between us that makes me second-guess where we stand.',
       question: 'What are their genuine thoughts and feelings toward me right now that they haven\'t voiced?',
       cards: [
@@ -90,6 +94,7 @@ export const PRESET_READINGS: { id: string; title: string; subtitle: string; ico
       age: '42',
       dob: '08/12/1983',
       topic: "10. Blind Reading (Name Only)",
+      shopName: 'Daisy Medium Studio',
       problem: "Blind Reading - Name and birthdate only (Don't tell me anything)",
       question: 'What is the primary message the universe wants me to know right now?',
       cards: [
@@ -109,6 +114,7 @@ export const PRESET_READINGS: { id: string; title: string; subtitle: string; ico
       age: '33',
       dob: '12/04/1992',
       topic: "20. What’s Blocking Your Money Flow",
+      shopName: 'Abundance Oracle Studio',
       problem: 'I earn decent income but unexpected expenses always drain my savings. I feel an energetic ceiling preventing me from scaling my business beyond its current revenue mark.',
       question: 'What subconscious scarcity block or ancestral belief is constricting my financial abundance?',
       cards: [

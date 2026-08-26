@@ -325,6 +325,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           'What does my most peaceful, abundant, and joyful timeline look like in physical reality?',
         ];
 
+  const effectiveShopName = (inputs.shopName || '').trim() || 'Daisy Medium Studio';
+
   // =========================================================================
   // DYNAMIC PAGE ASSEMBLY: Omit any pages that have no valid data / content
   // =========================================================================
@@ -333,7 +335,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
   // 1. Cover Page
   pages.push({
     key: 'cover',
-    headerTitle: 'DAISY MEDIUM STUDIO',
+    headerTitle: effectiveShopName.toUpperCase(),
     render: (pageNumber, totalPages) => (
       <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between items-center z-10 text-center font-serif">
         <div className="space-y-1.5 pt-2">
@@ -341,7 +343,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
             Sacred Divination & Numerology
           </span>
           <h1 className="text-[26pt] font-serif font-bold tracking-tight text-[#1F1914] uppercase leading-tight">
-            Daisy Medium Studio
+            {effectiveShopName}
           </h1>
           <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
           <p className="text-[10pt] italic text-[#4A3F35]">
@@ -377,9 +379,9 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         </div>
 
         <div className="text-center text-[8pt] font-sans text-[#6B5E51] tracking-wider uppercase space-y-0.5 border-t border-[#E8E1D5] pt-2 w-full max-w-md">
-          <p>Channeled with Reverence by Daisy Hayes</p>
+          <p>Channeled with Reverence by {effectiveShopName}</p>
           <p className="text-[7.5pt] text-[#8C7D6D]">
-            © {new Date().getFullYear()} Daisy Medium Studio · All Rights Reserved
+            © {new Date().getFullYear()} {effectiveShopName} · All Rights Reserved
           </p>
         </div>
       </div>
@@ -1818,7 +1820,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
             With Gratitude & Light
           </span>
           <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-            Thank You for Trusting Daisy Medium Studio
+            Thank You for Trusting {effectiveShopName}
           </h1>
           <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
           <p className="text-[10pt] font-serif text-[#4A3F35]">
@@ -1835,7 +1837,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
               With Infinite Love & Blessings,
             </p>
             <p className="text-[10.5pt] font-serif text-[#6B5E51]">
-              Daisy Hayes & DaisyMediumStudio
+              {effectiveShopName}
             </p>
           </div>
         </div>
@@ -1846,7 +1848,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
             Tarot and numerology readings are offered solely for personal insight, self-reflection, spiritual exploration, and entertainment purposes. The guidance and interpretations provided are designed to inspire introspection, but do not constitute and should never substitute for licensed medical, psychological, legal, or financial advice.
           </p>
           <p className="text-[7.5pt] text-[#8C7D6D] font-sans">
-            © {new Date().getFullYear()} Daisy Medium Studio · All Rights Reserved
+            © {new Date().getFullYear()} {effectiveShopName} · All Rights Reserved
           </p>
         </div>
       </div>
@@ -1876,6 +1878,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
               pageNumber={pageNum}
               totalPages={dynamicTotalPages}
               headerTitle={pageDef.headerTitle}
+              brandName={effectiveShopName}
             />
             {pageDef.render(pageNum, dynamicTotalPages)}
           </div>

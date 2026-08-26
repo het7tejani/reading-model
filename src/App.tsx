@@ -24,6 +24,7 @@ const EMPTY_INPUTS: ReadingInputs = {
   problem: '',
   question: '',
   topic: '',
+  shopName: '',
   cards: [null, null, null],
 };
 
@@ -193,6 +194,7 @@ export default function App() {
         problem: inputs.problem,
         question: inputs.question,
         topic: inputs.topic,
+        shopName: inputs.shopName,
         cardNames: [
           inputs.cards[0]?.name || 'Card 1',
           inputs.cards[1]?.name || 'Card 2',
@@ -222,6 +224,7 @@ export default function App() {
       problem: item.inputs.problem,
       question: item.inputs.question,
       topic: item.inputs.topic,
+      shopName: item.inputs.shopName || '',
       cards: [c1, c2, c3],
     });
     setMarkdownResult(item.markdownContent);

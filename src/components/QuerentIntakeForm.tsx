@@ -144,7 +144,7 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Name */}
           <div>
             <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest mb-1.5">
@@ -192,6 +192,21 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
               />
               <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8C7B6A] pointer-events-none" />
             </div>
+          </div>
+
+          {/* Shop / Studio Name */}
+          <div>
+            <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest mb-1.5 flex items-center justify-between">
+              <span>Shop / Studio Name</span>
+              <span className="text-[9px] text-[#BC6C25] font-semibold">PDF Header</span>
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Daisy Medium Studio"
+              value={inputs.shopName || ''}
+              onChange={(e) => onUpdateInputs({ shopName: e.target.value })}
+              className="w-full px-3.5 py-2.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm text-[#2C2C2C] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 transition-all font-sans"
+            />
           </div>
         </div>
 

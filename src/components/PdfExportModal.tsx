@@ -30,13 +30,15 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
   const blueprint = getTopicMasterBlueprint(inputs.topic || categorySpec.id);
   const [renderedTotalPages, setRenderedTotalPages] = useState<number>(blueprint.totalPages);
 
+  const effectiveShopName = (inputs.shopName || '').trim() || 'Daisy Medium Studio';
+
   if (!isOpen) return null;
 
   const handleDownloadPdf = async () => {
     try {
       setIsGenerating(true);
       setDownloadSuccess(false);
-      await generateAndDownloadPdf(inputs.name, (p) => setProgress(p));
+      await generateAndDownloadPdf(inputs.name, (p) => setProgress(p), effectiveShopName);
       setDownloadSuccess(true);
       setTimeout(() => setDownloadSuccess(false), 4000);
     } catch (err) {
@@ -67,7 +69,7 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
                   {renderedTotalPages}-Page Client PDF Preview & Export
                 </h3>
                 <span className="px-2 py-0.5 rounded-xs bg-[#F2EDE8] border border-[#BC6C25]/40 text-[#BC6C25] text-[10px] font-bold uppercase tracking-wider font-mono">
-                  Daisy Medium Studio
+                  {effectiveShopName}
                 </span>
               </div>
               <p className="text-xs text-[#8C7B6A]">

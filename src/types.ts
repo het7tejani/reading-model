@@ -46,6 +46,7 @@ export interface ReadingInputs {
   problem: string;
   question: string;
   topic: string;
+  shopName?: string; // Shop / Studio name for PDF header & branding
   cards: [TarotCard | null, TarotCard | null, TarotCard | null];
   categoryData?: CategoryCustomData;
 }
@@ -68,6 +69,7 @@ export interface StoredReading {
     problem: string;
     question: string;
     topic: string;
+    shopName?: string;
     cardNames: [string, string, string];
   };
   lifePath: number;
