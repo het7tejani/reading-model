@@ -14,7 +14,7 @@ export const PRESET_READINGS: { id: string; title: string; subtitle: string; ico
       age: '28',
       dob: '11/05/1997',
       topic: '1. Deep Love Reading',
-      shopName: 'Daisy Medium Studio',
+      shopName: 'Heart & Soul Sanctuary',
       problem: 'After a painful betrayal two years ago, I keep keeping potential partners at arm\'s length. I have met someone wonderful with whom I feel deep soul resonance, but my unconscious instinct is to withdraw or find flaws before they can hurt me.',
       question: 'What must I heal within my heart center to allow deep emotional intimacy without fear of abandonment?',
       cards: [
@@ -34,7 +34,7 @@ export const PRESET_READINGS: { id: string; title: string; subtitle: string; ico
       age: '31',
       dob: '05/14/1994',
       topic: '8. Career & Job Reading',
-      shopName: 'Daisy Medium Studio',
+      shopName: 'Solaris Vision Studio',
       problem: 'I feel deeply unfulfilled in my current corporate executive role despite external success. I dream of launching my own conscious consultancy and creative studio, but I am paralyzed by imposter syndrome, fear of losing financial security, and dread of disappointing my family expectations.',
       question: 'How can I release the fear of stepping into my true creative vocation and build financial stability in my new venture?',
       cards: [
@@ -94,7 +94,7 @@ export const PRESET_READINGS: { id: string; title: string; subtitle: string; ico
       age: '42',
       dob: '08/12/1983',
       topic: "10. Blind Reading (Name Only)",
-      shopName: 'Daisy Medium Studio',
+      shopName: 'Mystic Horizon Oracle',
       problem: "Blind Reading - Name and birthdate only (Don't tell me anything)",
       question: 'What is the primary message the universe wants me to know right now?',
       cards: [

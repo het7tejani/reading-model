@@ -30,7 +30,7 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
   const blueprint = getTopicMasterBlueprint(inputs.topic || categorySpec.id);
   const [renderedTotalPages, setRenderedTotalPages] = useState<number>(blueprint.totalPages);
 
-  const effectiveShopName = (inputs.shopName || '').trim() || 'Daisy Medium Studio';
+  const effectiveShopName = (inputs.shopName || '').trim() || 'Sacred Intuitive Studio';
 
   if (!isOpen) return null;
 

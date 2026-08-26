@@ -325,7 +325,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           'What does my most peaceful, abundant, and joyful timeline look like in physical reality?',
         ];
 
-  const effectiveShopName = (inputs.shopName || '').trim() || 'Daisy Medium Studio';
+  const effectiveShopName = (inputs.shopName || '').trim() || 'Sacred Intuitive Studio';
 
   // =========================================================================
   // DYNAMIC PAGE ASSEMBLY: Omit any pages that have no valid data / content

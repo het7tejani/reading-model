@@ -804,10 +804,10 @@ export const UniversalPageDecorations: React.FC<{
   headerTitle = 'PERSONALIZED INTUITIVE GUIDANCE',
   className = '',
   hideHeader,
-  brandName = 'Daisy Medium Studio',
+  brandName = 'Sacred Intuitive Studio',
 }) => {
   const isCover = pageNumber === 1 || hideHeader;
-  const effectiveBrandName = (brandName || '').trim() || 'Daisy Medium Studio';
+  const effectiveBrandName = (brandName || '').trim() || 'Sacred Intuitive Studio';
 
   return (
     <div className={`absolute inset-0 pointer-events-none z-0 overflow-hidden select-none ${className}`}>

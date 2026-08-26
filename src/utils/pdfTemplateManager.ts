@@ -49,7 +49,7 @@ export async function convertPdfToPageImages(
 }
 
 // Local storage key for custom template background images cache
-export const TEMPLATE_STORAGE_KEY = 'daisy_medium_custom_pdf_template_pages';
+export const TEMPLATE_STORAGE_KEY = 'custom_pdf_template_pages';
 
 export function saveTemplatePagesToLocalStorage(pages: string[]) {
   try {

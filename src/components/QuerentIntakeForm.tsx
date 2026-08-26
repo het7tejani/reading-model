@@ -202,7 +202,7 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
             </label>
             <input
               type="text"
-              placeholder="e.g. Daisy Medium Studio"
+              placeholder="Enter your shop / studio name"
               value={inputs.shopName || ''}
               onChange={(e) => onUpdateInputs({ shopName: e.target.value })}
               className="w-full px-3.5 py-2.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm text-[#2C2C2C] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 transition-all font-sans"
