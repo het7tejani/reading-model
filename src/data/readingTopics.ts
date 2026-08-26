@@ -177,14 +177,59 @@ export const READING_TOPICS: ReadingTopic[] = [
 ];
 
 export const getTopicByTitleOrId = (identifier: string | number): ReadingTopic | undefined => {
+  if (typeof window !== 'undefined') {
+    try {
+      const rawCustom = localStorage.getItem('tarot_custom_categories_v1');
+      const rawOverrides = localStorage.getItem('tarot_category_overrides_v1');
+      const customCategories = rawCustom ? JSON.parse(rawCustom) : {};
+      const overrides = rawOverrides ? JSON.parse(rawOverrides) : {};
+
+      if (typeof identifier === 'number') {
+        if (customCategories[identifier]) {
+          return {
+            id: identifier,
+            title: customCategories[identifier].title,
+            headline: customCategories[identifier].headline,
+          };
+        }
+        const builtIn = READING_TOPICS.find((t) => t.id === identifier);
+        if (builtIn) {
+          const over = overrides[identifier];
+          return over
+            ? { id: builtIn.id, title: over.title || builtIn.title, headline: over.headline || builtIn.headline }
+            : builtIn;
+        }
+      }
+
+      const clean = cleanTopicTitle(String(identifier)).toLowerCase();
+      // Check custom
+      const foundCustom = Object.values(customCategories).find((c: any) => {
+        return (
+          c.title?.toLowerCase() === clean ||
+          c.headline?.toLowerCase() === clean ||
+          clean.startsWith(`${c.id}.`) ||
+          c.title?.toLowerCase().includes(clean)
+        );
+      }) as any;
+      if (foundCustom) {
+        return {
+          id: typeof foundCustom.id === 'number' ? foundCustom.id : Number(foundCustom.id) || 100,
+          title: foundCustom.title,
+          headline: foundCustom.headline,
+        };
+      }
+    } catch (e) {}
+  }
+
   if (typeof identifier === 'number') {
-    return READING_TOPICS.find(t => t.id === identifier);
+    return READING_TOPICS.find((t) => t.id === identifier);
   }
   const clean = cleanTopicTitle(identifier).toLowerCase();
-  return READING_TOPICS.find(t => 
-    t.title.toLowerCase() === clean || 
-    t.headline.toLowerCase() === clean ||
-    clean.startsWith(`${t.id}.`) ||
-    t.title.toLowerCase().includes(clean)
+  return READING_TOPICS.find(
+    (t) =>
+      t.title.toLowerCase() === clean ||
+      t.headline.toLowerCase() === clean ||
+      clean.startsWith(`${t.id}.`) ||
+      t.title.toLowerCase().includes(clean)
   );
 };

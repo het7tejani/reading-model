@@ -4,6 +4,7 @@ import { calculateLifePath } from "../utils/numerology.ts";
 import { READING_TOPICS, cleanTopicTitle, getTopicByTitleOrId } from "../data/readingTopics.ts";
 import { getCategorySpecByTopic } from "../data/categoryConfig.ts";
 import { TarotCard } from "../types.ts";
+import { classifyDynamicTopic, calculateDynamicTemporalAnchor, performCrossSystemTriangulation } from "../utils/dynamicTopicRouter.ts";
 
 /**
  * Resolves the Google Gemini API key from explicit user input or environment variables.
@@ -102,7 +103,21 @@ export async function generateReading(payload: ReadingRequestPayload) {
       safeTopicTitle.toLowerCase().includes(t.headline.toLowerCase()) ||
       t.id === Number(topic)
   );
-  const mainHeadline = matchedTopic ? matchedTopic.headline : safeTopicTitle.toUpperCase() || "SACRED TAROT & NUMEROLOGY ORACLE";
+
+  // Run dynamic topic classification & cross-system triangulation
+  const dynamicClassification = classifyDynamicTopic(safeTopicTitle, problem, question);
+  const generatedModuleTitle = dynamicClassification.detected_attributes.generated_module_title;
+  const detectedTone = dynamicClassification.detected_attributes.detected_emotional_tone;
+  const toneGuidance = dynamicClassification.detected_attributes.tone_guidance;
+  const isKnownStandardTopic = Boolean(matchedTopic);
+
+  // Cross-system triangulation & temporal calculations
+  const triangulation = performCrossSystemTriangulation(safeTopicTitle, problem, question, card1.element || 'Water', Number(lpNumber) || 1);
+  const temporalAnchor = calculateDynamicTemporalAnchor(card1, card2, card3);
+
+  const mainHeadline = matchedTopic
+    ? matchedTopic.headline
+    : generatedModuleTitle.toUpperCase() || safeTopicTitle.toUpperCase() || "SACRED TAROT & NUMEROLOGY ORACLE";
 
   // Resolve Category Spec for defaults
   const topicId = matchedTopic?.id || (typeof topic === 'number' ? topic : 1);
@@ -186,6 +201,23 @@ You are an exceptionally gifted, empathetic, intuitive Tarot Reader and Master N
 You are generating a completely personalized, deep, authentic spiritual consultation for ${name}.
 The reading topic chosen is: "${safeTopicTitle}" with Main Headline: "${mainHeadline}".
 
+### HUMAN-WRITTEN & SIMPLE, BEAUTIFUL LANGUAGE (CORE MANDATE) ###
+- Speak like a real, deeply caring, wise human intuitive friend—warm, conversational, articulate, and completely grounded.
+- Avoid academic, robotic, stiff, or convoluted jargon. Use simple, vivid, evocative words that touch the heart and bring immediate relief.
+- Tone Calibration: The querent's emotional state has been detected as **"${detectedTone.toUpperCase()}"**.
+  -> Required Tone Guidance: ${toneGuidance}
+
+### CROSS-SYSTEM TRIANGULATION (CONNECTING CHART TO QUESTION) ###
+- Seamlessly weave together their Life Path number (${lpNumber}), their elemental nature (${card1.element || 'Water'}), and their specific inquiry ("${problem}").
+- Address any natural tension or synergy: "${triangulation.triangulationInsight}"
+- Point out their trap to avoid ("${triangulation.coreFrictionAndGift.potentialTrap}") and their true superpower to unlock ("${triangulation.coreFrictionAndGift.superpowerToUnlock}").
+
+### DYNAMIC TIMEFRAME ANCHOR (CONCRETE TIMELINES) ###
+- Provide clear, grounded energetic timelines instead of vague generalities.
+- Dominant spread timeframe: **${temporalAnchor.primaryTimeframe}** (Speed: ${temporalAnchor.speedOfManifestation}).
+- First Catalyst Window: ${temporalAnchor.catalystWindow} | Culmination Window: ${temporalAnchor.culminationWindow}.
+- Timing Wisdom: ${temporalAnchor.temporalAdvice}
+
 ### ABSOLUTE PROHIBITION OF TEMPLATES & STOCK PHRASES ###
 - You are STRICTLY FORBIDDEN from using pre-defined formulas, fill-in-the-blank sentences, or repetitive opening phrases.
 - Treat this as an authentic, real-time intuitive channeling. Write with natural, varied, fluid, and deeply empathetic language.
@@ -200,7 +232,7 @@ The reading topic chosen is: "${safeTopicTitle}" with Main Headline: "${mainHead
 - Write with rich, resonant, intuitive depth. Avoid overly brief or curt bullet-like responses.
 - For Section 1 (Numerology): Exactly 2 substantial paragraphs (~90-110 words each) exploring the core essence, sovereign gifts, and real-life guidance of Life Path ${lpNumber}.
 - For Section 2 (3-Card Energy Overview): For each of the 3 cards, write EXACTLY 2 substantial, deeply tailored paragraphs (~90-110 words per paragraph, ~180-220 words total per card). Delve into the card's traditional symbolism, elemental nuances, psychological reflection, and actionable wisdom.
-- For Section 3 (Synthesis): Exactly 4 to 5 substantial, deeply insightful paragraphs (~90 to 120 words each).
+- For Section 3 (Synthesis): Exactly 4 to 5 substantial, deeply insightful paragraphs (~90 to 120 words each). Weave in the Cross-System Triangulation and Timeframe Anchor.
 - For Section 4 (Q&A Inquiries): ${isTenQuestions ? "Answer ALL 10 specific inquiries with 200–250 words of rich, intuitive prose per question unpacking the psychological and spiritual layers thoroughly, followed by clear subconscious defense and somatic alignment guidance." : "Answer 5 profound questions with 200–250 words of rich, intuitive prose per question unpacking the psychological, emotional, and spiritual layers thoroughly, followed by clear subconscious defense and somatic alignment guidance."}
 - For Section 5 (Action Steps): Exactly 1 comprehensive, actionable paragraph per step (~90-120 words each).
 - For Section 7 (Soul Inquiries): 3 deep, evocative journaling inquiries, each accompanied by a reflective guiding sub-prompt.
@@ -223,17 +255,17 @@ ${lpMath}
 ## 2. 3-Card Energy Overview
 
 ### Card 1: ${card1.name} (Position: Current Energy)
-**Keywords:** ${card1.keywords?.join(", ") || "Intuition, Awakening, Alignment"}
+* **Keywords:** ${card1.keywords?.join(", ") || "Intuition, Awakening, Alignment"}
 
 [2 substantial, deeply tailored paragraphs (~90-110 words each, ~200 words total) interpreting ${card1.name}'s traditional symbolism, element (${card1.element || "Sacred"}), and how it reflects ${name}'s current emotional climate and energetic field.]
 
 ### Card 2: ${card2.name} (Position: The Blockage)
-**Keywords:** ${card2.keywords?.join(", ") || "Hesitation, Limitation, Tension"}
+* **Keywords:** ${card2.keywords?.join(", ") || "Hesitation, Limitation, Tension"}
 
 [2 substantial, compassionate paragraphs (~90-110 words each, ~200 words total) exploring the root of ${card2.name}'s obstacle with zero judgment and showing how to release the mental loop and emotional resistance.]
 
 ### Card 3: ${card3.name} (Position: Path Forward)
-**Keywords:** ${card3.keywords?.join(", ") || "Clarity, Resolution, Triumph"}
+* **Keywords:** ${card3.keywords?.join(", ") || "Clarity, Resolution, Triumph"}
 
 [2 substantial, empowering paragraphs (~90-110 words each, ~200 words total) illuminating the elevated road ahead with ${card3.name} and providing actionable, uplifting counsel.]
 
@@ -241,11 +273,11 @@ ${lpMath}
 
 ## 3. Synthesis
 [4 to 5 substantial, deeply insightful paragraphs (~90 to 120 words each) exploring the holistic spiritual alchemy of this reading:
-- Paragraph 1: Weave together ${name}'s Life Path ${lpNumber} blueprint, their current age (${age}), and the overarching soul themes in ${safeTopicTitle}.
-- Paragraph 2: Analyze the energetic bridge from ${card1.name} (present state) to ${card2.name} (the core blockage), exploring the underlying emotional and subconscious patterns at play.
-- Paragraph 3: Unpack the specific friction of "${problem}" without judgment, explaining how past conditioning or self-protection mechanisms created this impasse.
-- Paragraph 4: Illuminate the breakthrough and transformation promised by ${card3.name}, charting the exact energetic shift needed to answer "${question}".
-- Paragraph 5: Provide an uplifting, empowering spiritual horizon, cementing self-trust, universal reciprocity, and long-term peace.]
+- Paragraph 1: Weave together ${name}'s Life Path ${lpNumber} blueprint, their ${card1.element || 'Water'} nature, and the overarching themes in ${safeTopicTitle}.
+- Paragraph 2: Address the cross-system triangulation insight: "${triangulation.triangulationInsight}"
+- Paragraph 3: Unpack the specific friction of "${problem}" and the direct answer to "${question}".
+- Paragraph 4: Detail the energetic timeframe: Dominant window of ${temporalAnchor.primaryTimeframe}, first catalyst in ${temporalAnchor.catalystWindow}, and culmination in ${temporalAnchor.culminationWindow}.
+- Paragraph 5: Provide an uplifting, empowering spiritual horizon, cementing self-trust and lasting peace.]
 
 ---
 
@@ -303,6 +335,20 @@ ${
 * **The Botanical:** [Recommend 1-2 herbal allies/botanicals chosen specifically to complement the elemental medicine of the cards drawn, explaining how they soothe or revitalize ${name}.]
 * **The Practice:** **[Name of Practice].** [A 5-10 minute mindfulness or breathwork exercise aligned with this spread.]`;
 
+      const customTopicDirective = !isKnownStandardTopic
+        ? `\n\n### DYNAMIC CUSTOM TOPIC ROUTING & UNIVERSAL BLUEPRINT DIRECTIVE ###
+The user has submitted a custom or specific topic: "${safeTopicTitle}".
+Detected Primary Domain: "${dynamicClassification.detected_attributes.primary_domain}"
+Energy Vector: "${dynamicClassification.detected_attributes.energy_vector}"
+Generated Custom Module Title: "${generatedModuleTitle}"
+
+Because this is a custom topic, you must dynamically integrate this theme into the reading:
+1. Embody an empathetic, expert intuitive tone connecting "${problem}" and "${question}" directly to "${generatedModuleTitle}".
+2. Provide a core alignment diagnostic connecting the 3 tarot cards (${card1.name}, ${card2.name}, ${card3.name}) to this exact inquiry.
+3. Unpack the root cause and hidden friction stopping them from moving forward.
+4. Prescribe a 3-step actionable decision roadmap in the synthesis and action sections.`
+        : "";
+
       const prompt = `Please channel a completely original, personalized, compassionate, and solution-focused reading for this querent:
 - Querent: ${name}
 - Age: ${age} years old
@@ -315,8 +361,8 @@ ${categoryContextStr}
   * Card 1 (Current Energy): ${card1.name} (Arcana: ${card1.arcana || "tarot"}, Element: ${card1.element || "spirit"}, Archetype: ${card1.archetype || "Guide"})
   * Card 2 (The Blockage): ${card2.name} (Arcana: ${card2.arcana || "tarot"}, Element: ${card2.element || "spirit"}, Archetype: ${card2.archetype || "Challenge"})
   * Card 3 (The Path Forward): ${card3.name} (Arcana: ${card3.arcana || "tarot"}, Element: ${card3.element || "spirit"}, Archetype: ${card3.archetype || "Destiny"})
-${isTenQuestions ? `\nCRITICAL INSTRUCTION: This is a 10 Question Deep Dive Reading. You MUST answer ALL 10 questions individually in Section 4 with depth, clarity, and compassion.\n` : ""}
-Write with genuine human empathy, deep wisdom, completely varied sentences, and no stock templates.`;
+${isTenQuestions ? `\nCRITICAL INSTRUCTION: This is a 10 Question Deep Dive Reading. You MUST answer ALL 10 questions individually in Section 4 with depth, clarity, and compassion.\n` : ""}${customTopicDirective}
+Write in the easiest, warmest, most natural human language. Write with genuine human empathy, deep wisdom, completely varied sentences, and no stock templates.`;
 
       let text = "";
       let modelUsed = "gemini-3.7-flash";

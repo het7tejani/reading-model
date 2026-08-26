@@ -1070,6 +1070,59 @@ export const CATEGORY_SPECS: Record<number, CategorySpec> = {
 };
 
 export const getCategorySpecByTopic = (topic: string | number): CategorySpec => {
+  // Check if browser environment has custom categories or overrides saved
+  if (typeof window !== 'undefined') {
+    try {
+      const rawCustom = localStorage.getItem('tarot_custom_categories_v1');
+      const rawOverrides = localStorage.getItem('tarot_category_overrides_v1');
+      const customCategories: Record<number | string, CategorySpec> = rawCustom ? JSON.parse(rawCustom) : {};
+      const categoryOverrides: Record<number, Partial<CategorySpec>> = rawOverrides ? JSON.parse(rawOverrides) : {};
+
+      if (typeof topic === 'number') {
+        if (customCategories[topic]) return customCategories[topic];
+        if (CATEGORY_SPECS[topic]) {
+          return categoryOverrides[topic]
+            ? { ...CATEGORY_SPECS[topic], ...categoryOverrides[topic] }
+            : CATEGORY_SPECS[topic];
+        }
+      }
+
+      const clean = String(topic)
+        .trim()
+        .toLowerCase()
+        .replace(/^topic\s*\d+[:.\s]*/i, '')
+        .replace(/^\d+[\.\)]\s*/, '');
+
+      // Check in custom categories first
+      const foundCustom = Object.values(customCategories).find((spec) => {
+        return (
+          spec.title.toLowerCase().includes(clean) ||
+          clean.includes(spec.title.toLowerCase()) ||
+          spec.headline.toLowerCase().includes(clean) ||
+          clean.includes(spec.headline.toLowerCase())
+        );
+      });
+      if (foundCustom) return foundCustom;
+
+      // Check in built-in categories with overrides
+      const foundBuiltIn = Object.values(CATEGORY_SPECS).find((spec) => {
+        return (
+          spec.title.toLowerCase().includes(clean) ||
+          clean.includes(spec.title.toLowerCase()) ||
+          spec.headline.toLowerCase().includes(clean) ||
+          clean.includes(spec.headline.toLowerCase())
+        );
+      });
+      if (foundBuiltIn) {
+        return categoryOverrides[foundBuiltIn.id]
+          ? { ...foundBuiltIn, ...categoryOverrides[foundBuiltIn.id] }
+          : foundBuiltIn;
+      }
+    } catch (e) {
+      // Fall through to default built-ins if JSON parse failed
+    }
+  }
+
   if (typeof topic === 'number') {
     return CATEGORY_SPECS[topic] || CATEGORY_SPECS[1];
   }

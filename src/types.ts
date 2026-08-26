@@ -39,10 +39,14 @@ export interface CategoryCustomData {
   thirdEyeFocus?: string;
 }
 
+export type ReadingTier = 'standard' | 'detailed' | 'premium';
+
 export interface ReadingInputs {
   name: string;
   age: string;
-  dob: string; // MM/DD/YYYY
+  dob: string; // MM/DD/YYYY (optional - if omitted, numerology is cleanly removed)
+  zodiacSign?: string; // Optional or auto-calculated (Aries, Taurus, etc.)
+  tier?: ReadingTier; // 'standard' (15-18 pages), 'detailed' (25-28 pages), 'premium' (32+ pages)
   problem: string;
   question: string;
   topic: string;
@@ -66,6 +70,8 @@ export interface StoredReading {
     name: string;
     age: string;
     dob: string;
+    zodiacSign?: string;
+    tier?: ReadingTier;
     problem: string;
     question: string;
     topic: string;

@@ -124,13 +124,13 @@ export const ReadingResultView: React.FC<ReadingResultViewProps> = ({
 
         {/* Action Buttons */}
         <div className="flex items-center flex-wrap gap-2">
-          {/* Primary 26-Page PDF Export Button */}
+          {/* Primary Client PDF Export Button */}
           <button
             onClick={() => setIsPdfModalOpen(true)}
             className="flex items-center gap-1.5 px-4 py-1.5 rounded-xs bg-[#BC6C25] hover:bg-[#9B561B] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer"
           >
             <FileText className="w-3.5 h-3.5 text-white" />
-            <span>26-Page PDF Preview & Export</span>
+            <span>PDF Preview & Export ({inputs.tier || 'Detailed'})</span>
           </button>
 
           <button

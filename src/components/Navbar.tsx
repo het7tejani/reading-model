@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, History, FileText, Compass, ChevronDown, Key } from 'lucide-react';
+import { Sparkles, History, FileText, Compass, ChevronDown, Key, Layers } from 'lucide-react';
 import { PRESET_READINGS } from '../data/presets';
 import { ReadingInputs } from '../types';
 
@@ -8,9 +8,11 @@ interface NavbarProps {
   onOpenHistory: () => void;
   onOpenGuide: () => void;
   onOpenApiKeyModal: () => void;
+  onOpenCategories: () => void;
   hasCustomApiKey: boolean;
   hasServerKey?: boolean;
   historyCount: number;
+  activeView?: 'oracle' | 'categories';
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -18,9 +20,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenHistory,
   onOpenGuide,
   onOpenApiKeyModal,
+  onOpenCategories,
   hasCustomApiKey,
   hasServerKey = false,
-  historyCount
+  historyCount,
+  activeView = 'oracle'
 }) => {
   const [showPresetsMenu, setShowPresetsMenu] = useState(false);
   const isAiActive = hasCustomApiKey || hasServerKey;
@@ -45,6 +49,20 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Action Tools */}
         <div className="flex items-center gap-2">
+          {/* Categories & Listings Studio Tab Button */}
+          <button
+            onClick={onOpenCategories}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm border text-xs font-semibold transition-all shadow-xs ${
+              activeView === 'categories'
+                ? 'bg-[#4A3F35] border-[#4A3F35] text-[#FCFAF7]'
+                : 'bg-white border-[#BC6C25]/40 text-[#BC6C25] hover:bg-[#F2EDE8]'
+            }`}
+            title="Add & Customize Listing Categories"
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>Category Studio</span>
+          </button>
+
           {/* Gemini API Key Button */}
           <button
             onClick={onOpenApiKeyModal}
@@ -57,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Key className="w-3.5 h-3.5 text-[#BC6C25]" />
             <span className="hidden sm:inline">
-              {isAiActive ? (hasCustomApiKey ? 'Gemini AI Active' : 'Gemini AI (.env)') : 'Gemini API Key'}
+              {isAiActive ? (hasCustomApiKey ? 'Gemini AI' : 'Gemini (.env)') : 'API Key'}
             </span>
             <span className={`w-1.5 h-1.5 rounded-full ${isAiActive ? 'bg-emerald-500' : 'bg-[#D4A373]'}`} />
           </button>
@@ -69,7 +87,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-white border border-[#E0D7CC] hover:border-[#4A3F35] text-xs font-medium text-[#4A3F35] transition-colors shadow-xs"
             >
               <Compass className="w-3.5 h-3.5 text-[#D4A373]" />
-              <span className="hidden sm:inline">Archetype Presets</span>
+              <span className="hidden sm:inline">Presets</span>
               <ChevronDown className="w-3 h-3 text-[#8C7B6A]" />
             </button>
 

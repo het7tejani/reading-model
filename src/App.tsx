@@ -6,12 +6,15 @@ import { ReadingResultView } from './components/ReadingResultView';
 import { ReadingHistoryModal } from './components/ReadingHistoryModal';
 import { FormattingGuideModal } from './components/FormattingGuideModal';
 import { ApiKeyModal } from './components/ApiKeyModal';
-import { ReadingInputs, StoredReading } from './types';
+import { CategoryManagerPage } from './components/CategoryManagerPage';
+import { ReadingInputs, StoredReading, CategoryCustomData } from './types';
 import { TAROT_DECK } from './data/tarotCards';
 import { PRESET_READINGS } from './data/presets';
 import { calculateLifePath } from './utils/numerology';
 import { generateTarotNumerologyReadingMarkdown } from './utils/fallbackGenerator';
 import { executeReading } from './utils/geminiClient';
+import { getCategorySpecByTopic } from './data/categoryConfig';
+import { getTopicByTitleOrId } from './data/readingTopics';
 import { Sparkles, AlertCircle, Wand2, Key } from 'lucide-react';
 
 const STORAGE_KEY = 'tarot_numerology_readings_history_v1';
@@ -29,6 +32,9 @@ const EMPTY_INPUTS: ReadingInputs = {
 };
 
 export default function App() {
+  // Navigation view
+  const [activeView, setActiveView] = useState<'oracle' | 'categories'>('oracle');
+
   // Start with clean empty fields (no pre-filled dummy data)
   const [inputs, setInputs] = useState<ReadingInputs>(EMPTY_INPUTS);
   const [markdownResult, setMarkdownResult] = useState<string | null>(null);
@@ -244,6 +250,36 @@ export default function App() {
     }
   };
 
+  const handleSelectCategoryForReading = (categoryTitleOrId: string | number) => {
+    const topicObj = getTopicByTitleOrId(categoryTitleOrId);
+    const topicTitle = topicObj?.title || String(categoryTitleOrId);
+    const spec = getCategorySpecByTopic(categoryTitleOrId);
+    const initialCategoryData: CategoryCustomData = { ...(inputs.categoryData || {}) };
+
+    spec.customFields?.forEach((field) => {
+      if (field.type === 'list' && field.defaultItems) {
+        if (!initialCategoryData[field.key as keyof CategoryCustomData]) {
+          (initialCategoryData as any)[field.key] = [...field.defaultItems];
+        }
+      }
+    });
+
+    const isCurrentProblemEmptyOrAuto = !inputs.problem.trim() || inputs.problem.startsWith('Navigating') || inputs.problem.startsWith('Seeking') || inputs.problem.startsWith('Feeling') || inputs.problem.startsWith('Tired') || inputs.problem.startsWith('Sensing') || inputs.problem.startsWith('Unsure') || inputs.problem.startsWith('Caught') || inputs.problem.startsWith('Experiencing') || inputs.problem.startsWith('Anticipating') || inputs.problem.startsWith('Desiring') || inputs.problem.startsWith('Pure');
+    const isCurrentQuestionEmptyOrAuto = !inputs.question.trim() || inputs.question.startsWith('What is the true') || inputs.question.startsWith('What are their') || inputs.question.startsWith('Where is this') || inputs.question.startsWith('Will they') || inputs.question.startsWith('What is the exact') || inputs.question.startsWith('What are the major') || inputs.question.startsWith('What are the 8') || inputs.question.startsWith('What is the highest') || inputs.question.startsWith('What is my true') || inputs.question.startsWith('What does the universe') || inputs.question.startsWith('What is the brutal') || inputs.question.startsWith('What are the 3') || inputs.question.startsWith('Who are my primary') || inputs.question.startsWith('What past life') || inputs.question.startsWith('What or who') || inputs.question.startsWith('What is my pet') || inputs.question.startsWith('Where is my lost') || inputs.question.startsWith('What are the in-depth') || inputs.question.startsWith('What spiritual blockage') || inputs.question.startsWith('What subconscious or energetic') || inputs.question.startsWith('What emotional barrier') || inputs.question.startsWith('What is the karmic') || inputs.question.startsWith('What was the higher') || inputs.question.startsWith('What are the exact words') || inputs.question.startsWith('What is their true') || inputs.question.startsWith('What critical truth') || inputs.question.startsWith('How can I permanently sever') || inputs.question.startsWith('What comprehensive soul') || inputs.question.startsWith('What psychic visions') || inputs.question.startsWith('What is the prophetic') || inputs.question.startsWith('What secret feelings') || inputs.question.startsWith('What is the complete psychic');
+
+    setInputs((prev) => ({
+      ...prev,
+      topic: topicTitle,
+      problem: isCurrentProblemEmptyOrAuto && spec.suggestedProblem ? spec.suggestedProblem : prev.problem,
+      question: isCurrentQuestionEmptyOrAuto && spec.suggestedQuestion ? spec.suggestedQuestion : prev.question,
+      categoryData: initialCategoryData,
+    }));
+
+    setMarkdownResult(null);
+    setActiveView('oracle');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen bg-[#FCFAF7] text-[#2C2C2C] flex flex-col selection:bg-[#E0D7CC] selection:text-[#4A3F35] font-sans">
       {/* Top Navigation */}
@@ -252,9 +288,11 @@ export default function App() {
         onOpenHistory={() => setIsHistoryOpen(true)}
         onOpenGuide={() => setIsGuideOpen(true)}
         onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
+        onOpenCategories={() => setActiveView(activeView === 'categories' ? 'oracle' : 'categories')}
         hasCustomApiKey={Boolean(customApiKey)}
         hasServerKey={serverHasKey}
         historyCount={history.length}
+        activeView={activeView}
       />
 
       {/* Main Container */}
@@ -267,59 +305,67 @@ export default function App() {
           </div>
         )}
 
-        <AnimatePresence mode="wait">
-          {markdownResult ? (
-            <motion.div
-              key="result"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ReadingResultView
-                markdown={markdownResult}
-                inputs={inputs}
-                onEditInputs={() => setMarkdownResult(null)}
-                onSaveReading={handleSaveReading}
-                isSaved={isSaved}
-                source={generationSource}
-                model={generationModel}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="form"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-6"
-            >
-              {/* Hero Banner Header */}
-              <div className="text-center space-y-2.5 max-w-2xl mx-auto py-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F2EDE8] border border-[#E0D7CC] text-[#4A3F35] text-[11px] font-bold uppercase tracking-widest">
-                  <Sparkles className="w-3 h-3 text-[#BC6C25]" />
-                  Sacred Synthesis Engine
+        {activeView === 'categories' ? (
+          <CategoryManagerPage
+            onBackToOracle={() => setActiveView('oracle')}
+            onSelectCategoryForReading={handleSelectCategoryForReading}
+          />
+        ) : (
+          <AnimatePresence mode="wait">
+            {markdownResult ? (
+              <motion.div
+                key="result"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ReadingResultView
+                  markdown={markdownResult}
+                  inputs={inputs}
+                  onEditInputs={() => setMarkdownResult(null)}
+                  onSaveReading={handleSaveReading}
+                  isSaved={isSaved}
+                  source={generationSource}
+                  model={generationModel}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="form"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                {/* Hero Banner Header */}
+                <div className="text-center space-y-2.5 max-w-2xl mx-auto py-2">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F2EDE8] border border-[#E0D7CC] text-[#4A3F35] text-[11px] font-bold uppercase tracking-widest">
+                    <Sparkles className="w-3 h-3 text-[#BC6C25]" />
+                    Sacred Synthesis Engine
+                  </div>
+                  <h1 className="text-3xl md:text-5xl font-serif italic text-[#4A3F35] tracking-tight">
+                    Life Path & 3-Card Oracle
+                  </h1>
+                  <p className="text-sm text-[#8C7B6A] leading-relaxed max-w-xl mx-auto">
+                    Enter querent details, problem context, and tarot spread to generate a complete, expert empathetic reading structured precisely for PDF templates.
+                  </p>
                 </div>
-                <h1 className="text-3xl md:text-5xl font-serif italic text-[#4A3F35] tracking-tight">
-                  Life Path & 3-Card Oracle
-                </h1>
-                <p className="text-sm text-[#8C7B6A] leading-relaxed max-w-xl mx-auto">
-                  Enter querent details, problem context, and tarot spread to generate a complete, expert empathetic reading structured precisely for PDF templates.
-                </p>
-              </div>
 
-              {/* Intake Form */}
-              <QuerentIntakeForm
-                inputs={inputs}
-                onUpdateInputs={handleUpdateInputs}
-                onGenerateReading={handleGenerateReading}
-                onClearForm={handleClearForm}
-                isLoading={isLoading}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+                {/* Intake Form */}
+                <QuerentIntakeForm
+                  inputs={inputs}
+                  onUpdateInputs={handleUpdateInputs}
+                  onGenerateReading={handleGenerateReading}
+                  onClearForm={handleClearForm}
+                  onOpenCategories={() => setActiveView('categories')}
+                  isLoading={isLoading}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
       </main>
 
       {/* Footer */}

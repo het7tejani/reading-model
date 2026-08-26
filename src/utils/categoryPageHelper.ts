@@ -1,11 +1,13 @@
 import { CategorySpec, getCategorySpecByTopic } from '../data/categoryConfig';
-import { ReadingInputs } from '../types';
+import { ReadingInputs, ReadingTier } from '../types';
 
 export interface TopicBlueprintSpec {
-  topicId: number;
+  topicId: number | string;
   title: string;
   totalPages: number;
-  moduleCMode: 'two_pages_per_question' | 'one_page_per_month' | 'three_pages_per_question';
+  tier?: ReadingTier;
+  hasDob?: boolean;
+  moduleCMode: 'two_pages_per_question' | 'one_page_per_month' | 'condensed_single_page' | 'three_pages_per_question';
   questionCount: number;
   moduleCRange: [number, number];
   moduleDRange: [number, number];
@@ -426,14 +428,99 @@ export const TOPIC_MASTER_BLUEPRINTS: Record<number, TopicBlueprintSpec> = {
   },
 };
 
-export const getTopicMasterBlueprint = (topic: string | number): TopicBlueprintSpec => {
+export const getTopicMasterBlueprint = (
+  topic: string | number,
+  tier: ReadingTier = 'detailed',
+  hasDob: boolean = true
+): TopicBlueprintSpec => {
   const spec = getCategorySpecByTopic(topic);
-  return TOPIC_MASTER_BLUEPRINTS[spec.id] || TOPIC_MASTER_BLUEPRINTS[1];
+  const isTwelveMonths = spec.categoryType === 'twelve_months';
+
+  // Standard Tier: 15 to 18 pages
+  if (tier === 'standard') {
+    const totalPages = hasDob ? 17 : 16;
+    return {
+      topicId: spec.id,
+      title: spec.title,
+      totalPages,
+      tier: 'standard',
+      hasDob,
+      moduleCMode: 'condensed_single_page',
+      questionCount: 3,
+      moduleCRange: [hasDob ? 13 : 12, hasDob ? 13 : 12],
+      moduleDRange: [hasDob ? 14 : 13, hasDob ? 15 : 14],
+      moduleERange: [hasDob ? 16 : 15, totalPages],
+      roadmapTitle: `${spec.title} 30-Day Guidance`,
+      actionTitle: `${spec.title} Action Plan`,
+    };
+  }
+
+  // Detailed Tier: 25 to 28 pages
+  if (tier === 'detailed') {
+    const totalPages = hasDob ? 27 : 26;
+    return {
+      topicId: spec.id,
+      title: spec.title,
+      totalPages,
+      tier: 'detailed',
+      hasDob,
+      moduleCMode: 'two_pages_per_question',
+      questionCount: 3,
+      moduleCRange: [hasDob ? 15 : 14, hasDob ? 20 : 19],
+      moduleDRange: [hasDob ? 21 : 20, hasDob ? 23 : 22],
+      moduleERange: [hasDob ? 24 : 23, totalPages],
+      roadmapTitle: `${spec.title} Strategic Roadmap`,
+      actionTitle: `${spec.title} 4-Phase Protocol`,
+    };
+  }
+
+  // Premium Tier: 32+ pages (34 to 40 pages)
+  if (isTwelveMonths) {
+    const totalPages = hasDob ? 40 : 39;
+    return {
+      topicId: spec.id,
+      title: spec.title,
+      totalPages,
+      tier: 'premium',
+      hasDob,
+      moduleCMode: 'one_page_per_month',
+      questionCount: 12,
+      moduleCRange: [hasDob ? 16 : 15, hasDob ? 27 : 26],
+      moduleDRange: [hasDob ? 28 : 27, hasDob ? 32 : 31],
+      moduleERange: [hasDob ? 33 : 32, totalPages],
+      roadmapTitle: 'Quarterly Energetic Roadmap & Milestones',
+      actionTitle: 'Annual Realization & Manifestation Steps',
+    };
+  }
+
+  // Check if topic is a 10-question deep dive or has specific question count
+  const is10Q = spec.id === 32 || (spec.suggestedQuestions && spec.suggestedQuestions.length >= 10);
+  const qCount = is10Q ? 8 : (spec.suggestedQuestions && spec.suggestedQuestions.length >= 6 ? 6 : 5);
+  const totalPages = hasDob ? (is10Q ? 40 : qCount === 6 ? 38 : 34) : (is10Q ? 39 : qCount === 6 ? 37 : 33);
+
+  return {
+    topicId: spec.id,
+    title: spec.title,
+    totalPages,
+    tier: 'premium',
+    hasDob,
+    moduleCMode: 'two_pages_per_question',
+    questionCount: qCount,
+    moduleCRange: [hasDob ? 16 : 15, hasDob ? 15 + qCount * 2 : 14 + qCount * 2],
+    moduleDRange: [hasDob ? 16 + qCount * 2 : 15 + qCount * 2, hasDob ? 19 + qCount * 2 : 18 + qCount * 2],
+    moduleERange: [hasDob ? 20 + qCount * 2 : 19 + qCount * 2, totalPages],
+    roadmapTitle: `${spec.title} Sacred Roadmap & Timelines`,
+    actionTitle: `${spec.title} Multi-Phase Protocol`,
+  };
 };
 
-export const getCategoryPageCount = (categorySpec: CategorySpec): number => {
-  const bp = TOPIC_MASTER_BLUEPRINTS[categorySpec.id];
-  return bp ? bp.totalPages : 34;
+export const getCategoryPageCount = (
+  categorySpec: CategorySpec,
+  tier: ReadingTier = 'detailed',
+  hasDob: boolean = true
+): number => {
+  const bp = getTopicMasterBlueprint(categorySpec.id, tier, hasDob);
+  return bp ? bp.totalPages : (tier === 'standard' ? 17 : tier === 'premium' ? 34 : 27);
 };
 
 // Build high-depth 2-page items for Module C
@@ -444,9 +531,11 @@ export const buildDeepDiveItems = (
   card1Name: string,
   card2Name: string,
   card3Name: string,
-  lpNumber: number
+  lpNumber: number,
+  tier: ReadingTier = 'detailed',
+  hasDob: boolean = true
 ): DeepDiveQuestionItem[] => {
-  const bp = getTopicMasterBlueprint(categorySpec.id);
+  const bp = getTopicMasterBlueprint(categorySpec.id, tier, hasDob);
   const querentName = inputs.name || 'Seeker';
   const personName = inputs.categoryData?.personName || 'the other party';
   const petName = inputs.categoryData?.petName || 'your pet companion';
@@ -599,8 +688,11 @@ export const buildDeepDiveItems = (
     default:
       for (let i = 1; i <= bp.questionCount; i++) {
         const activeCardName = i === 1 ? card1Name : (i === 2 ? card2Name : card3Name);
+        const customQ = categorySpec.suggestedQuestions && categorySpec.suggestedQuestions[i - 1]
+          ? categorySpec.suggestedQuestions[i - 1]
+          : `Inquiry ${i}: Channeled Guidance regarding ${cleanProblem}`;
         baseQuestions.push({
-          q: `Inquiry ${i}: Channeled Guidance regarding ${cleanProblem}`,
+          q: customQ,
           sub: `${categorySpec.title} • Dimension ${i} of ${bp.questionCount}`,
           trans: `The channeled oracle reveals that this phase of your life is activating profound soul mastery and conscious elevation. Reflecting the sacred medicine of ${activeCardName}, you are learning to anchor unshakeable clarity within your own center, refusing to let external doubt, delays, or ambiguity dictate your emotional equilibrium. In navigating "${cleanProblem}", your spiritual guides emphasize that every obstacle you have encountered has served to dismantle outdated illusions and strengthen your sovereign discernment. You are being called to trust the wisdom of your lived experience and step forward with quiet, unwavering authority. As you align your mindset with the vibrational frequency of Life Path ${lpNumber}, you will discover that solutions and opportunities begin to manifest with remarkable synchronicity, clearing the path toward lasting peace, creative fulfillment, and empowered self-expression.`,
           som: `✦ Somatic Key: Take three slow, grounding breaths deep into your lower belly; allow tension to melt into the earth as clarity anchors in your core.`,
