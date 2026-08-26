@@ -1,12 +1,36 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Calendar, Wand2, Sparkles, Search, RotateCcw, Check, Sliders, HelpCircle, Plus, Trash2, Layers, Compass, Star, Moon } from 'lucide-react';
-import { ReadingInputs, ReadingTier, CategoryCustomData } from '../types';
+import {
+  Calendar,
+  Wand2,
+  Sparkles,
+  Search,
+  RotateCcw,
+  Check,
+  Sliders,
+  HelpCircle,
+  Plus,
+  Trash2,
+  Layers,
+  Compass,
+  Star,
+  Moon,
+  FileText,
+  Copy,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  Store,
+  Tag
+} from 'lucide-react';
+import { ReadingInputs, ReadingTier, CategoryCustomData, TarotCard } from '../types';
 import { calculateLifePath } from '../utils/numerology';
 import { TarotCardPicker } from './TarotCardPicker';
-import { ReadingTopic, getTopicByTitleOrId } from '../data/readingTopics';
+import { ReadingTopic, cleanTopicTitle, getTopicByTitleOrId } from '../data/readingTopics';
 import { getCategorySpecByTopic, CategorySpec } from '../data/categoryConfig';
-import { getAllMergedReadingTopics, CATEGORIES_UPDATED_EVENT } from '../utils/categoryStorage';
 import { ZODIAC_PROFILES, getZodiacProfile, getZodiacFromDob } from '../utils/astrology';
+import { parseClientParagraph, autoDrawSacredCards } from '../utils/clientDataParser';
+import { TAROT_DECK } from '../data/tarotCards';
 
 interface QuerentIntakeFormProps {
   inputs: ReadingInputs;
@@ -17,110 +41,135 @@ interface QuerentIntakeFormProps {
   isLoading: boolean;
 }
 
+const SAMPLE_CLIENT_WITH_DOB = `Name - Julianne Thorne, DOB - 04/18/1991, Age - 33, Problem - Feeling unfulfilled in my 10-year corporate legal career and deeply longing to open a holistic wellness retreat, Question - Is this the aligned season to transition, and what hidden obstacles must I overcome?, Shop - Sacred Soul Sanctuary`;
+
+const SAMPLE_CLIENT_NO_DOB = `Name: Marcus Vance, Age: 42, Problem: Facing an intense partnership dispute in my architectural firm where creative control is being compromised, Question: How should I navigate this contract negotiation to protect my integrity and financial peace?, Shop: Vance Mystic Oracle`;
+
 export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
   inputs,
   onUpdateInputs,
   onGenerateReading,
   onClearForm,
   onOpenCategories,
-  isLoading
+  isLoading,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [availableTopics, setAvailableTopics] = useState<ReadingTopic[]>(() => getAllMergedReadingTopics());
+  // State for raw single paragraph text
+  const [paragraphText, setParagraphText] = useState<string>(() => {
+    if (inputs.name || inputs.problem || inputs.question) {
+      const parts = [];
+      if (inputs.name) parts.push(`Name - ${inputs.name}`);
+      if (inputs.dob) parts.push(`DOB - ${inputs.dob}`);
+      if (inputs.age) parts.push(`Age - ${inputs.age}`);
+      if (inputs.problem) parts.push(`Problem - ${inputs.problem}`);
+      if (inputs.question) parts.push(`Question - ${inputs.question}`);
+      return parts.join(', ');
+    }
+    return '';
+  });
 
-  useEffect(() => {
-    const handleUpdate = () => {
-      setAvailableTopics(getAllMergedReadingTopics());
-    };
-    window.addEventListener(CATEGORIES_UPDATED_EVENT, handleUpdate);
-    return () => {
-      window.removeEventListener(CATEGORIES_UPDATED_EVENT, handleUpdate);
-    };
-  }, []);
+  const [showAdvancedFields, setShowAdvancedFields] = useState(false);
 
+  const activeTier: ReadingTier = inputs.tier || 'detailed';
   const hasDob = Boolean(inputs.dob && inputs.dob.trim().length > 3);
 
   const numerology = useMemo(() => {
     return hasDob ? calculateLifePath(inputs.dob) : null;
   }, [inputs.dob, hasDob]);
 
-  const currentTopicObj = useMemo(() => {
-    return getTopicByTitleOrId(inputs.topic);
+  const safeTopic = inputs.topic?.trim() || 'Life Direction & Sacred Breakthrough';
+  const categorySpec: CategorySpec = useMemo(() => {
+    return getCategorySpecByTopic(inputs.topic || 1);
   }, [inputs.topic]);
 
-  const categorySpec: CategorySpec = useMemo(() => {
-    return getCategorySpecByTopic(currentTopicObj?.id || inputs.topic || 1);
-  }, [currentTopicObj, inputs.topic]);
+  // Real-time synchronization when paragraph text changes
+  const handleParagraphChange = (text: string) => {
+    setParagraphText(text);
+    const parsed = parseClientParagraph(text);
 
-  const activeTier: ReadingTier = inputs.tier || 'detailed';
+    const updatePayload: Partial<ReadingInputs> = {};
+    if (parsed.name) updatePayload.name = parsed.name;
+    if (parsed.age) updatePayload.age = parsed.age;
+    
+    // Explicitly update DOB (can be empty string if user removed it)
+    updatePayload.dob = parsed.dob;
 
-  const filteredTopics = useMemo(() => {
-    return availableTopics.filter((topic) => {
-      const q = searchQuery.trim().toLowerCase();
-      if (!q) return true;
-      return (
-        topic.title.toLowerCase().includes(q) ||
-        topic.headline.toLowerCase().includes(q) ||
-        String(topic.id) === q
-      );
-    });
-  }, [availableTopics, searchQuery]);
+    if (parsed.problem) updatePayload.problem = parsed.problem;
+    if (parsed.question) updatePayload.question = parsed.question;
+    if (parsed.topic && !inputs.topic) updatePayload.topic = parsed.topic;
+    if (parsed.shopName) {
+      updatePayload.shopName = parsed.shopName;
+      try {
+        localStorage.setItem('user_tarot_shop_name', parsed.shopName);
+      } catch (e) {}
+    }
 
-  const isBlindReading = categorySpec.categoryType === 'blind_reading';
-
-  const categoryData: CategoryCustomData = useMemo(() => {
-    return inputs.categoryData || {};
-  }, [inputs.categoryData]);
-
-  const handleUpdateCategoryData = (fieldKey: keyof CategoryCustomData, value: any) => {
-    const updated = {
-      ...(inputs.categoryData || {}),
-      [fieldKey]: value,
-    };
-    onUpdateInputs({ categoryData: updated });
-  };
-
-  const handleSelectTopic = (topic: ReadingTopic) => {
-    const spec = getCategorySpecByTopic(topic.id);
-    const initialCategoryData: CategoryCustomData = { ...(inputs.categoryData || {}) };
-
-    // Pre-populate list defaults if not present
-    spec.customFields.forEach((field) => {
-      if (field.type === 'list' && field.defaultItems) {
-        if (!initialCategoryData[field.key as keyof CategoryCustomData]) {
-          (initialCategoryData as any)[field.key] = [...field.defaultItems];
-        }
+    if (parsed.dob) {
+      const detectedZodiac = getZodiacFromDob(parsed.dob);
+      if (detectedZodiac) {
+        updatePayload.zodiacSign = detectedZodiac.name;
       }
-    });
+    }
 
-    const isCurrentProblemEmptyOrAuto = !inputs.problem.trim() || inputs.problem.startsWith('Navigating') || inputs.problem.startsWith('Seeking') || inputs.problem.startsWith('Feeling') || inputs.problem.startsWith('Tired') || inputs.problem.startsWith('Sensing') || inputs.problem.startsWith('Unsure') || inputs.problem.startsWith('Caught') || inputs.problem.startsWith('Experiencing') || inputs.problem.startsWith('Anticipating') || inputs.problem.startsWith('Desiring') || inputs.problem.startsWith('Pure');
-    const isCurrentQuestionEmptyOrAuto = !inputs.question.trim() || inputs.question.startsWith('What is the true') || inputs.question.startsWith('What are their') || inputs.question.startsWith('Where is this') || inputs.question.startsWith('Will they') || inputs.question.startsWith('What is the exact') || inputs.question.startsWith('What are the major') || inputs.question.startsWith('What are the 8') || inputs.question.startsWith('What is the highest') || inputs.question.startsWith('What is my true') || inputs.question.startsWith('What does the universe') || inputs.question.startsWith('What is the brutal') || inputs.question.startsWith('What are the 3') || inputs.question.startsWith('Who are my primary') || inputs.question.startsWith('What past life') || inputs.question.startsWith('What or who') || inputs.question.startsWith('What is my pet') || inputs.question.startsWith('Where is my lost') || inputs.question.startsWith('What are the in-depth') || inputs.question.startsWith('What spiritual blockage') || inputs.question.startsWith('What subconscious or energetic') || inputs.question.startsWith('What emotional barrier') || inputs.question.startsWith('What is the karmic') || inputs.question.startsWith('What was the higher') || inputs.question.startsWith('What are the exact words') || inputs.question.startsWith('What is their true') || inputs.question.startsWith('What critical truth') || inputs.question.startsWith('How can I permanently sever') || inputs.question.startsWith('What comprehensive soul') || inputs.question.startsWith('What psychic visions') || inputs.question.startsWith('What is the prophetic') || inputs.question.startsWith('What secret feelings') || inputs.question.startsWith('What is the complete psychic');
+    onUpdateInputs(updatePayload);
+  };
 
+  const handleUpdateShopName = (newShopName: string) => {
+    onUpdateInputs({ shopName: newShopName });
+    try {
+      localStorage.setItem('user_tarot_shop_name', newShopName);
+    } catch (e) {}
+  };
+
+  const handleApplySample = (sampleText: string, sampleTopic: string) => {
+    setParagraphText(sampleText);
+    const parsed = parseClientParagraph(sampleText);
+    const drawn = autoDrawSacredCards(sampleTopic, parsed.problem);
+    
     onUpdateInputs({
-      topic: topic.title,
-      problem: isCurrentProblemEmptyOrAuto && spec.suggestedProblem ? spec.suggestedProblem : inputs.problem,
-      question: isCurrentQuestionEmptyOrAuto && spec.suggestedQuestion ? spec.suggestedQuestion : inputs.question,
-      categoryData: initialCategoryData,
+      name: parsed.name,
+      dob: parsed.dob,
+      age: parsed.age,
+      problem: parsed.problem,
+      question: parsed.question,
+      topic: sampleTopic,
+      shopName: parsed.shopName || inputs.shopName || 'Sacred Intuitive Studio',
+      cards: drawn,
+      zodiacSign: parsed.dob ? getZodiacFromDob(parsed.dob)?.name || 'Aries' : 'Aries',
     });
   };
 
-  // Auto-detect zodiac from DOB if DOB changes and zodiac is not manually locked
-  const handleDobChange = (newDob: string) => {
-    const detectedZodiac = getZodiacFromDob(newDob);
-    onUpdateInputs({
-      dob: newDob,
-      zodiacSign: detectedZodiac?.name || inputs.zodiacSign || 'Aries',
-    });
+  const handleAutoDrawCards = () => {
+    const drawn = autoDrawSacredCards(inputs.topic || 'Life Purpose', inputs.problem || 'Path Forward');
+    onUpdateInputs({ cards: drawn });
   };
+
+  // Ensure 3 cards are drawn on initial mount and load saved shop name if available
+  useEffect(() => {
+    const updateInit: Partial<ReadingInputs> = {};
+    if (!inputs.cards[0] && !inputs.cards[1] && !inputs.cards[2]) {
+      updateInit.cards = autoDrawSacredCards(inputs.topic || 'General Reading', inputs.problem || '');
+    }
+    if (!inputs.shopName) {
+      try {
+        const savedShop = localStorage.getItem('user_tarot_shop_name');
+        if (savedShop) {
+          updateInit.shopName = savedShop;
+        } else {
+          updateInit.shopName = 'Sacred Intuitive Studio';
+        }
+      } catch (e) {}
+    }
+    if (Object.keys(updateInit).length > 0) {
+      onUpdateInputs(updateInit);
+    }
+  }, []);
+
+  const hasThreeCards = Boolean(inputs.cards[0] && inputs.cards[1] && inputs.cards[2]);
 
   const isFormValid =
     inputs.name.trim() !== '' &&
-    inputs.age.trim() !== '' &&
     inputs.topic.trim() !== '' &&
-    (isBlindReading || (inputs.problem.trim() !== '' && inputs.question.trim() !== '')) &&
-    inputs.cards[0] !== null &&
-    inputs.cards[1] !== null &&
-    inputs.cards[2] !== null;
+    hasThreeCards;
 
   return (
     <form
@@ -132,22 +181,29 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
       }}
       className="space-y-6"
     >
-      {/* Top Action / Reset Bar */}
-      <div className="flex items-center justify-between px-1">
+      {/* Top Action & Status Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-2 text-xs text-[#8C7B6A]">
           <Sparkles className="w-3.5 h-3.5 text-[#BC6C25]" />
-          <span>Professional Tarot Reading Studio · 3-Tier PDF Engine (Standard, Detailed, Premium)</span>
+          <span className="font-medium">
+            Universal Reading Studio · Direct Title & Single-Paragraph Intake · Auto PDF Engine
+          </span>
         </div>
-        {onClearForm && (
-          <button
-            type="button"
-            onClick={onClearForm}
-            className="flex items-center gap-1 text-[11px] font-semibold text-[#8C7B6A] hover:text-[#4A3F35] transition-colors py-1 px-2 rounded-xs hover:bg-[#E0D7CC]/40 cursor-pointer"
-          >
-            <RotateCcw className="w-3 h-3" />
-            Clear All Fields
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {onClearForm && (
+            <button
+              type="button"
+              onClick={() => {
+                setParagraphText('');
+                onClearForm();
+              }}
+              className="flex items-center gap-1 text-[11px] font-semibold text-[#8C7B6A] hover:text-[#4A3F35] transition-colors py-1 px-2.5 rounded-xs hover:bg-[#E0D7CC]/40 cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset All
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 01. PDF Tier Selection */}
@@ -159,15 +215,15 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
             </div>
             <div>
               <h2 className="text-xs uppercase tracking-widest font-bold text-[#4A3F35]">
-                PDF Generation Tier & Page Volume *
+                Select PDF Edition & Page Depth *
               </h2>
               <p className="text-[11px] text-[#8C7B6A] font-medium">
-                Choose the PDF depth and structure (Standard 15-18p, Detailed 25-28p, Premium 32+p)
+                Standard (16-18p), Detailed (26-28p), or Premium Masterclass (34+p)
               </p>
             </div>
           </div>
           <span className="text-[10px] uppercase tracking-widest text-[#BC6C25] font-mono font-bold">
-            3 Tier Options
+            {activeTier.toUpperCase()} EDITION
           </span>
         </div>
 
@@ -189,11 +245,11 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
                   <h3 className="font-serif font-bold text-sm text-[#1F1914]">Standard Edition</h3>
                 </div>
                 <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#E0D7CC]/60 text-[#4A3F35]">
-                  {hasDob ? '17 Pages' : '16 Pages'}
+                  {hasDob ? '17 Pages' : '16 Pages (No DOB)'}
                 </span>
               </div>
               <p className="text-xs text-[#6B5E51] leading-relaxed">
-                Core 3-card spread artwork & deep analysis, unified breakthrough synthesis, 3-inquiry concise Q&A, and practical action plan.
+                Concise high-impact blueprint: 3-card spread artwork & analysis, unified breakthrough synthesis, 3-inquiry Q&A, and practical action plan.
               </p>
             </div>
             <div className="mt-3 pt-2 border-t border-[#E8E1D5] flex items-center justify-between text-[11px] font-medium text-[#8C7B6A]">
@@ -219,7 +275,7 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
                   <h3 className="font-serif font-bold text-sm text-[#1F1914]">Detailed Edition</h3>
                 </div>
                 <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#BC6C25] text-white">
-                  {hasDob ? '27 Pages' : '26 Pages'}
+                  {hasDob ? '27 Pages' : '26 Pages (No DOB)'}
                 </span>
               </div>
               <p className="text-xs text-[#6B5E51] leading-relaxed">
@@ -249,7 +305,7 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
                   <h3 className="font-serif font-bold text-sm text-[#1F1914]">Premium Edition</h3>
                 </div>
                 <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#4A3F35] text-white">
-                  {hasDob ? '34+ Pages' : '33+ Pages'}
+                  {hasDob ? '34+ Pages' : '33+ Pages (No DOB)'}
                 </span>
               </div>
               <p className="text-xs text-[#6B5E51] leading-relaxed">
@@ -264,8 +320,8 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
         </div>
       </div>
 
-      {/* 02. Querent Identity Section */}
-      <div className="p-6 md:p-7 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-5">
+      {/* 02. Title / Topic & Shop Name Input */}
+      <div className="p-6 md:p-7 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-6">
         <div className="flex items-center justify-between pb-3 border-b border-[#E0D7CC]">
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
@@ -273,144 +329,115 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
             </div>
             <div>
               <h2 className="text-xs uppercase tracking-widest font-bold text-[#4A3F35]">
-                Querent Identity & Cosmic Coordinates
+                Reading Title & Shop / Studio Branding *
               </h2>
               <p className="text-[11px] text-[#8C7B6A] font-medium">
-                Name, age, optional DOB (for Life Path calculation) and Zodiac sign
+                Set the inquiry topic and customize your Shop / Brand name for the PDF covers & headers
               </p>
             </div>
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-[#8C7B6A] font-mono hidden sm:inline">
-            Identity
+          <span className="text-[10px] uppercase tracking-widest text-[#BC6C25] font-mono font-bold">
+            PDF Branding & Intelligence
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {/* Name */}
-          <div>
-            <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest mb-1.5">
-              Full Name *
-            </label>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Left: Reading Title / Topic */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] uppercase tracking-wider font-bold text-[#4A3F35] flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#BC6C25]" />
+                Reading Title / Topic (Any Subject or Word) *
+              </label>
+            </div>
             <input
               type="text"
               required
-              placeholder="e.g. Julianne Thorne"
-              value={inputs.name}
-              onChange={(e) => onUpdateInputs({ name: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm text-[#2C2C2C] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 transition-all font-sans"
+              placeholder="e.g. Career Transition, Crypto Investment, Neighbor Dispute, Soulmate Reunion, Divorce, Real Estate..."
+              value={inputs.topic}
+              onChange={(e) => onUpdateInputs({ topic: e.target.value })}
+              className="w-full px-4 py-2.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm font-serif text-[#1F1914] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 transition-all font-semibold"
             />
+            {/* Quick Instant Topic Suggestions */}
+            <div className="flex items-center gap-1 flex-wrap text-xs pt-1">
+              <span className="text-[9px] font-bold text-[#8C7B6A] uppercase tracking-wider mr-1">
+                Topics:
+              </span>
+              {[
+                'Career Transition',
+                'Soulmate Reunion',
+                'Financial Breakthrough',
+                'Crypto & Investments',
+                'Neighbor Dispute',
+                'Legal & Court Clarity',
+                'Health & Vitality',
+                'Life Purpose',
+              ].map((suggested) => (
+                <button
+                  key={suggested}
+                  type="button"
+                  onClick={() => onUpdateInputs({ topic: suggested })}
+                  className={`px-2 py-0.5 rounded-full text-[10px] border transition-all cursor-pointer ${
+                    inputs.topic.toLowerCase() === suggested.toLowerCase()
+                      ? 'bg-[#4A3F35] text-white border-[#4A3F35]'
+                      : 'bg-[#F2EDE8] text-[#4A3F35] border-[#E0D7CC] hover:bg-[#E0D7CC]/60'
+                  }`}
+                >
+                  {suggested}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Age */}
-          <div>
-            <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest mb-1.5">
-              Age *
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. 34"
-              value={inputs.age}
-              onChange={(e) => onUpdateInputs({ age: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm text-[#2C2C2C] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 transition-all font-sans"
-            />
-          </div>
-
-          {/* DOB (Optional) */}
-          <div>
-            <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest mb-1.5 flex items-center justify-between">
-              <span>DOB (Optional)</span>
-              <span className="text-[9px] text-[#BC6C25] font-mono">Numerology</span>
-            </label>
+          {/* Right: Shop / Studio Name Option */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] uppercase tracking-wider font-bold text-[#4A3F35] flex items-center gap-1.5">
+                <Store className="w-3.5 h-3.5 text-[#BC6C25]" />
+                Shop / Studio Name (PDF Front Cover & Headers)
+              </label>
+              <span className="text-[10px] text-[#8C7B6A] font-mono">Auto-saved</span>
+            </div>
             <div className="relative">
               <input
                 type="text"
-                placeholder="MM/DD/YYYY (Optional)"
-                value={inputs.dob}
-                onChange={(e) => handleDobChange(e.target.value)}
-                className="w-full pl-3.5 pr-9 py-2.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm text-[#2C2C2C] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 font-mono transition-all"
+                placeholder="e.g. Sacred Intuitive Studio, Celestial Tarot Co., Golden Feather Oracle..."
+                value={inputs.shopName || ''}
+                onChange={(e) => handleUpdateShopName(e.target.value)}
+                className="w-full px-4 py-2.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm font-serif text-[#1F1914] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 transition-all font-semibold"
               />
-              <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8C7B6A] pointer-events-none" />
             </div>
-            <p className="text-[9px] text-[#8C7B6A] mt-1 italic">
-              Leave blank to remove Numerology page
-            </p>
-          </div>
-
-          {/* Zodiac Sign Selector */}
-          <div>
-            <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest mb-1.5 flex items-center justify-between">
-              <span>Zodiac Sign</span>
-              <span className="text-[9px] text-[#BC6C25] font-mono">Astrology</span>
-            </label>
-            <select
-              value={inputs.zodiacSign || (hasDob ? getZodiacFromDob(inputs.dob)?.name || 'Aries' : 'Aries')}
-              onChange={(e) => onUpdateInputs({ zodiacSign: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm text-[#2C2C2C] focus:outline-none focus:border-[#4A3F35] font-sans"
-            >
-              {Object.keys(ZODIAC_PROFILES).map((signKey) => {
-                const z = ZODIAC_PROFILES[signKey];
-                return (
-                  <option key={signKey} value={signKey}>
-                    {z.symbol} {z.name} ({z.element})
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-
-          {/* Shop / Studio Name */}
-          <div>
-            <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest mb-1.5 flex items-center justify-between">
-              <span>Shop / Studio Name</span>
-              <span className="text-[9px] text-[#BC6C25] font-semibold">PDF Header</span>
-            </label>
-            <input
-              type="text"
-              placeholder="Enter your shop / studio name"
-              value={inputs.shopName || ''}
-              onChange={(e) => onUpdateInputs({ shopName: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm text-[#2C2C2C] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 transition-all font-sans"
-            />
+            {/* Quick Preset Shop Names */}
+            <div className="flex items-center gap-1 flex-wrap text-xs pt-1">
+              <span className="text-[9px] font-bold text-[#8C7B6A] uppercase tracking-wider mr-1">
+                Presets:
+              </span>
+              {[
+                'Sacred Intuitive Studio',
+                'Celestial Tarot Sanctuary',
+                'Golden Path Divination',
+                'Soul Blueprint Oracle',
+                'Solstice Mystic Arts',
+              ].map((shopPreset) => (
+                <button
+                  key={shopPreset}
+                  type="button"
+                  onClick={() => handleUpdateShopName(shopPreset)}
+                  className={`px-2 py-0.5 rounded-full text-[10px] border transition-all cursor-pointer ${
+                    (inputs.shopName || '').toLowerCase() === shopPreset.toLowerCase()
+                      ? 'bg-[#BC6C25] text-white border-[#BC6C25]'
+                      : 'bg-[#FAF7EE] text-[#6B5E51] border-[#E8E1D5] hover:bg-[#F2EDE8]'
+                  }`}
+                >
+                  {shopPreset}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-
-        {/* Live Numerology Life Path Calculation Preview */}
-        {numerology ? (
-          <div className="p-3.5 rounded-xs bg-[#F2EDE8] border border-[#E0D7CC] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full border border-[#4A3F35] bg-white text-[#4A3F35] font-serif italic font-bold flex items-center justify-center text-xs">
-                  {numerology.lifePathNumber}
-                </span>
-                <span className="font-bold text-[#4A3F35] uppercase tracking-wide text-xs">
-                  Life Path {numerology.lifePathNumber}: {numerology.coreEnergyTitle}
-                </span>
-                <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-mono font-bold">
-                  Numerology Page Active
-                </span>
-              </div>
-              <p className="text-[#8C7B6A] font-mono text-[10px]">
-                {numerology.mathBreakdown}
-              </p>
-            </div>
-            <div className="text-[11px] text-[#5C554E] flex items-center gap-1 font-medium">
-              <span>Governing: {numerology.governingPlanet}</span>
-            </div>
-          </div>
-        ) : (
-          <div className="p-3 rounded-xs bg-[#FAF8F3] border border-[#E0D7CC] flex items-center justify-between text-xs text-[#8C7B6A]">
-            <div className="flex items-center gap-2">
-              <Moon className="w-4 h-4 text-[#BC6C25]" />
-              <span>
-                No DOB entered — The PDF will seamlessly bypass the Numerology Calculation page and focus on Tarot & Astrology.
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* 03. Reading Topic (Options: Title & Main Headline in One Block) */}
+      {/* 03. Client Data in Single Paragraph */}
       <div className="p-6 md:p-7 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#E0D7CC] gap-2">
           <div className="flex items-center gap-3">
@@ -419,286 +446,278 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
             </div>
             <div>
               <h2 className="text-xs uppercase tracking-widest font-bold text-[#4A3F35]">
-                Reading Topic & Specialized Modality *
+                Client Data (Single Paragraph or Key-Value) *
               </h2>
               <p className="text-[11px] text-[#8C7B6A] font-medium">
-                Select from 32 distinct categories or use custom topics with tailored modules
+                Paste or write Name, DOB (optional), Age, Problem, Question, and Shop all in one single paragraph
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {onOpenCategories && (
-              <button
-                type="button"
-                onClick={onOpenCategories}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xs bg-[#FAF7EE] hover:bg-[#F2EDE8] border border-[#BC6C25]/40 text-xs font-bold text-[#BC6C25] uppercase tracking-wider transition-colors cursor-pointer"
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Customize / Add Categories</span>
-              </button>
-            )}
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8C7B6A]" />
-              <input
-                type="text"
-                placeholder="Search 32 categories..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-xs text-[#2C2C2C] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35]"
-              />
-            </div>
+            <span className="text-[10px] uppercase tracking-wider text-[#8C7B6A] font-bold">Try Sample:</span>
+            <button
+              type="button"
+              onClick={() => handleApplySample(SAMPLE_CLIENT_WITH_DOB, 'Career Transition & Purpose')}
+              className="px-2 py-1 rounded-xs bg-[#FAF7EE] hover:bg-[#F2EDE8] border border-[#BC6C25]/40 text-[10px] font-bold text-[#BC6C25] uppercase transition-colors cursor-pointer"
+            >
+              With DOB
+            </button>
+            <button
+              type="button"
+              onClick={() => handleApplySample(SAMPLE_CLIENT_NO_DOB, 'Business Partnership Negotiation')}
+              className="px-2 py-1 rounded-xs bg-[#FAF7EE] hover:bg-[#F2EDE8] border border-[#8C7B6A]/40 text-[10px] font-bold text-[#4A3F35] uppercase transition-colors cursor-pointer"
+            >
+              No DOB (Auto-Eliminate Page)
+            </button>
           </div>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 max-h-60 overflow-y-auto pr-1">
-          {filteredTopics.map((topic) => {
-            const isSelected = inputs.topic === topic.title;
-            return (
-              <button
-                key={topic.id}
-                type="button"
-                onClick={() => handleSelectTopic(topic)}
-                className={`p-2.5 text-left rounded-xs border transition-all text-xs flex flex-col justify-between gap-1 cursor-pointer ${
-                  isSelected
-                    ? 'bg-[#4A3F35] text-[#FCFAF7] border-[#4A3F35] shadow-xs'
-                    : 'bg-[#FCFAF7] text-[#2C2C2C] border-[#E0D7CC] hover:bg-[#F2EDE8] hover:border-[#8C7B6A]'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span className={`text-[9px] font-mono ${isSelected ? 'text-[#D4A373]' : 'text-[#8C7B6A]'}`}>
-                    #{topic.id < 10 ? `0${topic.id}` : topic.id}
-                  </span>
-                  {isSelected && <Check className="w-3.5 h-3.5 text-[#D4A373]" />}
-                </div>
-                <div>
-                  <h4 className="font-serif font-bold line-clamp-1">{topic.title}</h4>
-                  <p className={`text-[10px] line-clamp-1 italic ${isSelected ? 'text-[#FCFAF7]/80' : 'text-[#8C7B6A]'}`}>
-                    {topic.headline}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        {/* Textarea for single paragraph */}
+        <div className="space-y-3">
+          <div className="relative">
+            <textarea
+              rows={4}
+              value={paragraphText}
+              onChange={(e) => handleParagraphChange(e.target.value)}
+              placeholder="Paste or write client data in one single paragraph:&#10;Name - Sarah Jenkins, DOB - 14/05/1990, Age - 34, Problem - Feeling stuck in current career, Question - Should I launch my own creative studio?, Shop - Sarah's Tarot Studio&#10;(Note: If you omit DOB, the system automatically eliminates the Numerology page from the PDF!)"
+              className="w-full p-4 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm text-[#2C2C2C] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 font-sans leading-relaxed transition-all"
+            />
+          </div>
 
-        {/* Selected Category Highlight Banner */}
-        <div className="p-3 bg-[#F2EDE8] rounded-xs border border-[#E0D7CC] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-          <div className="space-y-0.5">
-            <span className="text-[10px] font-bold text-[#8C7B6A] uppercase tracking-wider">
-              Active Category & Blueprint:
-            </span>
-            <div className="flex items-center gap-2">
-              <h3 className="font-serif font-bold text-sm text-[#4A3F35]">{categorySpec.title}</h3>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-white font-mono text-[#BC6C25] font-bold border border-[#E0D7CC]">
-                {categorySpec.headline}
+          {/* Real-Time Extraction Status Dashboard */}
+          <div className="p-4 bg-[#F2EDE8] border border-[#E0D7CC] rounded-xs space-y-3">
+            <div className="flex items-center justify-between border-b border-[#E0D7CC] pb-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A3F35] flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#BC6C25]" />
+                Live Extracted Coordinates
               </span>
+              <button
+                type="button"
+                onClick={() => setShowAdvancedFields(!showAdvancedFields)}
+                className="text-[10px] text-[#8C7B6A] hover:text-[#4A3F35] font-semibold underline cursor-pointer"
+              >
+                {showAdvancedFields ? 'Hide Individual Controls' : 'Fine-Tune Individual Fields / Shop Name'}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+              {/* Name badge */}
+              <div className="p-2.5 bg-white rounded-xs border border-[#E0D7CC]">
+                <span className="text-[9px] font-bold text-[#8C7B6A] uppercase tracking-wider block mb-0.5">
+                  Client Name
+                </span>
+                <p className="font-serif font-bold text-sm text-[#1F1914] truncate">
+                  {inputs.name || <span className="text-[#8C7B6A]/60 italic font-sans text-xs">Waiting for name...</span>}
+                </p>
+              </div>
+
+              {/* Age badge */}
+              <div className="p-2.5 bg-white rounded-xs border border-[#E0D7CC]">
+                <span className="text-[9px] font-bold text-[#8C7B6A] uppercase tracking-wider block mb-0.5">
+                  Age
+                </span>
+                <p className="font-sans font-bold text-sm text-[#1F1914]">
+                  {inputs.age ? `${inputs.age} years old` : <span className="text-[#8C7B6A]/60 italic font-normal text-xs">Waiting for age...</span>}
+                </p>
+              </div>
+
+              {/* Shop / Studio Name badge */}
+              <div className="p-2.5 bg-white rounded-xs border border-[#BC6C25]/30 bg-[#FAF7EE]/50">
+                <span className="text-[9px] font-bold text-[#BC6C25] uppercase tracking-wider block mb-0.5 flex items-center gap-1">
+                  <Store className="w-2.5 h-2.5" />
+                  PDF Shop Brand
+                </span>
+                <p className="font-serif font-bold text-xs text-[#4A3F35] truncate" title={inputs.shopName || 'Sacred Intuitive Studio'}>
+                  {inputs.shopName || 'Sacred Intuitive Studio'}
+                </p>
+              </div>
+
+              {/* DOB & Numerology Status (KEY REQUIREMENT: DYNAMIC NUMEROLOGY PAGE ELIMINATION) */}
+              <div className={`p-2.5 rounded-xs border sm:col-span-2 ${
+                hasDob ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900' : 'bg-amber-50/70 border-amber-300 text-amber-900'
+              }`}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[9px] font-bold uppercase tracking-wider">
+                    Date of Birth & Numerology Page
+                  </span>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${
+                    hasDob ? 'bg-emerald-200/80 text-emerald-900' : 'bg-amber-200/80 text-amber-900'
+                  }`}>
+                    {hasDob ? 'PAGE INCLUDED' : 'PAGE ELIMINATED ✂️'}
+                  </span>
+                </div>
+                {hasDob && numerology ? (
+                  <p className="text-xs font-medium">
+                    DOB: <strong>{inputs.dob}</strong> ➔ Life Path <strong>{numerology.lifePathNumber}</strong> ({numerology.coreEnergyTitle})
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-amber-800 leading-tight">
+                    No birthdate provided — The PDF generation engine will <strong>automatically eliminate the Numerology page</strong>, cleanly renumbering all remaining pages.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Extracted Problem & Question preview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
+              <div className="p-2.5 bg-white rounded-xs border border-[#E0D7CC]">
+                <span className="text-[9px] font-bold text-[#8C7B6A] uppercase tracking-wider block mb-0.5">
+                  Extracted Situation / Problem
+                </span>
+                <p className="text-xs text-[#2C2C2C] line-clamp-2 italic">
+                  {inputs.problem || <span className="text-[#8C7B6A]/60 not-italic">None detected (Will auto-synthesize from title)</span>}
+                </p>
+              </div>
+              <div className="p-2.5 bg-white rounded-xs border border-[#E0D7CC]">
+                <span className="text-[9px] font-bold text-[#8C7B6A] uppercase tracking-wider block mb-0.5">
+                  Extracted Question / Inquiry
+                </span>
+                <p className="text-xs text-[#2C2C2C] line-clamp-2 italic">
+                  {inputs.question || <span className="text-[#8C7B6A]/60 not-italic">None detected (Will auto-channel highest inquiry)</span>}
+                </p>
+              </div>
             </div>
           </div>
-          <p className="text-[11px] text-[#5C554E] italic max-w-sm sm:text-right">
-            {categorySpec.description}
-          </p>
         </div>
+
+        {/* Collapsible Fine-Tune Controls */}
+        {showAdvancedFields && (
+          <div className="p-4 bg-[#FAF8F3] border border-[#E0D7CC] rounded-xs space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#4A3F35]">
+              Manual Field Adjustments
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div>
+                <label className="block text-[9px] font-bold text-[#8C7B6A] uppercase mb-1">Full Name</label>
+                <input
+                  type="text"
+                  value={inputs.name}
+                  onChange={(e) => onUpdateInputs({ name: e.target.value })}
+                  className="w-full px-3 py-1.5 bg-white border border-[#E0D7CC] rounded-xs text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] font-bold text-[#8C7B6A] uppercase mb-1">Age</label>
+                <input
+                  type="text"
+                  value={inputs.age}
+                  onChange={(e) => onUpdateInputs({ age: e.target.value })}
+                  className="w-full px-3 py-1.5 bg-white border border-[#E0D7CC] rounded-xs text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] font-bold text-[#8C7B6A] uppercase mb-1">DOB (Leave blank to omit page)</label>
+                <input
+                  type="text"
+                  placeholder="MM/DD/YYYY"
+                  value={inputs.dob}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const detectedZodiac = getZodiacFromDob(val);
+                    onUpdateInputs({
+                      dob: val,
+                      zodiacSign: detectedZodiac?.name || inputs.zodiacSign || 'Aries',
+                    });
+                  }}
+                  className="w-full px-3 py-1.5 bg-white border border-[#E0D7CC] rounded-xs text-xs font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] font-bold text-[#8C7B6A] uppercase mb-1">Zodiac Sign</label>
+                <select
+                  value={inputs.zodiacSign || (hasDob ? getZodiacFromDob(inputs.dob)?.name || 'Aries' : 'Aries')}
+                  onChange={(e) => onUpdateInputs({ zodiacSign: e.target.value })}
+                  className="w-full px-3 py-1.5 bg-white border border-[#E0D7CC] rounded-xs text-xs"
+                >
+                  {Object.keys(ZODIAC_PROFILES).map((signKey) => {
+                    const z = ZODIAC_PROFILES[signKey];
+                    return (
+                      <option key={signKey} value={signKey}>
+                        {z.symbol} {z.name} ({z.element})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[9px] font-bold text-[#8C7B6A] uppercase mb-1">Shop / Studio Name (Header)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Sacred Intuitive Studio"
+                  value={inputs.shopName || ''}
+                  onChange={(e) => onUpdateInputs({ shopName: e.target.value })}
+                  className="w-full px-3 py-1.5 bg-white border border-[#E0D7CC] rounded-xs text-xs"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 04. Querent Problem & Direct Question */}
-      <div className="p-6 md:p-7 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-5">
-        <div className="flex items-center justify-between pb-3 border-b border-[#E0D7CC]">
+      {/* 04. Sacred 3-Card Spread Selection */}
+      <div className="p-6 md:p-7 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#E0D7CC] gap-2">
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
               04
             </div>
             <div>
               <h2 className="text-xs uppercase tracking-widest font-bold text-[#4A3F35]">
-                Querent Situation & Direct Soul Inquiry *
+                Sacred 3-Card Tarot Spread *
               </h2>
               <p className="text-[11px] text-[#8C7B6A] font-medium">
-                The specific crossroads and channeled question
+                Auto-drawn based on topic or manually customize cards
               </p>
             </div>
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-[#8C7B6A] font-mono hidden sm:inline">
-            Intake Inquiry
-          </span>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest mb-1.5 flex items-center justify-between">
-              <span>Specific Problem / Current Situation *</span>
-              {categorySpec.suggestedProblem && (
-                <button
-                  type="button"
-                  onClick={() => onUpdateInputs({ problem: categorySpec.suggestedProblem })}
-                  className="text-[10px] text-[#BC6C25] hover:underline cursor-pointer"
-                >
-                  Insert Default
-                </button>
-              )}
-            </label>
-            <textarea
-              required={!isBlindReading}
-              rows={3}
-              placeholder="e.g. Navigating mixed signals, emotional silence, and wondering if this connection has a mutual future."
-              value={inputs.problem}
-              onChange={(e) => onUpdateInputs({ problem: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm text-[#2C2C2C] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] resize-y font-sans"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest mb-1.5 flex items-center justify-between">
-              <span>Direct Soul Question *</span>
-              {categorySpec.suggestedQuestion && (
-                <button
-                  type="button"
-                  onClick={() => onUpdateInputs({ question: categorySpec.suggestedQuestion })}
-                  className="text-[10px] text-[#BC6C25] hover:underline cursor-pointer"
-                >
-                  Insert Default
-                </button>
-              )}
-            </label>
-            <textarea
-              required={!isBlindReading}
-              rows={3}
-              placeholder="e.g. What is the true trajectory of our emotional connection and what action should I take?"
-              value={inputs.question}
-              onChange={(e) => onUpdateInputs({ question: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm text-[#2C2C2C] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] resize-y font-sans"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Dynamic Category Custom Fields (If Any) */}
-      {categorySpec.customFields && categorySpec.customFields.length > 0 && (
-        <div className="p-6 md:p-7 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-[#E0D7CC]">
-            <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
-                <Sliders className="w-3.5 h-3.5" />
-              </div>
-              <div>
-                <h2 className="text-xs uppercase tracking-widest font-bold text-[#4A3F35]">
-                  {categorySpec.title} Custom Parameters
-                </h2>
-                <p className="text-[11px] text-[#8C7B6A] font-medium">
-                  Tailored inputs specific to {categorySpec.title}
-                </p>
-              </div>
-            </div>
-            <span className="text-[10px] uppercase tracking-widest text-[#BC6C25] font-mono">
-              Custom Modules
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {categorySpec.customFields.map((field) => {
-              if (field.type === 'textarea') {
-                const val = (categoryData[field.key as keyof CategoryCustomData] as string) || '';
-                return (
-                  <div key={field.key}>
-                    <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest mb-1.5 flex items-center justify-between">
-                      <span>{field.label} {field.required ? '*' : ''}</span>
-                      {field.helpText && <span className="text-[10px] text-[#8C7B6A] font-normal italic">{field.helpText}</span>}
-                    </label>
-                    <textarea
-                      required={field.required}
-                      rows={3}
-                      placeholder={field.placeholder}
-                      value={val}
-                      onChange={(e) => handleUpdateCategoryData(field.key as keyof CategoryCustomData, e.target.value)}
-                      className="w-full px-3.5 py-2 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm text-[#2C2C2C] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] resize-y font-sans"
-                    />
-                  </div>
-                );
-              }
-
-              // Text input default
-              const val = (categoryData[field.key as keyof CategoryCustomData] as string) || '';
-              return (
-                <div key={field.key}>
-                  <label className="block text-[10px] font-bold text-[#8C7B6A] uppercase tracking-widest mb-1.5 flex items-center justify-between">
-                    <span>{field.label} {field.required ? '*' : ''}</span>
-                    {field.helpText && <span className="text-[10px] text-[#8C7B6A] font-normal italic">{field.helpText}</span>}
-                  </label>
-                  <input
-                    type="text"
-                    required={field.required}
-                    placeholder={field.placeholder}
-                    value={val}
-                    onChange={(e) => handleUpdateCategoryData(field.key as keyof CategoryCustomData, e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm text-[#2C2C2C] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] font-sans"
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 05. Three-Card Sacred Spread */}
-      <div className="p-6 md:p-7 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-[#E0D7CC]">
-          <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
-              05
-            </div>
-            <div>
-              <h2 className="text-xs uppercase tracking-widest font-bold text-[#4A3F35]">
-                Three-Card Energy Spread *
-              </h2>
-              <p className="text-[11px] text-[#8C7B6A] font-medium">
-                Card 1 (Current Energy) • Card 2 (The Blockage) • Card 3 (Path Forward)
-              </p>
-            </div>
-          </div>
-          <span className="text-[10px] uppercase tracking-widest text-[#8C7B6A] font-mono hidden sm:inline">
-            Oracle Spread
-          </span>
+          <button
+            type="button"
+            onClick={handleAutoDrawCards}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xs bg-[#4A3F35] text-white hover:bg-[#2C241E] text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer shadow-xs"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#D4A373]" />
+            <span>Auto-Draw 3 Cards</span>
+          </button>
         </div>
 
         <TarotCardPicker
           cards={inputs.cards}
-          onUpdateCards={(cards) => onUpdateInputs({ cards })}
+          onUpdateCards={(newCards) => onUpdateInputs({ cards: newCards })}
         />
       </div>
 
-      {/* Generate Reading Action Bar */}
-      <div className="p-5 md:p-6 rounded-sm bg-[#F2EDE8] border border-[#E0D7CC] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h4 className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#D4A373]"></span>
-            {currentTopicObj ? `Ready for "${currentTopicObj.headline}"` : 'Ready for Sacred Oracle Reading'}
-          </h4>
-          <p className="text-xs text-[#5C554E]">
-            Generates a bespoke transmission adapted for {categorySpec.title} in {activeTier.toUpperCase()} edition ({hasDob ? 'with' : 'without'} Numerology).
-          </p>
-        </div>
-
+      {/* Big Action Submit Button */}
+      <div className="pt-2">
         <button
           type="submit"
           disabled={!isFormValid || isLoading}
-          className={`px-7 py-3 rounded-xs font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-sm active:scale-98 cursor-pointer ${
+          className={`w-full py-4.5 px-6 rounded-sm font-serif font-bold text-base uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-md cursor-pointer ${
             isFormValid && !isLoading
-              ? 'bg-[#4A3F35] hover:bg-[#2C2C2C] text-[#FCFAF7] cursor-pointer'
-              : 'bg-[#E0D7CC] text-[#8C7B6A] cursor-not-allowed border border-[#E0D7CC]'
+              ? 'bg-[#1F1914] hover:bg-[#382E26] text-white ring-2 ring-[#BC6C25]/40 hover:ring-[#BC6C25]'
+              : 'bg-[#C4B6A4]/40 text-[#8C7B6A] cursor-not-allowed border border-[#E0D7CC]'
           }`}
         >
           {isLoading ? (
             <>
-              <Wand2 className="w-3.5 h-3.5 animate-spin text-[#FCFAF7]" />
-              Channeling Oracle Reading...
+              <Wand2 className="w-5 h-5 animate-spin text-[#D4A373]" />
+              <span>Channelling Deep Domain Knowledge & Blueprint PDF...</span>
             </>
           ) : (
             <>
-              <Sparkles className="w-3.5 h-3.5 text-[#D4A373]" />
-              Generate Reading
+              <Sparkles className="w-5 h-5 text-[#D4A373]" />
+              <span>Generate Deep Blueprint PDF ({activeTier.toUpperCase()})</span>
+              <ArrowRight className="w-4 h-4 text-[#D4A373]" />
             </>
           )}
         </button>
+
+        {!isFormValid && (
+          <p className="text-center text-xs text-[#8C7B6A] mt-2 italic">
+            Please enter a Title / Topic, Client Name in the paragraph box, and verify the 3 cards to generate.
+          </p>
+        )}
       </div>
     </form>
   );

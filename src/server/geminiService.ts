@@ -64,12 +64,12 @@ export async function testGeminiApiKey(userExplicitKey?: string) {
 
 export interface ReadingRequestPayload {
   name: string;
-  age: number | string;
-  dob: string;
-  problem: string;
-  question: string;
-  topic: string;
-  cards: Array<{
+  age?: number | string;
+  dob?: string;
+  problem?: string;
+  question?: string;
+  topic?: string;
+  cards?: Array<{
     name: string;
     arcana?: string;
     element?: string;
@@ -82,19 +82,30 @@ export interface ReadingRequestPayload {
 
 export async function generateReading(payload: ReadingRequestPayload) {
   const { name, age, dob, problem, question, topic, cards, categoryData, userApiKey } = payload;
-  const safeTopicTitle = cleanTopicTitle(topic);
+  const safeTopicTitle = cleanTopicTitle(topic || "Life Direction & Soul Clarity");
 
-  if (!name || !dob || !cards || cards.length < 3) {
-    throw new Error("Missing required inputs (name, dob, 3 cards)");
+  if (!name || name.trim() === "") {
+    throw new Error("Missing required input: Client Name");
   }
 
-  const card1 = cards[0];
-  const card2 = cards[1];
-  const card3 = cards[2];
+  const rawCards = cards && Array.isArray(cards) && cards.length >= 3 ? cards : [
+    { name: "The Star", arcana: "major", element: "Air", archetype: "Cosmic Healer", keywords: ["Hope", "Healing", "Inspiration", "Renewal"] },
+    { name: "Eight of Swords", arcana: "minor", element: "Air", archetype: "Mindful Guardian", keywords: ["Restriction", "Limitation", "Stuck", "Overthinking"] },
+    { name: "The Sun", arcana: "major", element: "Fire", archetype: "Divine Radiance", keywords: ["Joy", "Vitality", "Radiance", "Clarity"] },
+  ];
 
-  const numerology = calculateLifePath(dob);
-  const lpMath = numerology?.mathBreakdown || "";
-  const lpNumber = numerology?.lifePathNumber || "";
+  const card1 = rawCards[0];
+  const card2 = rawCards[1];
+  const card3 = rawCards[2];
+
+  const hasDob = Boolean(dob && dob.trim().length > 3);
+  const numerology = hasDob ? calculateLifePath(dob!) : null;
+  const lpMath = numerology?.mathBreakdown || "Cosmic Coordinate Alignment";
+  const lpNumber = numerology?.lifePathNumber || 7;
+
+  const effectiveProblem = (problem || "").trim() || `Seeking high-level intuitive clarity, domain insight, and empowered breakthrough regarding ${safeTopicTitle}.`;
+  const effectiveQuestion = (question || "").trim() || `What is the highest truth, hidden blockage, and sovereign path forward for ${safeTopicTitle}?`;
+  const effectiveAge = age || "Adult";
 
   // Match topic object and extract exact main headline
   const matchedTopic = getTopicByTitleOrId(topic) || READING_TOPICS.find(
@@ -203,9 +214,9 @@ The reading topic chosen is: "${safeTopicTitle}" with Main Headline: "${mainHead
 
 ### TOPIC INTELLIGENCE & REAL-WORLD SUBJECT DEPTH (CORE MANDATE) ###
 - Your absolute highest priority is to focus directly on the specific subject matter, real-world context, and domain realities of "${safeTopicTitle}".
-- The querent's current situation is: "${problem}".
-- Their sacred question is: "${question}".
-- DO NOT treat this as a generic template or default to unrelated topics. If the topic is about neighbor disputes, pet adoption, career decisions, family boundaries, financial investments, creative launches, or legal dilemmas, bring rich, realistic domain insights, practical nuance, situational psychology, and actionable wisdom into every section.
+- The querent's current situation is: "${effectiveProblem}".
+- Their sacred question is: "${effectiveQuestion}".
+- DO NOT treat this as a generic template or default to unrelated topics. Even if given only a single word (e.g., "Divorce", "Investment", "Relocation", "Adoption", "Crypto", "Exam", "Burnout", "Promotion", "Neighbor"), deeply research and unpack that exact domain, bringing rich, realistic domain insights, practical nuance, situational psychology, and actionable wisdom into every section.
 - NEVER produce repetitious, generic spiritual filler. Every paragraph must directly engage with the real-world mechanics, emotions, and practical realities of "${safeTopicTitle}".
 
 ### HUMAN-WRITTEN & SIMPLE, BEAUTIFUL LANGUAGE ###
@@ -215,7 +226,7 @@ The reading topic chosen is: "${safeTopicTitle}" with Main Headline: "${mainHead
   -> Required Tone Guidance: ${toneGuidance}
 
 ### CROSS-SYSTEM TRIANGULATION (CONNECTING CHART TO QUESTION) ###
-- Seamlessly weave together their Life Path number (${lpNumber}), their elemental nature (${card1.element || 'Water'}), and their specific inquiry ("${problem}").
+- Seamlessly weave together their energetic archetype (${hasDob ? `Life Path ${lpNumber}` : 'Universal Sovereign Seeker'}), their elemental nature (${card1.element || 'Water'}), and their specific inquiry ("${effectiveProblem}").
 - Address any natural tension or synergy: "${triangulation.triangulationInsight}"
 - Point out their trap to avoid ("${triangulation.coreFrictionAndGift.potentialTrap}") and their true superpower to unlock ("${triangulation.coreFrictionAndGift.superpowerToUnlock}").
 
@@ -228,7 +239,7 @@ The reading topic chosen is: "${safeTopicTitle}" with Main Headline: "${mainHead
 ### ABSOLUTE PROHIBITION OF TEMPLATES & STOCK PHRASES ###
 - You are STRICTLY FORBIDDEN from using pre-defined formulas, fill-in-the-blank sentences, or repetitive opening phrases.
 - Treat this as an authentic, real-time intuitive channeling. Write with natural, varied, fluid, and deeply empathetic language.
-- Every single sentence must be crafted uniquely from scratch based on the querent's actual life situation, their specific questions in ${safeTopicTitle}, their age (${age}), their birthdate (${dob} -> Life Path ${lpNumber}), and the esoteric synergy of the 3 specific Tarot cards drawn.
+- Every single sentence must be crafted uniquely from scratch based on the querent's actual life situation, their specific questions in ${safeTopicTitle}, their age (${effectiveAge}), ${hasDob ? `their birthdate (${dob} -> Life Path ${lpNumber})` : 'their cosmic coordinate alignment'}, and the esoteric synergy of the 3 specific Tarot cards drawn.
 
 ### TRADITIONAL TAROT & ELEMENTAL ACCURACY ###
 - Base all card meanings on authentic traditional Tarot symbolism, elemental dignity (Fire, Water, Air, Earth, Spirit), and archetypal wisdom.
@@ -237,9 +248,9 @@ The reading topic chosen is: "${safeTopicTitle}" with Main Headline: "${mainHead
 
 ### CONTENT DEPTH & PROPORTIONAL HARMONY ###
 - Write with rich, resonant, intuitive depth. Avoid overly brief or curt bullet-like responses.
-- For Section 1 (Numerology): Exactly 2 substantial paragraphs (~90-110 words each) exploring the core essence, sovereign gifts, and real-life guidance of Life Path ${lpNumber} applied directly to ${safeTopicTitle}.
+- For Section 1 (Numerology): Exactly 2 substantial paragraphs (~90-110 words each) exploring the core essence, sovereign gifts, and real-life guidance of ${hasDob ? `Life Path ${lpNumber}` : 'their Core Cosmic Blueprint'} applied directly to ${safeTopicTitle}.
 - For Section 2 (3-Card Energy Overview): For each of the 3 cards, write EXACTLY 2 substantial, deeply tailored paragraphs (~90-110 words per paragraph, ~180-220 words total per card). Delve into the card's traditional symbolism, elemental nuances, psychological reflection, and actionable wisdom regarding ${safeTopicTitle}.
-- For Section 3 (Synthesis): Exactly 4 to 5 substantial, deeply insightful paragraphs (~90 to 120 words each). Weave in the Cross-System Triangulation, Timeframe Anchor, and specific resolution for "${problem}".
+- For Section 3 (Synthesis): Exactly 4 to 5 substantial, deeply insightful paragraphs (~90 to 120 words each). Weave in the Cross-System Triangulation, Timeframe Anchor, and specific resolution for "${effectiveProblem}".
 - For Section 4 (Q&A Inquiries): ${isTenQuestions ? "Answer ALL 10 specific inquiries with 200–250 words of rich, intuitive prose per question unpacking the psychological, practical, and spiritual layers thoroughly, followed by clear subconscious defense and somatic alignment guidance." : "Answer 5 to 6 profound inquiries with 200–250 words of rich, intuitive prose per question unpacking the psychological, practical, and spiritual layers thoroughly, followed by clear subconscious defense and somatic alignment guidance."}
 - For Section 5 (Action Steps): Exactly 1 comprehensive, actionable paragraph per step (~90-120 words each), giving concrete real-world steps tailored to ${safeTopicTitle}.
 - For Section 6 (Mantras): 5 personalized affirmations directly empowering ${name} in ${safeTopicTitle}.
@@ -252,10 +263,10 @@ Output strictly in Markdown with ZERO conversational greetings, introductions, o
 # ${mainHeadline}
 
 ## 1. Numerology (Life Path)
-${lpMath}
+${hasDob ? lpMath : "Cosmic Coordinate & Soul Alignment"}
 
 [2 substantial, original paragraphs (~90-110 words each):
-1. Speak directly to ${name} about what carrying the Life Path ${lpNumber} blueprint means at age ${age}, unpacking their natural gifts, strengths, and spiritual frequency.
+1. Speak directly to ${name} about what carrying their soul blueprint means at age ${effectiveAge}, unpacking their natural gifts, strengths, and spiritual frequency.
 2. Address their current crossroad in "${safeTopicTitle}", validating what they have been carrying emotionally and illuminating their soul's growth and practical mastery.]
 
 ---
@@ -349,11 +360,11 @@ CRITICAL AI RESEARCH & DATA GATHERING REQUIREMENT:
 
       const prompt = `Please channel a completely original, personalized, compassionate, and solution-focused reading for this querent:
 - Querent: ${name}
-- Age: ${age} years old
-- Date of Birth: ${dob} (Life Path ${lpNumber}, calculated via: ${lpMath})
+- Age: ${effectiveAge} years old
+- Date of Birth: ${hasDob ? `${dob} (Life Path ${lpNumber}, calculated via: ${lpMath})` : "Omitted / Universal Coordinate Alignment"}
 - Topic: ${safeTopicTitle}
-- What they are navigating: ${problem}
-- Their sacred question: ${question}
+- What they are navigating: ${effectiveProblem}
+- Their sacred question: ${effectiveQuestion}
 ${categoryContextStr}
 - Tarot Spread:
   * Card 1 (Current Energy): ${card1.name} (Arcana: ${card1.arcana || "tarot"}, Element: ${card1.element || "spirit"}, Archetype: ${card1.archetype || "Guide"})
