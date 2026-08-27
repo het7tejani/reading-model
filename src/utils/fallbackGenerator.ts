@@ -79,23 +79,86 @@ export function generateTarotNumerologyReadingMarkdown(inputs: ReadingInputs): s
   const baseQuestion = question || categorySpec.suggestedQuestion || 'What is the highest wisdom for my path?';
   const cleanQuestion = baseQuestion.trim().replace(/[?\n]+$/, '');
 
-  // Build dynamic Q&A section based on category custom questions if provided or category defaults
-  let customQs = categoryData?.customQuestions;
-  if (!customQs || !Array.isArray(customQs) || customQs.length === 0) {
-    if (categorySpec.suggestedQuestions && categorySpec.suggestedQuestions.length > 0) {
-      customQs = categorySpec.suggestedQuestions;
-    }
-  }
+  const is12MonthTopic =
+    safeTopicTitle.toLowerCase().includes('12 month') ||
+    safeTopicTitle.toLowerCase().includes('year forecast') ||
+    safeTopicTitle.toLowerCase().includes('12-month') ||
+    safeTopicTitle.toLowerCase().includes('annual forecast') ||
+    categorySpec.categoryType === 'twelve_months' ||
+    matchedTopic?.id === 6;
+
+  const isEightPredictions =
+    safeTopicTitle.toLowerCase().includes('8 future') ||
+    safeTopicTitle.toLowerCase().includes('8 prediction') ||
+    safeTopicTitle.toLowerCase().includes('future prediction') ||
+    categorySpec.categoryType === 'eight_predictions' ||
+    matchedTopic?.id === 7;
 
   let qaSectionContent = '';
-  if (customQs && Array.isArray(customQs) && customQs.length > 0) {
-    qaSectionContent = customQs.map((q, idx) => {
-      const cleanQ = q.replace(/^\d+\.\s*/, '').trim();
-      const cardRef = idx % 3 === 0 ? card1.name : (idx % 3 === 1 ? card2.name : card3.name);
-      return `**${cleanQ}**\nChanneled under the vibrational resonance of ${cardRef} and your Life Path ${lpNumber} blueprint, the cosmic cards reveal clear and decisive insight for ${name}. In navigating ${safeTopicTitle} ${catPerson || catPet || catCareer || catItem || catTime || catDream}, your energetic field is undergoing a pivotal calibration. While surface circumstances may have created circular doubt, overthinking, or emotional friction, the underlying spiritual current is urging you to look beyond immediate appearances. When you stop bargaining with ambiguity and honor your internal boundaries, the path forward becomes strikingly clear. You are being invited to release outdated self-protection habits and step into your full sovereign authority. Trust that your nervous system recognizes genuine peace; do not second-guess the quiet clarity in your core. The universe is actively aligning external events to match your elevated frequency of self-respect and authenticity.`;
+
+  if (is12MonthTopic) {
+    const monthThemes = [
+      { name: 'Month 1', title: 'Awakening & Fresh Foundations', sign: 'Aries / Mars', elem: 'Fire', forecast: `Month 1 initiates a powerful energetic reset and spiritual clearing for ${name}. Carried by the vibrant force of ${card1.name} and your Life Path ${lpNumber} sovereignty, you step out of previous confusion or hesitation. This month demands clear boundaries, a conscious break from draining dynamics, and setting fearless intentions for the year ahead. Your vitality awakens as you stop seeking external permission and anchor into self-respect.`, advice: 'Perform an energetic boundary audit. Write down 3 non-negotiable standards for this year and honor them daily.', aff: 'I enter Month 1 with sovereign courage, unshakeable confidence, and clear vision.' },
+      { name: 'Month 2', title: 'Material Realignment & Emotional Grounding', sign: 'Taurus / Venus', elem: 'Earth', forecast: `Month 2 centers on solidifying your practical foundations, financial clarity, and emotional security. The grounding energy of ${card3.name} supports stabilizing your routines and establishing physical harmony. If past doubts regarding "${cleanProblem}" attempt to surface, remember that steady consistency is your greatest superpower. You are building lasting stability that cannot be easily shaken.`, advice: 'Establish a daily grounding ritual each morning. Align your practical spending and time investments with your highest values.', aff: 'I am grounded in physical security, abundance, and unwavering peace.' },
+      { name: 'Month 3', title: 'Crucial Dialogue & Breakthrough Insights', sign: 'Gemini / Mercury', elem: 'Air', forecast: `Month 3 brings decisive communications, social connections, and revelatory conversations. An important exchange or intuitive realization breaks through lingering ambiguity in ${safeTopicTitle}. Reflecting the discernment of ${card1.name}, you speak your authentic truth with grace and composure, dissolving misunderstandings and clearing the path forward.`, advice: 'Express your needs directly without self-censorship or over-explaining. Document new creative inspirations immediately.', aff: 'My communication is clear, authentic, and met with deep respect and reciprocity.' },
+      { name: 'Month 4', title: 'Heart Sanctuary & Deep Emotional Healing', sign: 'Cancer / Moon', elem: 'Water', forecast: `Month 4 opens a sacred portal for profound emotional healing, home sanctuary, and inner-child nurture. The soothing vibration of ${card3.name} envelops your heart, allowing old grief or vulnerability fears from ${card2.name} to dissolve permanently. You feel safe within your own skin, anchoring unconditional self-worth and genuine inner peace.`, advice: 'Create a dedicated evening relaxation sanctuary. Release emotional exhaustion through salt baths or gentle breathwork.', aff: 'My heart is safe, healed, and open to receiving pure, reciprocal love.' },
+      { name: 'Month 5', title: 'Creative Sovereignty & Radiant Self-Expression', sign: 'Leo / Sun', elem: 'Fire', forecast: `Month 5 radiates with magnetic passion, charismatic visibility, and creative expansion. Under the triumphant blessing of ${card3.name}, your natural gifts and talents take center stage. You are noticed and appreciated for your unique brilliance. Step boldly into the spotlight without diminishing your light for anyone.`, advice: 'Take one bold, creative risk that excites your spirit. Celebrate your achievements and share your gifts openly.', aff: 'I shine my radiant light unapologetically and magnetize joyful opportunities.' },
+      { name: 'Month 6', title: 'Refinement, Health & Daily Mastery', sign: 'Virgo / Mercury', elem: 'Earth', forecast: `Month 6 brings meticulous organization, bodily rejuvenation, and aligned productivity. You streamline your daily habits and eliminate unnecessary stress. The medicine of Life Path ${lpNumber} helps you discern between essential priorities and superficial distractions, optimizing your nervous system for long-term endurance.`, advice: 'Declutter your physical workspace and prioritize restorative nutrition and restful sleep cycles.', aff: 'I master my daily energy and create seamless harmony in mind, body, and spirit.' },
+      { name: 'Month 7', title: 'Partnership Reciprocity & Sacred Balance', sign: 'Libra / Venus', elem: 'Air', forecast: `Month 7 highlights harmonious relationships, mutually fulfilling agreements, and balanced partnerships. A significant connection deepens or reaches a peaceful resolution. Guided by ${card1.name}, you attract individuals who mirror your elevated frequency of respect, emotional maturity, and genuine companionship.`, advice: 'Hold high standards for mutual reciprocity. Celebrate partnerships that nourish and uplift your spirit.', aff: 'I attract and cultivate relationships built on mutual reverence, trust, and joy.' },
+      { name: 'Month 8', title: 'Karmic Transformation & Power Reclamation', sign: 'Scorpio / Pluto', elem: 'Water', forecast: `Month 8 serves as a potent alchemy threshold where old disempowering patterns are completely transmuted. You permanently shed outdated attachments or fears highlighted by ${card2.name}. This is a month of deep personal power, psychic intuition, and stepping into your sovereign authority without hesitation.`, advice: 'Consciously forgive past betrayals and reclaim your vital life force. Trust your gut instinct implicitly.', aff: 'I transmute all past limitations into pure personal power and wisdom.' },
+      { name: 'Month 9', title: 'Expanding Horizons & Spiritual Expansion', sign: 'Sagittarius / Jupiter', elem: 'Fire', forecast: `Month 9 expands your worldview, spiritual philosophy, and long-term vision. Synchronicities, auspicious opportunities, and higher guidance guide your steps. You realize how much your consciousness has grown throughout this journey, feeling inspired to explore new intellectual or geographic horizons.`, advice: 'Engage in higher learning, travel, or spiritual study that broadens your perspective.', aff: 'The universe expands my horizons and guides every step of my sacred expansion.' },
+      { name: 'Month 10', title: 'Vocational Triumph & Professional Elevation', sign: 'Capricorn / Saturn', elem: 'Earth', forecast: `Month 10 culminates in tangible career milestones, professional recognition, and leadership authority. The diligent efforts you have invested bear bountiful fruit. Reflecting your Life Path ${lpNumber} mastery, you stand as an unshakeable authority in your chosen field, earning the respect of peers and mentors alike.`, advice: 'Take decisive leadership in your key projects. Own your authority and celebrate your hard-earned mastery.', aff: 'I am an empowered leader achieving tangible success and enduring legacy.' },
+      { name: 'Month 11', title: 'Soul Tribe Connection & Community Impact', sign: 'Aquarius / Uranus', elem: 'Air', forecast: `Month 11 connects you with like-minded souls, visionary collaborators, and inspiring communities. Your unique ideas receive enthusiastic support. You find belonging among those who value your authentic perspective and share your progressive vision for a conscious future.`, advice: 'Collaborate with forward-thinking communities. Share your visionary insights with confidence.', aff: 'I am surrounded by aligned souls who celebrate, inspire, and elevate my journey.' },
+      { name: 'Month 12', title: 'Mastery, Wholeness & Sacred Completion', sign: 'Pisces / Neptune', elem: 'Water', forecast: `Month 12 marks the triumphant completion of this sacred 12-month evolutionary cycle. Under the ultimate blessing of ${card3.name}, you stand in total spiritual wholeness, deep peace, and gratitude. Every challenge faced has been integrated into pure soul wisdom. You step forward into the next chapter as an empowered, fulfilled, and sovereign creator of your reality.`, advice: 'Host a sacred ceremony of gratitude for your 12-month journey. Welcome the next spiral of growth with an open heart.', aff: 'I celebrate my complete transformation, anchored in eternal peace, abundance, and love.' }
+    ];
+
+    qaSectionContent = monthThemes.map((m) => {
+      return `**${m.name}: ${m.title}**
+Astrological Sign: ${m.sign} · Element: ${m.elem}
+${m.forecast}
+
+* Practical Aligned Action: ${m.advice}
+* Affirmation: "${m.aff}"`;
     }).join('\n\n');
+
+  } else if (isEightPredictions) {
+    const predictions = [
+      { num: 1, title: 'Immediate Breakthrough & Shift in Perspective', time: 'Weeks 1–4', cat: 'Sovereign Realization', body: `A sudden, unexpected shift in perspective will shatter the lingering confusion surrounding "${cleanProblem}". Reflecting the clarity of ${card1.name}, you will suddenly recognize what is truly worth your energy and what must be immediately released.` },
+      { num: 2, title: 'Crucial Truth Revealed & Unmasked Intentions', time: 'Month 2', cat: 'Relational Clarity', body: `An important conversation or revelation will bring transparent honesty to the surface. You will receive definitive confirmation regarding the true intentions of those involved, allowing you to establish firm, self-honoring boundaries.` },
+      { num: 3, title: 'Financial & Resource Acceleration', time: 'Months 2–3', cat: 'Material Inflow', body: `A new channel of abundance, unexpected resource, or professional opportunity will materialize, easing previous financial or material tension and validating your persistent dedication.` },
+      { num: 4, title: 'Dissolution of the Karmic Standoff', time: 'Month 4', cat: 'Karmic Release', body: `The repetitive emotional loop or stalemate highlighted by ${card2.name} will reach its natural expiration point. You will no longer feel emotionally hooked or drained by previous triggers.` },
+      { num: 5, title: 'A New Sacred Alliance / Rekindled Devotion', time: 'Months 5–6', cat: 'Reciprocal Union', body: `A deep, heart-aligned connection will step forward, offering genuine emotional safety, consistent effort, and mutual respect that matches your Life Path ${lpNumber} standard.` },
+      { num: 6, title: 'Vocational Expansion & Public Recognition', time: 'Months 7–8', cat: 'Career Elevation', body: `Your skills, creative vision, and leadership will be acknowledged in a visible, rewarding manner. An invitation or promotion will elevate your professional standing significantly.` },
+      { num: 7, title: 'Spiritual Homecoming & Intuitive Mastery', time: 'Months 9–10', cat: 'Spiritual Awakening', body: `Your psychic discernment and bodily intuition will sharpen to an unprecedented level. You will trust your instincts instantly, making decisions with effortless certainty and peace.` },
+      { num: 8, title: 'Triumphant Manifestation & Long-Term Sanctuary', time: 'Months 11–12', cat: 'Sacred Destiny', body: `Under the radiant blessing of ${card3.name}, you will anchor a permanent sanctuary of emotional fulfillment, joy, and stability, standing in the victorious realization of your sacred intentions.` },
+    ];
+
+    qaSectionContent = predictions.map((p) => {
+      return `**Prediction ${p.num}: ${p.title}**
+Timeframe: ${p.time} · Catalyst: ${p.cat}
+${p.body}
+
+* Practical Aligned Action: Stay centered in your Life Path ${lpNumber} sovereignty and take decisive, courageous action when this window opens.
+* Affirmation: "I welcome Prediction ${p.num} with open arms, knowing the universe is orchestrating my highest good."`;
+    }).join('\n\n');
+
   } else {
-    qaSectionContent = `**What is the hidden lesson in my current situation?**
+    // Build dynamic Q&A section based on category custom questions if provided or category defaults
+    let customQs = categoryData?.customQuestions;
+    if (!customQs || !Array.isArray(customQs) || customQs.length === 0) {
+      if (categorySpec.suggestedQuestions && categorySpec.suggestedQuestions.length > 0) {
+        customQs = categorySpec.suggestedQuestions;
+      }
+    }
+
+    if (customQs && Array.isArray(customQs) && customQs.length > 0) {
+      qaSectionContent = customQs.map((q, idx) => {
+        const cleanQ = q.replace(/^\d+\.\s*/, '').trim();
+        const cardRef = idx % 3 === 0 ? card1.name : (idx % 3 === 1 ? card2.name : card3.name);
+        return `**${cleanQ}**\nChanneled under the vibrational resonance of ${cardRef} and your Life Path ${lpNumber} blueprint, the cosmic cards reveal clear and decisive insight for ${name}. In navigating ${safeTopicTitle} ${catPerson || catPet || catCareer || catItem || catTime || catDream}, your energetic field is undergoing a pivotal calibration. While surface circumstances may have created circular doubt, overthinking, or emotional friction, the underlying spiritual current is urging you to look beyond immediate appearances. When you stop bargaining with ambiguity and honor your internal boundaries, the path forward becomes strikingly clear. You are being invited to release outdated self-protection habits and step into your full sovereign authority. Trust that your nervous system recognizes genuine peace; do not second-guess the quiet clarity in your core. The universe is actively aligning external events to match your elevated frequency of self-respect and authenticity.`;
+      }).join('\n\n');
+    } else {
+      qaSectionContent = `**What is the hidden lesson in my current situation?**
 The deeper spiritual lesson illuminated by ${card2.name} is that your emotional peace and spiritual sovereignty cannot remain conditional upon the validation, reactions, or approval of others. This circumstance has served as an essential energetic initiation, teaching you how to anchor unconditional self-worth within your own center rather than seeking permission to stand in your truth. In navigating "${cleanProblem}", you have been confronted with old habits of over-explaining, self-censorship, and tolerating emotional ambiguity. The hidden gift of this friction is the realization that your boundaries are not aggressive walls; they are the sacred architecture that protects your vital life force. By releasing the urge to manage everyone else's comfort, you dismantle decades of subconscious conditioning. You are learning that honoring your inner truth is the highest form of self-reverence, liberating your energy to magnetize authentic, reciprocal opportunities in ${safeTopicTitle}.
 
 **What energy should I embody to attract my desired outcome?**
@@ -109,6 +172,7 @@ Reflecting the intuitive resonance of ${card1.name} and ${card3.name}, the right
 
 **What is the ultimate potential of this journey?**
 The ultimate potential of this sacred journey is stepping into full spiritual, emotional, and vocational sovereignty as a Life Path ${lpNumber}, experiencing profound alignment, deep reciprocal partnerships, flourishing creative vitality, and an unshakeable sense of joy and inner sanctuary across ${safeTopicTitle}. You are not merely resolving a temporary crossroad; you are graduating from a lifelong karmic cycle of self-doubt and emotional sacrifice. By integrating the wisdom of this spread, you establish a permanent foundation of self-trust that will serve as the bedrock for all future blessings, allowing you to live with authentic freedom, deep fulfillment, and lasting peace.`;
+    }
   }
 
   return `# ${mainHeadline}

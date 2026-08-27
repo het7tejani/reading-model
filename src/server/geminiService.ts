@@ -191,7 +191,27 @@ export async function generateReading(payload: ReadingRequestPayload) {
       catData.hiddenTruthFocus.map((t: string, i: number) => `  Truth ${i + 1}: ${t}`).join("\n");
   }
 
-  const isTenQuestions = (catData.customQuestions && catData.customQuestions.length >= 8) || safeTopicTitle.toLowerCase().includes("10 question") || topicId === 32;
+  const is12MonthTopic =
+    safeTopicTitle.toLowerCase().includes("12 month") ||
+    safeTopicTitle.toLowerCase().includes("year forecast") ||
+    safeTopicTitle.toLowerCase().includes("12-month") ||
+    safeTopicTitle.toLowerCase().includes("annual forecast") ||
+    safeTopicTitle.toLowerCase().includes("twelve month") ||
+    topicId === 6;
+
+  const isEightPredictions =
+    safeTopicTitle.toLowerCase().includes("8 future") ||
+    safeTopicTitle.toLowerCase().includes("8 prediction") ||
+    safeTopicTitle.toLowerCase().includes("eight prediction") ||
+    safeTopicTitle.toLowerCase().includes("future prediction") ||
+    topicId === 7;
+
+  const isTenQuestions =
+    (catData.customQuestions && catData.customQuestions.length >= 8) ||
+    safeTopicTitle.toLowerCase().includes("10 question") ||
+    safeTopicTitle.toLowerCase().includes("10 burning") ||
+    safeTopicTitle.toLowerCase().includes("ten question") ||
+    topicId === 32;
 
   const apiKey = getGeminiApiKey(userApiKey);
 
@@ -302,7 +322,30 @@ ${hasDob ? lpMath : "Cosmic Coordinate & Soul Alignment"}
 
 ## 4. Q&A Insights
 ${
-  catData.customQuestions && catData.customQuestions.length > 0 && isKnownStandardTopic
+  is12MonthTopic
+    ? `### 12-MONTH FUTURE PREDICTIONS & MONTH-BY-MONTH ALMANAC ###
+You MUST provide 12 distinct month-by-month breakdowns for the entire year (Month 1 through Month 12).
+For EACH of the 12 months, format exactly as:
+**Month 1: [Theme / Energetic Focus for Month 1]**
+[4-6 rich, detailed sentences (~100-140 words) detailing the specific intuitive predictions, career/financial/relationship developments, timing catalysts, and spiritual evolution for this month.]
+* Aligned Action: [Concrete practical step for this month]
+* Affirmation: [Powerful personalized affirmation for this month]
+
+**Month 2: [Theme / Energetic Focus for Month 2]**
+[4-6 rich, detailed sentences detailing the forecast for Month 2...]
+* Aligned Action: [Practical step]
+* Affirmation: [Affirmation]
+
+(Continue this exact pattern for Month 3, Month 4, Month 5, Month 6, Month 7, Month 8, Month 9, Month 10, Month 11, and Month 12. You MUST output ALL 12 months individually!)`
+    : isEightPredictions
+    ? `### 8 FUTURE PREDICTIONS ###
+You MUST provide 8 distinct, comprehensive future predictions for ${name}.
+For EACH of the 8 predictions, format as:
+**Prediction 1: [Major Catalyst / Life Horizon Title]**
+[4-6 rich, detailed sentences (~100-140 words) detailing this milestone, its timing catalyst, and tangible manifestation.]
+
+(Continue for Prediction 2 through Prediction 8 individually!)`
+    : catData.customQuestions && catData.customQuestions.length > 0 && isKnownStandardTopic
     ? catData.customQuestions.map((q: string) => `**${q.replace(/^\d+\.\s*/, '')}**\n[4-6 rich, compassionate sentences (~100-140 words) providing direct, intuitive clarity, somatic validation, and guidance regarding ${safeTopicTitle}.]\n`).join('\n')
     : `[Generate and answer 5 to 6 bespoke, domain-targeted inquiries specifically tailored to investigate every dimension of "${safeTopicTitle}" and "${problem}".
 For each inquiry, provide:

@@ -30,7 +30,13 @@ import {
   UniversalDynamicPage1,
   UniversalDynamicPage2,
   UniversalDynamicPage3,
+  MasterExtendedShadowWorkPage,
+  MasterRelationalSigilPage,
+  MasterLunarRomancePage,
+  MasterEsotericGlossaryPage,
+  FiveCardAltarSpreadPage,
 } from './MasterSectionPages';
+import { getCategoryTOCDef } from '../data/categoryTOCRegistry';
 
 interface PdfPagesRendererProps {
   inputs: ReadingInputs;
@@ -196,9 +202,35 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     color: 'from-purple-400 to-pink-600',
   };
 
+  const card4: TarotCard = (inputs.cards as any)[3] || {
+    id: 'card4',
+    name: 'The Moon',
+    keywords: ['intuition', 'unconscious', 'veiled truth', 'subconscious', 'illusions'],
+    element: 'Water',
+    symbol: '🌙',
+    arcana: 'major',
+    archetype: 'The Veiled Mirror',
+    affirmation: 'I look beyond illusions to perceive the unspoken truth of the heart.',
+    color: 'from-blue-500 to-indigo-700',
+  };
+
+  const card5: TarotCard = (inputs.cards as any)[4] || {
+    id: 'card5',
+    name: 'The Lovers',
+    keywords: ['union', 'reciprocity', 'soulmate bond', 'harmony', 'vulnerability'],
+    element: 'Air',
+    symbol: '💖',
+    arcana: 'major',
+    archetype: 'The Divine Union',
+    affirmation: 'I open my heart to authentic, reciprocal, and elevated soul connection.',
+    color: 'from-rose-400 to-amber-600',
+  };
+
   const card1Img = getTarotCardImageUrl(card1.name);
   const card2Img = getTarotCardImageUrl(card2.name);
   const card3Img = getTarotCardImageUrl(card3.name);
+  const card4Img = getTarotCardImageUrl(card4.name);
+  const card5Img = getTarotCardImageUrl(card5.name);
 
   const querentName = inputs.name || 'Seeker';
   const topicUpper = safeTopic.toUpperCase();
@@ -209,7 +241,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     `As a Life Path ${calculatedLpNumber}, you channel the vibrational frequency of ${lpArchetypeObj.coreEnergyTitle}, guided by the planetary influence of ${lpArchetypeObj.governingPlanet}. ${lpArchetypeObj.description} At age ${inputs.age || 'this stage of your journey'}, your spirit is being summoned to honor your innate gifts of adaptability, intuitive insight, and authentic self-expression.`;
   const numAppText =
     parsed.numerology.applicationParagraph ||
-    `In relation to "${cleanProblem}" within ${safeTopic}, your Life Path ${calculatedLpNumber} blueprint calls you to recognize that feeling confined, stagnant, or restricted is a sacred signal that your energetic frequency is expanding. By standing sovereign in your truth as ${lpArchetypeObj.archetype}, you dismantle past limitations and invite expansive growth, freedom, and deep clarity into your reality.`;
+    `In relation to your core inquiry regarding "${cleanProblem}", your Life Path ${calculatedLpNumber} blueprint calls you to recognize that feeling confined, stagnant, or restricted is a sacred signal that your energetic frequency is expanding. By standing sovereign in your truth as ${lpArchetypeObj.archetype}, you dismantle past limitations and invite expansive growth, freedom, and deep clarity into your reality.`;
 
   const card1P1 = parsed.cards.card1.paragraphs[0] || 'The Two of Cups embodies reciprocal flow and authentic emotional connection.';
   const card1P2 = parsed.cards.card1.paragraphs[1] || 'In your current energy, this reflects a pivotal moment for harmony and mutual understanding.';
@@ -232,13 +264,21 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
   const card3Symbolism = `Radiating the transformative celestial frequency of ${card3.element || 'Air/Fire'} and ${card3.arcana || 'Major'} Arcana illumination, ${card3.name} is an archetypal beacon of renewed hope, divine protection, and synchronicity. It signals that universal forces are aligning to meet your highest standards.`;
   const card3Direct = card3P2 || 'Step boldly forward into this expansive new chapter. Anchor your decisions in joyful optimism, trusting that your sovereign path leads directly to lasting fulfillment.';
 
+  const card4Core = `In the position of The Blind Spot / What You Are Missing, ${card4.name} pulls back the veil on hidden emotional undercurrents. It asks you to look past surface behaviors and acknowledge the subtle, unexpressed needs that have remained unspoken.`;
+  const card4Symbolism = `Operating under the deep, intuitive current of ${card4.element || 'Water'}, ${card4.name} illuminates the subconscious mirror between partners—showing that what triggers emotional discomfort is often a call to heal an unmet childhood need for unconditional safety.`;
+  const card4Direct = 'Trust your intuitive gut over analytical second-guessing. What you sense beneath the words spoken is accurate; honor your emotional discernment without requiring external validation.';
+
+  const card5Core = `Anchoring the Immediate Path Forward & Healing Catalyst, ${card5.name} marks a profound spiritual turning point toward conscious union, emotional reciprocity, and joyful clarity.`;
+  const card5Symbolism = `Radiating the elevated frequency of ${card5.element || 'Air/Fire'}, ${card5.name} synthesizes personal boundaries with deep vulnerability, proving that true intimacy only flourishes when both individuals stand in mutual reverence and emotional sovereignty.`;
+  const card5Direct = 'Open your heart to genuine, reciprocal love. Take the bold step of expressing your true desires without fear of rejection, and watch the energetic dynamic elevate instantly.';
+
   // Synthesis splitting
   const synPars =
     parsed.synthesisParagraphs.length > 0
       ? parsed.synthesisParagraphs
       : [
           `Your Oracle reading weaves a transformative spiritual bridge between your inner vibrational frequency and the dynamic evolutionary passage from ${card1.name}, through ${card2.name}, into the triumphant blessing of ${card3.name}. At this pivotal moment in your journey, you stand at a sacred crossroads where old coping mechanisms are ready to be lovingly dissolved. Your soul is asking you to stop compromising your well-being for temporary comfort, inviting you instead to anchor your life in authentic sovereignty and conscious peace.`,
-          `Your core issue—"${cleanProblem}" within ${safeTopic}—has served as a potent initiation for your boundaries and self-worth. While this circumstance has caused genuine emotional weight and restless reflection, it has simultaneously illuminated what is sacred and non-negotiable for your spirit. The foundational awareness embodied by ${card1.name} proves that you are no longer blind to what requires realignment; your intuition has already sounded the call for renewal and clarity.`,
+          `Your core issue—"${cleanProblem}"—has served as a potent initiation for your boundaries and self-worth. While this circumstance has caused genuine emotional weight and restless reflection, it has simultaneously illuminated what is sacred and non-negotiable for your spirit. The foundational awareness embodied by ${card1.name} proves that you are no longer blind to what requires realignment; your intuition has already sounded the call for renewal and clarity.`,
           `The blockage highlighted by ${card2.name} is not an insurmountable barrier, but an invitation to dismantle mental constructs rooted in fear of judgment or rejection. By recognizing that past disappointments do not hold authority over your future, you reclaim command of your vibrational frequency. When you refuse to negotiate with ambiguity, the path forward clears instantly.`,
           `Moving decisively into the medicine of ${card3.name}, you enter a season of elevated synchronicity and profound emotional freedom. The universe is aligning tangible blessings that honor your loyalty, perseverance, and elevated standards. Trust the unfolding of this passage, for your highest destiny is meeting you at the exact altitude of your self-respect.`,
         ];
@@ -247,10 +287,22 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
   const synthesisPart2 = [synPars[2] || synPars[0], synPars[3] || synPars[1] || synPars[0]].filter(Boolean);
 
   // Module C items based on tier
-  const is12MonthTopic = blueprint.moduleCMode === 'one_page_per_month';
+  const is12MonthTopic =
+    blueprint.moduleCMode === 'one_page_per_month' ||
+    safeTopic.toLowerCase().includes('12 month') ||
+    safeTopic.toLowerCase().includes('year forecast') ||
+    (parsed.monthlyForecasts && parsed.monthlyForecasts.length >= 6);
+
   const twelveMonthItems = is12MonthTopic
-    ? buildTwelveMonthItems(card1.name, card2.name, card3.name, calculatedLpNumber)
+    ? (parsed.monthlyForecasts && parsed.monthlyForecasts.length >= 12
+        ? parsed.monthlyForecasts
+        : parsed.monthlyForecasts && parsed.monthlyForecasts.length > 0
+        ? parsed.monthlyForecasts.concat(
+            buildTwelveMonthItems(card1.name, card2.name, card3.name, calculatedLpNumber).slice(parsed.monthlyForecasts.length)
+          )
+        : buildTwelveMonthItems(card1.name, card2.name, card3.name, calculatedLpNumber))
     : [];
+
   const deepDiveItems = !is12MonthTopic
     ? buildDeepDiveItems(categorySpec, inputs, parsed.qaInsights, card1.name, card2.name, card3.name, calculatedLpNumber, activeTier, hasDob)
     : [];
@@ -700,7 +752,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                 ✦ Core Celestial Essence & Soul Gifts
               </h2>
               <p className="text-[10pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
-                As an archetype of {zodiacProfile.name} ({zodiacProfile.element} element), your energetic field operates with intrinsic qualities of {zodiacProfile.essence.toLowerCase()} When applied to {safeTopic}, your celestial frequency gives you the instinctual capability to cut through illusion and claim sovereign stability.
+                As an archetype of {zodiacProfile.name} ({zodiacProfile.element} element), your energetic field operates with intrinsic qualities of {zodiacProfile.essence.toLowerCase()} When navigating this chapter, your celestial frequency gives you the instinctual capability to cut through illusion and claim sovereign stability.
               </p>
             </div>
 
@@ -1317,10 +1369,9 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
   // =========================================================================
   // MODULE C: INTERACTIVE Q&A / SPECIALIZED BREAKDOWNS
   // =========================================================================
-  if (is12MonthTopic && activeTier === 'premium') {
+  if (is12MonthTopic) {
+    // 12-Month Annual Forecast: ALWAYS render 12 individual dedicated pages (1 page per month)
     twelveMonthItems.forEach((monthItem, mIdx) => {
-      if (!monthItem.forecast || monthItem.forecast.trim().length < 15) return;
-
       pages.push({
         key: `month-${mIdx + 1}`,
         headerTitle: `12-MONTH FORECAST • ${monthItem.monthName.toUpperCase()}`,
@@ -1358,71 +1409,71 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
 
             <div className="text-center border-t border-[#E8E1D5] pt-2">
               <p className="text-[9.5pt] font-serif italic text-[#1F1914]">
-                &ldquo;{monthItem.affirmation}&rdquo;
+                &ldquo;{monthItem.affirmation.replace(/&ldquo;|&rdquo;/g, '"').replace(/^"/, '').replace(/"$/, '')}&rdquo;
               </p>
             </div>
           </div>
         ),
       });
     });
-  } else if (activeTier === 'standard') {
-    // Condensed High-Impact Q&A Page for Standard Tier
-    pages.push({
-      key: 'standard-qa-condensed',
-      headerTitle: 'CHANNELED INQUIRIES & ORACLE INSIGHTS',
-      render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Channeled Oracle Answers
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              Key Insights & Sovereign Direction
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif italic text-[#4A3F35]">
-              Direct intuitive responses to your core inquiry points
-            </p>
-          </div>
+  } else if (blueprint.moduleCMode === 'one_page_per_month') {
+    // 1 Dedicated Page per Question / Prediction for single-page mode
+    const questionsToRender = deepDiveItems.slice(0, blueprint.questionCount);
 
-          <div className="space-y-4 my-auto max-w-2xl mx-auto w-full">
-            {deepDiveItems.slice(0, 3).map((item, qIdx) => (
-              <div key={qIdx} className="space-y-1 border-b border-[#E8E1D5] pb-3 last:border-b-0">
-                <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-[#4A3F35] text-white text-[9px] font-sans font-bold flex items-center justify-center">
-                    {qIdx + 1}
-                  </span>
-                  <h3 className="font-serif font-bold text-[11.5pt] text-[#1F1914]">
-                    {item.question}
-                  </h3>
-                </div>
-                <p className="text-[9.5pt] leading-[1.55] text-[#1F1914] text-justify font-serif pl-7">
+    questionsToRender.forEach((item) => {
+      pages.push({
+        key: `deep-dive-${item.questionNumber}-single`,
+        headerTitle: `SACRED INQUIRY ${item.questionNumber} · ORACLE TRANSMISSION`,
+        render: () => (
+          <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
+            <div className="text-center space-y-1.5 pt-2">
+              <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
+                {item.subTitle}
+              </span>
+              <h1 className="text-[19pt] font-serif font-bold leading-snug text-[#1F1914]">
+                {item.question}
+              </h1>
+              <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+            </div>
+
+            <div className="space-y-[16px] my-auto max-w-2xl mx-auto w-full">
+              <div className="space-y-1">
+                <span className="text-[7.5pt] uppercase tracking-[0.25em] font-sans font-bold text-[#6B5E51] block">
+                  ✦ Primary Oracle Insight:
+                </span>
+                <p className="text-[9.5pt] leading-[1.55] text-[#1F1914] text-justify font-serif">
                   {item.oracleTransmission.split('\n\n')[0] || item.oracleTransmission}
                 </p>
-                <p className="text-[8.5pt] font-serif italic text-[#6B5E51] pl-7">
-                  ✦ {item.somaticKey}
+              </div>
+
+              <div className="space-y-1 pt-2 border-t border-[#E8E1D5]">
+                <span className="text-[7.5pt] uppercase tracking-[0.25em] font-sans font-bold text-[#6B5E51] block">
+                  ✦ Sovereign Realignment & Action:
+                </span>
+                <p className="text-[9.5pt] leading-[1.55] text-[#1F1914] text-justify font-serif">
+                  {item.sovereignRealignment}
                 </p>
               </div>
-            ))}
-          </div>
+            </div>
 
-          <div className="text-center border-t border-[#E8E1D5] pt-2">
-            <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-              ✦ Clarity is the antidote to hesitation; trust your inner knowing ✦
-            </p>
+            <div className="text-center border-t border-[#E8E1D5] pt-2">
+              <p className="text-[9pt] italic text-[#4A3F35] font-serif">
+                {item.somaticKey}
+              </p>
+            </div>
           </div>
-        </div>
-      ),
+        ),
+      });
     });
   } else {
-    // Detailed (3 questions × 2 pages) or Premium (5-8 questions × 2 pages)
+    // Detailed (3-5 questions × 2 pages) or Premium (5-10 questions × 2 pages)
     const questionsToRender = deepDiveItems.slice(0, blueprint.questionCount);
 
     questionsToRender.forEach((item) => {
       // Part 1: Channeled Oracle Transmission
       pages.push({
         key: `deep-dive-${item.questionNumber}-part1`,
-        headerTitle: `${blueprint.title.toUpperCase()} · INQUIRY ${item.questionNumber} (PART I)`,
+        headerTitle: `SACRED INQUIRY ${item.questionNumber} · ORACLE TRANSMISSION`,
         render: () => (
           <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between items-center z-10 text-center font-serif">
             <div className="space-y-1.5 max-w-xl pt-2">
@@ -1458,7 +1509,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
       // Part 2: Subconscious Architecture & Realignment
       pages.push({
         key: `deep-dive-${item.questionNumber}-part2`,
-        headerTitle: `${blueprint.title.toUpperCase()} · INQUIRY ${item.questionNumber} (PART II)`,
+        headerTitle: `SACRED INQUIRY ${item.questionNumber} · REALIZATION & ACTION`,
         render: () => (
           <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
             <div className="text-center space-y-1.5 pt-2">
@@ -2387,7 +2438,29 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     ),
   });
 
-  const dynamicTotalPages = pages.length;
+  // Filter out any explicitly excluded sections from user structurizer
+  const filteredPages = pages.filter((pageDef) => {
+    if (inputs.excludedSections && inputs.excludedSections.length > 0) {
+      if (inputs.excludedSections.includes(pageDef.key)) {
+        return false;
+      }
+      if (inputs.excludedSections.includes('numerology-core') && pageDef.key === 'numerology-core') return false;
+      if (inputs.excludedSections.includes('personal-year') && pageDef.key === 'personal-year') return false;
+      if (inputs.excludedSections.includes('elemental-balance') && pageDef.key === 'elemental-balance') return false;
+      if (inputs.excludedSections.includes('chakra-matrix') && pageDef.key === 'chakra-matrix-alignment') return false;
+      if (inputs.excludedSections.includes('vedic-upayas') && pageDef.key === 'vedic-esoteric-remedies') return false;
+      if (inputs.excludedSections.includes('defense-breakdown') && pageDef.key === 'extended-shadow-work') return false;
+      if (inputs.excludedSections.includes('specialized-mask-whisper') && pageDef.key === 'specialized-blueprint') return false;
+      if (inputs.excludedSections.includes('career-wealth-matrix') && pageDef.key === 'career-wealth-master-blueprint') return false;
+      if (inputs.excludedSections.includes('lunar-timing') && pageDef.key === 'lunar-romance') return false;
+      if (inputs.excludedSections.includes('deep-dive-1') && pageDef.key.startsWith('deep-dive-1')) return false;
+      if (inputs.excludedSections.includes('deep-dive-2') && pageDef.key.startsWith('deep-dive-2')) return false;
+      if (inputs.excludedSections.includes('deep-dive-3') && pageDef.key.startsWith('deep-dive-3')) return false;
+    }
+    return true;
+  });
+
+  const dynamicTotalPages = filteredPages.length;
 
   useEffect(() => {
     if (onTotalPagesCalculated) {
@@ -2397,7 +2470,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
 
   return (
     <div className="pdf-renderer flex flex-col items-center gap-10 select-none">
-      {pages.map((pageDef, index) => {
+      {filteredPages.map((pageDef, index) => {
         const pageNum = index + 1;
         return (
           <div

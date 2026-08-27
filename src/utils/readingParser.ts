@@ -1,3 +1,14 @@
+export interface MonthForecastParsedItem {
+  monthNumber: number;
+  monthName: string;
+  title: string;
+  astrologicalSign: string;
+  element: string;
+  forecast: string;
+  practicalAdvice: string;
+  affirmation: string;
+}
+
 export interface ParsedReadingData {
   mainHeadline: string;
   numerology: {
@@ -24,6 +35,7 @@ export interface ParsedReadingData {
   };
   synthesisParagraphs: string[];
   qaInsights: { question: string; answer: string }[];
+  monthlyForecasts?: MonthForecastParsedItem[];
   actionSteps: string[];
   mantras: string[];
   soulInquiries: string[];
@@ -157,10 +169,47 @@ export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): 
     .map(p => p.trim())
     .filter(p => p && !p.startsWith('#') && p.length > 30);
 
-  // 4. Q&A Insights / Category Questions
-  const qaRaw = findSection('q&a') || findSection('insights') || findSection('questions') || findSection('predictions') || findSection('forecast') || '';
+  // 4. Q&A Insights / Category Questions / Monthly Forecasts
+  const qaRaw = findSection('q&a') || findSection('insights') || findSection('questions') || findSection('predictions') || findSection('forecast') || findSection('monthly') || '';
   const qaParagraphs = qaRaw.split(/\n\n+/).filter(p => p.trim());
   const qaInsights: { question: string; answer: string }[] = [];
+  const monthlyForecasts: MonthForecastParsedItem[] = [];
+
+  // Parse Month-by-Month sections if present (e.g. Month 1: ..., ### Month 1, **Month 1:**)
+  const monthRegex = /(?:###|\*\*|##)?\s*(?:Month\s*(\d+)|Quarter\s*(\d+))\s*[:\-–—]\s*([^*\n]+?)(?:\*\*)?(?:\n|$)([\s\S]*?)(?=(?:(?:###|\*\*|##)?\s*(?:Month\s*\d+|Quarter\s*\d+)\s*[:\-–—])|$)/gi;
+  let monthMatch: RegExpExecArray | null;
+  const monthSearchText = qaRaw || markdown;
+  
+  while ((monthMatch = monthRegex.exec(monthSearchText)) !== null) {
+    const mNum = parseInt(monthMatch[1] || monthMatch[2], 10);
+    const mTitle = cleanHeadingText(monthMatch[3] || `Theme for Month ${mNum}`, `Month ${mNum} Alignment`);
+    const mBody = (monthMatch[4] || '').trim();
+
+    if (mNum >= 1 && mNum <= 12 && mBody.length > 20) {
+      // Extract practical advice and affirmation if present
+      const advMatch = mBody.match(/(?:practical advice|action|aligned action|steps?)[^\n:]*:\s*([^\n]+)/i);
+      const affMatch = mBody.match(/(?:affirmation|mantra)[^\n:]*:\s*([^\n]+)/i);
+      const cleanForecast = mBody
+        .replace(/(?:practical advice|action|aligned action|steps?)[^\n:]*:[^\n]+/gi, '')
+        .replace(/(?:affirmation|mantra)[^\n:]*:[^\n]+/gi, '')
+        .replace(/[*#_~]/g, '')
+        .trim();
+
+      const zodiacs = ['Aries / Mars', 'Taurus / Venus', 'Gemini / Mercury', 'Cancer / Moon', 'Leo / Sun', 'Virgo / Mercury', 'Libra / Venus', 'Scorpio / Pluto', 'Sagittarius / Jupiter', 'Capricorn / Saturn', 'Aquarius / Uranus', 'Pisces / Neptune'];
+      const elements = ['Fire', 'Earth', 'Air', 'Water', 'Fire', 'Earth', 'Air', 'Water', 'Fire', 'Earth', 'Air', 'Water'];
+
+      monthlyForecasts.push({
+        monthNumber: mNum,
+        monthName: `Month ${mNum}`,
+        title: mTitle,
+        astrologicalSign: zodiacs[(mNum - 1) % 12],
+        element: elements[(mNum - 1) % 12],
+        forecast: cleanForecast || mBody,
+        practicalAdvice: advMatch ? advMatch[1].replace(/[*_~]/g, '').trim() : `Ground your intentions, maintain regular self-reflection, and take aligned action without hesitation.`,
+        affirmation: affMatch ? affMatch[1].replace(/[*_~"']/g, '').trim() : `I step into Month ${mNum} with sovereign confidence and absolute trust in my divine path.`,
+      });
+    }
+  }
 
   // Robust parser for QA: handles "**Question?** \n Answer" or "### Question \n Answer" or "**Question:** Answer" or "1. **Question?** Answer"
   for (let i = 0; i < qaParagraphs.length; i++) {
@@ -374,6 +423,7 @@ export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): 
       'Where am I giving away my personal power to appease others, and how can I reclaim it?',
       'How does my life feel when I fully trust my intuition without needing outside validation?'
     ],
+    monthlyForecasts: monthlyForecasts.length > 0 ? monthlyForecasts : undefined,
     spiritualPrescription: {
       crystals,
       botanicals,

@@ -41,6 +41,18 @@ export interface CategoryCustomData {
 
 export type ReadingTier = 'standard' | 'detailed' | 'premium';
 
+export interface SectionDefinition {
+  id: string;
+  key: string;
+  name: string;
+  category: 'core' | 'numerology_astrology' | 'tarot_spread' | 'synthesis_psychology' | 'remedies_action' | 'master_specialized';
+  description: string;
+  defaultIncludedInTiers: ('standard' | 'detailed' | 'premium')[];
+  archetypeRestrictions?: ('A' | 'B' | 'C' | 'D' | 'E' | 'F')[];
+  requiresDob?: boolean;
+  exclusionReason?: string;
+}
+
 export interface ReadingInputs {
   name: string;
   age: string;
@@ -53,6 +65,8 @@ export interface ReadingInputs {
   shopName?: string; // Shop / Studio name for PDF header & branding
   cards: [TarotCard | null, TarotCard | null, TarotCard | null];
   categoryData?: CategoryCustomData;
+  customSections?: string[]; // IDs of explicitly enabled sections
+  excludedSections?: string[]; // IDs of explicitly excluded sections
 }
 
 export interface NumerologyBreakdown {

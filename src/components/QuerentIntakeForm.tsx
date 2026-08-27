@@ -32,6 +32,9 @@ import { ZODIAC_PROFILES, getZodiacProfile, getZodiacFromDob } from '../utils/as
 import { parseClientParagraph, autoDrawSacredCards } from '../utils/clientDataParser';
 import { TAROT_DECK } from '../data/tarotCards';
 
+import { SectionStructurizer } from './SectionStructurizer';
+import { calculateSectionState, detectReadingArchetype } from '../data/masterSectionsCatalog';
+
 interface QuerentIntakeFormProps {
   inputs: ReadingInputs;
   onUpdateInputs: (updated: Partial<ReadingInputs>) => void;
@@ -655,12 +658,29 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
         )}
       </div>
 
-      {/* 04. Sacred 3-Card Spread Selection */}
+      {/* 04. AI Type Detection & 35-Section Structurizer (Selected vs Eliminated + Add / Remove) */}
+      <div className="space-y-3">
+        <SectionStructurizer
+          topic={inputs.topic}
+          problem={inputs.problem}
+          question={inputs.question}
+          dob={inputs.dob}
+          tier={activeTier}
+          customSections={inputs.customSections || []}
+          excludedSections={inputs.excludedSections || []}
+          onChangeTier={(newTier) => onUpdateInputs({ tier: newTier })}
+          onUpdateSectionOverrides={(custom, excluded) => {
+            onUpdateInputs({ customSections: custom, excludedSections: excluded });
+          }}
+        />
+      </div>
+
+      {/* 05. Sacred 3-Card Spread Selection */}
       <div className="p-6 md:p-7 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#E0D7CC] gap-2">
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
-              04
+              05
             </div>
             <div>
               <h2 className="text-xs uppercase tracking-widest font-bold text-[#4A3F35]">

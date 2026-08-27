@@ -434,28 +434,143 @@ export const getTopicMasterBlueprint = (
   hasDob: boolean = true
 ): TopicBlueprintSpec => {
   const spec = getCategorySpecByTopic(topic);
-  const isTwelveMonths = spec.categoryType === 'twelve_months';
+  const topicStr = String(topic || '').toLowerCase();
+  const specTitle = (spec.title || '').toLowerCase();
 
-  // Standard Tier: 15 to 18 pages
+  const isTwelveMonths =
+    spec.categoryType === 'twelve_months' ||
+    spec.id === 6 ||
+    topicStr.includes('12 month') ||
+    topicStr.includes('year forecast') ||
+    topicStr.includes('12-month') ||
+    topicStr.includes('annual forecast') ||
+    topicStr.includes('twelve month') ||
+    specTitle.includes('12 month') ||
+    specTitle.includes('year forecast');
+
+  const isEightPredictions =
+    spec.categoryType === 'eight_predictions' ||
+    spec.id === 7 ||
+    topicStr.includes('8 future') ||
+    topicStr.includes('8 prediction') ||
+    topicStr.includes('eight prediction') ||
+    topicStr.includes('future prediction') ||
+    specTitle.includes('8 future') ||
+    specTitle.includes('8 prediction');
+
+  const isTenQuestions =
+    spec.id === 32 ||
+    (spec.suggestedQuestions && spec.suggestedQuestions.length >= 8) ||
+    topicStr.includes('10 question') ||
+    topicStr.includes('10 burning') ||
+    topicStr.includes('ten question') ||
+    specTitle.includes('10 question');
+
+  // 12-Month Annual Forecast: ALWAYS at least 12 individual month pages
+  if (isTwelveMonths) {
+    const totalPages =
+      tier === 'standard'
+        ? (hasDob ? 28 : 27)
+        : tier === 'detailed'
+        ? (hasDob ? 34 : 33)
+        : (hasDob ? 40 : 39);
+
+    const startModuleC = hasDob ? 15 : 14;
+    const endModuleC = startModuleC + 11; // 12 pages for 12 months
+
+    return {
+      topicId: spec.id,
+      title: spec.title,
+      totalPages,
+      tier,
+      hasDob,
+      moduleCMode: 'one_page_per_month',
+      questionCount: 12,
+      moduleCRange: [startModuleC, endModuleC],
+      moduleDRange: [endModuleC + 1, endModuleC + 4],
+      moduleERange: [endModuleC + 5, totalPages],
+      roadmapTitle: 'Quarterly Energetic Roadmap & Milestones',
+      actionTitle: 'Annual Realization & Manifestation Steps',
+    };
+  }
+
+  // 8 Future Predictions: ALWAYS at least 8 individual prediction pages
+  if (isEightPredictions) {
+    const totalPages =
+      tier === 'standard'
+        ? (hasDob ? 24 : 23)
+        : tier === 'detailed'
+        ? (hasDob ? 30 : 29)
+        : (hasDob ? 36 : 35);
+
+    const startModuleC = hasDob ? 15 : 14;
+    const endModuleC = startModuleC + 7; // 8 pages for 8 predictions
+
+    return {
+      topicId: spec.id,
+      title: spec.title,
+      totalPages,
+      tier,
+      hasDob,
+      moduleCMode: 'one_page_per_month',
+      questionCount: 8,
+      moduleCRange: [startModuleC, endModuleC],
+      moduleDRange: [endModuleC + 1, endModuleC + 4],
+      moduleERange: [endModuleC + 5, totalPages],
+      roadmapTitle: 'Future Trajectory Synthesis & Timeline',
+      actionTitle: 'Predictive Integration & Alignment Steps',
+    };
+  }
+
+  // 10 Burning Questions: ALWAYS 10 individual question inquiries
+  if (isTenQuestions) {
+    const totalPages =
+      tier === 'standard'
+        ? (hasDob ? 26 : 25)
+        : tier === 'detailed'
+        ? (hasDob ? 34 : 33)
+        : (hasDob ? 40 : 39);
+
+    const startModuleC = hasDob ? 15 : 14;
+    const endModuleC = startModuleC + 9;
+
+    return {
+      topicId: spec.id,
+      title: spec.title,
+      totalPages,
+      tier,
+      hasDob,
+      moduleCMode: tier === 'standard' ? 'one_page_per_month' : 'two_pages_per_question',
+      questionCount: 10,
+      moduleCRange: [startModuleC, endModuleC],
+      moduleDRange: [endModuleC + 1, endModuleC + 4],
+      moduleERange: [endModuleC + 5, totalPages],
+      roadmapTitle: 'Masterclass Realization & Integration Roadmap',
+      actionTitle: 'Exhaustive Sovereignty & Manifestation Steps',
+    };
+  }
+
+  // Standard Tier: 17 to 20 pages
   if (tier === 'standard') {
-    const totalPages = hasDob ? 17 : 16;
+    const qCount = spec.suggestedQuestions && spec.suggestedQuestions.length >= 5 ? 5 : 4;
+    const totalPages = hasDob ? 18 : 17;
     return {
       topicId: spec.id,
       title: spec.title,
       totalPages,
       tier: 'standard',
       hasDob,
-      moduleCMode: 'condensed_single_page',
-      questionCount: 3,
-      moduleCRange: [hasDob ? 13 : 12, hasDob ? 13 : 12],
-      moduleDRange: [hasDob ? 14 : 13, hasDob ? 15 : 14],
-      moduleERange: [hasDob ? 16 : 15, totalPages],
+      moduleCMode: 'two_pages_per_question',
+      questionCount: qCount,
+      moduleCRange: [hasDob ? 13 : 12, hasDob ? 13 + qCount - 1 : 12 + qCount - 1],
+      moduleDRange: [hasDob ? 14 + qCount - 1 : 13 + qCount - 1, hasDob ? 15 + qCount - 1 : 14 + qCount - 1],
+      moduleERange: [hasDob ? 16 + qCount - 1 : 15 + qCount - 1, totalPages],
       roadmapTitle: `${spec.title} 30-Day Guidance`,
       actionTitle: `${spec.title} Action Plan`,
     };
   }
 
-  // Detailed Tier: 25 to 28 pages
+  // Detailed Tier: 26 to 28 pages
   if (tier === 'detailed') {
     const totalPages = hasDob ? 27 : 26;
     return {
@@ -465,38 +580,18 @@ export const getTopicMasterBlueprint = (
       tier: 'detailed',
       hasDob,
       moduleCMode: 'two_pages_per_question',
-      questionCount: 3,
-      moduleCRange: [hasDob ? 15 : 14, hasDob ? 20 : 19],
-      moduleDRange: [hasDob ? 21 : 20, hasDob ? 23 : 22],
-      moduleERange: [hasDob ? 24 : 23, totalPages],
+      questionCount: 4,
+      moduleCRange: [hasDob ? 15 : 14, hasDob ? 22 : 21],
+      moduleDRange: [hasDob ? 23 : 22, hasDob ? 24 : 23],
+      moduleERange: [hasDob ? 25 : 24, totalPages],
       roadmapTitle: `${spec.title} Strategic Roadmap`,
       actionTitle: `${spec.title} 4-Phase Protocol`,
     };
   }
 
-  // Premium Tier: 32+ pages (34 to 40 pages)
-  if (isTwelveMonths) {
-    const totalPages = hasDob ? 40 : 39;
-    return {
-      topicId: spec.id,
-      title: spec.title,
-      totalPages,
-      tier: 'premium',
-      hasDob,
-      moduleCMode: 'one_page_per_month',
-      questionCount: 12,
-      moduleCRange: [hasDob ? 16 : 15, hasDob ? 27 : 26],
-      moduleDRange: [hasDob ? 28 : 27, hasDob ? 32 : 31],
-      moduleERange: [hasDob ? 33 : 32, totalPages],
-      roadmapTitle: 'Quarterly Energetic Roadmap & Milestones',
-      actionTitle: 'Annual Realization & Manifestation Steps',
-    };
-  }
-
-  // Check if topic is a 10-question deep dive or has specific question count
-  const is10Q = spec.id === 32 || (spec.suggestedQuestions && spec.suggestedQuestions.length >= 10);
-  const qCount = is10Q ? 8 : (spec.suggestedQuestions && spec.suggestedQuestions.length >= 6 ? 6 : 5);
-  const totalPages = hasDob ? (is10Q ? 40 : qCount === 6 ? 38 : 34) : (is10Q ? 39 : qCount === 6 ? 37 : 33);
+  // Premium Tier: 34 to 40 pages
+  const qCount = spec.suggestedQuestions && spec.suggestedQuestions.length >= 6 ? 6 : 5;
+  const totalPages = hasDob ? (qCount === 6 ? 38 : 34) : (qCount === 6 ? 37 : 33);
 
   return {
     topicId: spec.id,
@@ -569,7 +664,7 @@ export const buildDeepDiveItems = (
       return {
         questionNumber: qNum,
         question: qa.question,
-        subTitle: `${categorySpec.title} • Channeled Inquiry ${qNum} of ${bp.questionCount}`,
+        subTitle: `Channeled Oracle Transmission · Inquiry ${qNum} of ${bp.questionCount}`,
         oracleTransmission: richTransmission,
         somaticKey: `✦ Somatic Anchor: Notice where tension softens in your chest and throat as this truth is accepted.`,
         subconsciousArchitecture: `Beneath the conscious narrative lies an ingrained defense pattern developed to guard against vulnerability or disappointment. Your energetic system has reflexively braced for friction, leading to subconscious hypervigilance, over-analysis, and an urge to control outcomes rather than resting in receptive trust.`,
@@ -693,11 +788,11 @@ export const buildDeepDiveItems = (
           : `Inquiry ${i}: Channeled Guidance regarding ${cleanProblem}`;
         baseQuestions.push({
           q: customQ,
-          sub: `${categorySpec.title} • Dimension ${i} of ${bp.questionCount}`,
+          sub: `Sacred Oracle Channel · Inquiry ${i} of ${bp.questionCount}`,
           trans: `The channeled oracle reveals that this phase of your life is activating profound soul mastery and conscious elevation. Reflecting the sacred medicine of ${activeCardName}, you are learning to anchor unshakeable clarity within your own center, refusing to let external doubt, delays, or ambiguity dictate your emotional equilibrium. In navigating "${cleanProblem}", your spiritual guides emphasize that every obstacle you have encountered has served to dismantle outdated illusions and strengthen your sovereign discernment. You are being called to trust the wisdom of your lived experience and step forward with quiet, unwavering authority. As you align your mindset with the vibrational frequency of Life Path ${lpNumber}, you will discover that solutions and opportunities begin to manifest with remarkable synchronicity, clearing the path toward lasting peace, creative fulfillment, and empowered self-expression.`,
           som: `✦ Somatic Key: Take three slow, grounding breaths deep into your lower belly; allow tension to melt into the earth as clarity anchors in your core.`,
           subc: `Subconsciously, an outdated defensive belief pattern is being dismantled. You are transitioning out of an old fear of making mistakes or being judged, moving into the grounded understanding that your worth is inherent and unconditional.`,
-          sovr: `Align your daily habits with your highest values. Speak your truth with dignity, establish boundaries that fiercely protect your peace, and step boldly into the triumphant expansion awaiting you in ${categorySpec.title}.`,
+          sovr: `Align your daily habits with your highest values. Speak your truth with dignity, establish boundaries that fiercely protect your peace, and step boldly into the triumphant expansion awaiting you on this sacred path.`,
           tag: `Dimension ${i} Realization`,
           anc: `Clarity, sovereignty, and profound inner peace are your divine birthright; walk forward with unwavering trust.`,
         });

@@ -836,8 +836,8 @@ export const UniversalPageDecorations: React.FC<{
       {/* Clean Editorial Top Header bar - Suppressed on Page 1 to prevent stutter-repeating brand headers */}
       {!isCover && (
         <div className="absolute top-[34px] left-[40px] right-[40px] flex items-center justify-between text-[#7A6B5B] font-sans text-[8pt] tracking-[0.26em] uppercase border-b border-[#E8E1D5] pb-2 z-10">
-          <span className="font-semibold">{effectiveBrandName}</span>
-          <span className="text-[#8C7D6D]">{headerTitle}</span>
+          <span className="font-semibold shrink-0 max-w-[220px] truncate">{effectiveBrandName}</span>
+          <span className="text-[#8C7D6D] shrink min-w-0 max-w-[420px] truncate text-right">{headerTitle}</span>
         </div>
       )}
 

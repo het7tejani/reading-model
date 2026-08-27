@@ -262,8 +262,13 @@ export function classifyDynamicTopic(rawTopic: string, userProblem?: string, use
   }
 
   // 9. Universal Fallback
-  const cleanTitle = rawTopic && rawTopic.length > 3 ? rawTopic : 'Cosmic Crossroads & Sacred Transition';
-  const capitalizedTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
+  const cleanTitle = rawTopic && rawTopic.length > 3 ? rawTopic.trim() : 'Cosmic Crossroads & Sacred Transition';
+  let shortDisplayTitle = cleanTitle;
+  if (cleanTitle.length > 35) {
+    const firstClause = cleanTitle.split(/[,:;—\-\.\?\!]/)[0].trim();
+    shortDisplayTitle = firstClause.length <= 35 && firstClause.length >= 3 ? firstClause : 'Sacred Life Transition';
+  }
+  const capitalizedTitle = shortDisplayTitle.charAt(0).toUpperCase() + shortDisplayTitle.slice(1);
   return {
     input_topic: rawTopic,
     detected_attributes: {

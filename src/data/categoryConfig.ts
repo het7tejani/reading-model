@@ -1075,20 +1075,43 @@ export function createDynamicCustomTopicSpec(topicTitle: string): CategorySpec {
     .replace(/^topic\s*\d+[:.\s]*/i, '')
     .replace(/^\d+[\.\)]\s*/, '') || 'Sacred Life Transition & Choice';
   const capTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
+  const lower = cleanTitle.toLowerCase();
+  const is12Month = lower.includes('12 month') || lower.includes('year forecast') || lower.includes('annual forecast');
+  const is8Predictions = lower.includes('8 future') || lower.includes('8 prediction');
+
+  // Generate concise, elegant title if user provided a lengthy query string
+  let conciseTitle = capTitle;
+  if (capTitle.length > 36) {
+    if (is12Month) {
+      conciseTitle = '12-Month Future Forecast';
+    } else if (is8Predictions) {
+      conciseTitle = '8 Future Predictions';
+    } else if (lower.includes('love') || lower.includes('relationship') || lower.includes('soulmate') || lower.includes('ex')) {
+      conciseTitle = 'Love & Relationship Reading';
+    } else if (lower.includes('career') || lower.includes('job') || lower.includes('money') || lower.includes('finance') || lower.includes('business')) {
+      conciseTitle = 'Career & Wealth Blueprint';
+    } else if (lower.includes('health') || lower.includes('vitality') || lower.includes('healing')) {
+      conciseTitle = 'Holistic Healing & Vitality';
+    } else {
+      const firstClause = capTitle.split(/[,:;—\-\.\?\!]/)[0].trim();
+      conciseTitle = firstClause.length <= 36 && firstClause.length >= 3 ? firstClause : 'Personalized Oracle Guidance';
+    }
+  }
+
   return {
     id: 999,
-    title: capTitle,
-    headline: `${capTitle.toUpperCase()} BLUEPRINT`,
-    categoryType: 'standard',
-    description: `Deep intuitive guidance, domain insights, and strategic clarity for ${capTitle}.`,
-    suggestedProblem: `Seeking clarity and aligned direction regarding ${capTitle}.`,
-    suggestedQuestion: `What is the highest wisdom, hidden factors, and path forward for ${capTitle}?`,
+    title: conciseTitle,
+    headline: `${conciseTitle.toUpperCase()} BLUEPRINT`,
+    categoryType: is12Month ? 'twelve_months' : is8Predictions ? 'eight_predictions' : 'standard',
+    description: `Deep intuitive guidance, domain insights, and strategic clarity for your sacred journey.`,
+    suggestedProblem: `Seeking clarity and aligned direction regarding ${conciseTitle.toLowerCase()}.`,
+    suggestedQuestion: `What is the highest wisdom, hidden factors, and path forward for this journey?`,
     suggestedQuestions: [
-      `What is the underlying energetic and practical reality of ${capTitle}?`,
+      `What is the underlying energetic and practical reality of this situation?`,
       `What hidden friction, hesitation, or external obstacle needs immediate attention?`,
       `What practical mindset shift and tangible action will ensure successful alignment?`,
-      `How will the energetic timeline and catalyst windows unfold for ${capTitle}?`,
-      `What is the ultimate sovereign outcome when fully stepping into clarity on this path?`,
+      `How will the energetic timeline and catalyst windows unfold for your path?`,
+      `What is the ultimate sovereign outcome when fully stepping into clarity on this journey?`,
     ],
     customFields: [
       {
@@ -1096,15 +1119,15 @@ export function createDynamicCustomTopicSpec(topicTitle: string): CategorySpec {
         label: 'Channeled Inquiries (5 Questions)',
         type: 'list',
         defaultItems: [
-          `What is the underlying energetic and practical reality of ${capTitle}?`,
+          `What is the underlying energetic and practical reality of this situation?`,
           `What hidden friction, hesitation, or external obstacle needs immediate attention?`,
           `What practical mindset shift and tangible action will ensure successful alignment?`,
-          `How will the energetic timeline and catalyst windows unfold for ${capTitle}?`,
-          `What is the ultimate sovereign outcome when fully stepping into clarity on this path?`,
+          `How will the energetic timeline and catalyst windows unfold for your path?`,
+          `What is the ultimate sovereign outcome when fully stepping into clarity on this journey?`,
         ],
       },
     ],
-    pdfSectionTitle: `${capTitle.toUpperCase()} DEEP DIVE`,
+    pdfSectionTitle: `${conciseTitle.toUpperCase()} DEEP DIVE`,
   };
 }
 
