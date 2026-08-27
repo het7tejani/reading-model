@@ -33,7 +33,6 @@ import { parseClientParagraph, autoDrawSacredCards } from '../utils/clientDataPa
 import { TAROT_DECK } from '../data/tarotCards';
 
 import { SectionStructurizer } from './SectionStructurizer';
-import { calculateSectionState, detectReadingArchetype } from '../data/masterSectionsCatalog';
 
 interface QuerentIntakeFormProps {
   inputs: ReadingInputs;
@@ -658,20 +657,15 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
         )}
       </div>
 
-      {/* 04. AI Type Detection & 35-Section Structurizer (Selected vs Eliminated + Add / Remove) */}
+      {/* 04. AI Product Block Detection & Selected Section Architecture (Blocks 1–30) */}
       <div className="space-y-3">
         <SectionStructurizer
           topic={inputs.topic}
           problem={inputs.problem}
           question={inputs.question}
           dob={inputs.dob}
+          title={inputs.name ? `${inputs.name}'s Reading` : ''}
           tier={activeTier}
-          customSections={inputs.customSections || []}
-          excludedSections={inputs.excludedSections || []}
-          onChangeTier={(newTier) => onUpdateInputs({ tier: newTier })}
-          onUpdateSectionOverrides={(custom, excluded) => {
-            onUpdateInputs({ customSections: custom, excludedSections: excluded });
-          }}
         />
       </div>
 
