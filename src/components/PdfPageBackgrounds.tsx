@@ -833,24 +833,23 @@ export const UniversalPageDecorations: React.FC<{
         +
       </div>
 
-      {/* Clean Editorial Top Header bar - Suppressed on Page 1 to prevent stutter-repeating brand headers */}
+      {/* Clean Editorial Top Header bar - Suppressed on Page 1 */}
       {!isCover && (
         <div className="absolute top-[34px] left-[40px] right-[40px] flex items-center justify-between text-[#7A6B5B] font-sans text-[8pt] tracking-[0.26em] uppercase border-b border-[#E8E1D5] pb-2 z-10">
-          <span className="font-semibold shrink-0 max-w-[220px] truncate">{effectiveBrandName}</span>
-          <span className="text-[#8C7D6D] shrink min-w-0 max-w-[420px] truncate text-right">{headerTitle}</span>
+          <span className="font-semibold shrink-0 max-w-[260px] truncate" style={{ fontFamily: "'Montserrat', sans-serif" }}>{effectiveBrandName}</span>
+          <span className="text-[#8C7D6D] shrink min-w-0 max-w-[420px] truncate text-right" style={{ fontFamily: "'Montserrat', sans-serif" }}>{headerTitle}</span>
         </div>
       )}
 
-      {/* Clean Editorial Bottom Footer - Suppressed on Page 1 */}
+      {/* Clean Editorial Bottom Footer - No page number, no guidance text */}
       {!isCover && (
         <div className="absolute bottom-[36px] left-[40px] right-[40px] flex items-center justify-between text-[#7A6B5B] font-sans text-[8pt] tracking-[0.22em] uppercase border-t border-[#E8E1D5] pt-2 z-10">
-          <span className="text-[#8C7D6D]">{effectiveBrandName}</span>
+          <span className="text-[#8C7D6D]" style={{ fontFamily: "'Montserrat', sans-serif" }}>{effectiveBrandName}</span>
           <div className="flex items-center gap-2 text-[#8C7D6D]">
             <span className="text-[7pt]">✦</span>
-            <span className="tracking-[0.24em] text-[8pt]">Sacred Intuitive Guidance</span>
             <span className="text-[7pt]">✦</span>
           </div>
-          <span className="text-[#8C7D6D]">{pageNumber ? `Page ${pageNumber} of ${totalPages}` : 'Tarot & Numerology'}</span>
+          <span className="text-[#8C7D6D] tracking-widest text-[7pt]">✦  ✦  ✦</span>
         </div>
       )}
     </div>

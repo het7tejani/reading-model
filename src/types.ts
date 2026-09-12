@@ -55,6 +55,8 @@ export interface SectionDefinition {
 
 export interface ReadingInputs {
   name: string;
+  clientDetails?: string; // Comprehensive client profile, background, context
+  agenda?: string; // Meeting agenda, primary focus, or sacred questions
   age: string;
   dob: string; // MM/DD/YYYY (optional - if omitted, numerology is cleanly removed)
   zodiacSign?: string; // Optional or auto-calculated (Aries, Taurus, etc.)
@@ -82,6 +84,8 @@ export interface StoredReading {
   createdAt: string;
   inputs: {
     name: string;
+    clientDetails?: string;
+    agenda?: string;
     age: string;
     dob: string;
     zodiacSign?: string;
@@ -94,6 +98,6 @@ export interface StoredReading {
   };
   lifePath: number;
   markdownContent: string;
-  source?: 'gemini-ai' | 'algorithmic';
+  source?: 'luna-ai' | 'gemini-ai' | 'algorithmic';
   model?: string;
 }

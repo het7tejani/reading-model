@@ -60,11 +60,40 @@ export const SectionStructurizer: React.FC<SectionStructurizerProps> = ({
   problem,
   question,
   title = '',
+  tier = 'detailed',
   onSelectProductBlock,
 }) => {
   const [filterMode, setFilterMode] = useState<'all' | 'selected' | 'eliminated'>('selected');
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
   const [manualBlockOverride, setManualBlockOverride] = useState<ProductBlockNumber | null>(null);
+
+  // Active Edition Tier Depth Details
+  const tierDetails = useMemo(() => {
+    switch (tier) {
+      case 'standard':
+        return {
+          label: 'Standard Edition',
+          targetPages: '15–18 Pages',
+          badgeColor: 'bg-[#E0D7CC]/80 text-[#4A3F35] border-[#D0C4B5]',
+          summary: 'Core essential layout with primary spread interpretation, concise breakthrough synthesis, and essential action steps.',
+        };
+      case 'premium':
+        return {
+          label: 'Premium Masterclass',
+          targetPages: '32–38+ Pages',
+          badgeColor: 'bg-[#4A3F35] text-[#FAF7F2] border-[#2A241E]',
+          summary: 'Deluxe masterclass edition with full 10-part inquiry deep-dives / 12-month horizon timeline, somatic worksheets, and exhaustive spiritual prescriptions.',
+        };
+      case 'detailed':
+      default:
+        return {
+          label: 'Detailed Edition',
+          targetPages: '25–28 Pages',
+          badgeColor: 'bg-[#BC6C25] text-white border-[#9E5318]',
+          summary: 'Extended 2-part master synthesis, celestial astrological cross-over, 6-page multi-vector inquiry deep dives, and 4-phase execution protocols.',
+        };
+    }
+  }, [tier]);
 
   // Auto-detect Product Block based on inputs
   const activeProductBlock: ProductBlockMeta = useMemo(() => {
@@ -157,8 +186,11 @@ export const SectionStructurizer: React.FC<SectionStructurizerProps> = ({
                 <span className="text-[10px] uppercase font-mono tracking-widest bg-[#4A3F35] text-[#FAF7F2] px-2 py-0.5 rounded-xs font-semibold">
                   {activeProductBlock.code}
                 </span>
+                <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-xs font-bold border ${tierDetails.badgeColor}`}>
+                  {tierDetails.label} · {tierDetails.targetPages}
+                </span>
                 <span className="text-[10px] uppercase font-mono tracking-widest bg-[#E8DEC8] text-[#5A4525] px-2 py-0.5 rounded-xs font-bold border border-[#D4C3A3]">
-                  AI Selected: {activeProductBlock.injectedSections.length} Injected Sections
+                  {activeProductBlock.injectedSections.length} Core Sections
                 </span>
                 <span className="text-[10px] uppercase font-mono tracking-widest bg-[#EFE9E1] text-[#7A6B5C] px-2 py-0.5 rounded-xs">
                   {activeProductBlock.spreadCardCount} Cards Spread ({activeProductBlock.spreadName})
@@ -169,6 +201,9 @@ export const SectionStructurizer: React.FC<SectionStructurizerProps> = ({
               </h3>
               <p className="text-xs text-[#6A5E52] mt-0.5 max-w-3xl leading-relaxed">
                 <span className="font-semibold text-[#4A3F35]">Target Focus:</span> {activeProductBlock.targetFocus}
+              </p>
+              <p className="text-[11px] text-[#8C7B6A] mt-0.5 italic max-w-3xl">
+                <span className="font-medium text-[#4A3F35]">Tier Scope:</span> {tierDetails.summary}
               </p>
             </div>
           </div>

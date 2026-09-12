@@ -9,8 +9,24 @@ export interface MonthForecastParsedItem {
   affirmation: string;
 }
 
+export interface PageByPageItem {
+  pageNumber: number;
+  title: string;
+  content: string;
+  paragraphs: string[];
+  isCover?: boolean;
+  isWelcomeLetter?: boolean;
+  isTarotSpread?: boolean;
+  isTarotCardArt?: boolean;
+  isTarotInterpretation?: boolean;
+  isNumerology?: boolean;
+  cardIndex?: number;
+  isClosingDisclaimer?: boolean;
+}
+
 export interface ParsedReadingData {
   mainHeadline: string;
+  pageByPage?: PageByPageItem[];
   numerology: {
     math: string;
     coreParagraph: string;
@@ -44,6 +60,7 @@ export interface ParsedReadingData {
     botanicals: { name: string; description: string }[];
     mindfulness: { name: string; description: string }[];
   };
+  customSections?: { title: string; paragraphs: string[] }[];
 }
 
 /**
@@ -74,14 +91,149 @@ export const cleanMarkdownText = (text: string | undefined, defaultVal = ''): st
   return cleaned || defaultVal;
 };
 
+export function parsePageByPageOutput(rawMarkdown: string): PageByPageItem[] {
+  const pages: PageByPageItem[] = [];
+  if (!rawMarkdown) return pages;
+
+  // Match lines like: PAGE 1 — Cover Page or ## PAGE 2: Welcome Letter or PAGE 1: Title
+  const pageRegex = /(?:^|\n)(?:#{1,3}\s*)?PAGE\s*(\d+)[\s:—–\-]+([^\n]+)\n([\s\S]*?)(?=(?:(?:\r?\n)(?:#{1,3}\s*)?PAGE\s*\d+[\s:—–\-])|$)/gi;
+  let match: RegExpExecArray | null;
+  while ((match = pageRegex.exec(rawMarkdown)) !== null) {
+    const pageNumber = parseInt(match[1], 10);
+    const rawTitle = match[2]?.trim() || `Page ${pageNumber}`;
+    const title = cleanHeadingText(rawTitle, `Page ${pageNumber}`);
+    const rawContent = match[3]?.trim() || '';
+
+    // Split into clean paragraphs
+    const paragraphs = rawContent
+      .split(/\n\s*\n/)
+      .map(p => cleanMarkdownText(p.trim()))
+      .filter(p => p.length > 0 && !p.toLowerCase().startsWith('page '));
+
+    const content = paragraphs.join('\n\n');
+    const lowerTitle = title.toLowerCase();
+
+    const isCover = pageNumber === 1 || lowerTitle.includes('cover');
+    const isWelcomeLetter = lowerTitle.includes('welcome') || lowerTitle.includes('letter');
+    const isTarotSpread =
+      lowerTitle.includes('card energy overview') ||
+      lowerTitle.includes('cards energy overview') ||
+      lowerTitle.includes('energy overview') ||
+      lowerTitle.includes('tarot spread') ||
+      lowerTitle.includes('spread overview') ||
+      lowerTitle.includes('3-card energy') ||
+      lowerTitle.includes('3 card energy') ||
+      lowerTitle.includes('3-card spread') ||
+      lowerTitle.includes('3 card spread') ||
+      lowerTitle.includes('oracle spread') ||
+      lowerTitle.includes('cards drawn') ||
+      lowerTitle.includes('cards overview') ||
+      lowerTitle.includes('tarot overview') ||
+      lowerTitle.includes('triad alchemy') ||
+      lowerTitle.includes('triad overview');
+
+    let cardIndex: number | undefined = undefined;
+    if (!isTarotSpread) {
+      if (
+        lowerTitle.includes('card 1') ||
+        lowerTitle.includes('card i ') ||
+        lowerTitle.includes('card i:') ||
+        lowerTitle.includes('card i—') ||
+        lowerTitle.includes('card i-') ||
+        lowerTitle.includes('first card') ||
+        lowerTitle.includes('present energy')
+      ) {
+        cardIndex = 0;
+      } else if (
+        lowerTitle.includes('card 2') ||
+        lowerTitle.includes('card ii') ||
+        lowerTitle.includes('second card') ||
+        lowerTitle.includes('the blockage') ||
+        lowerTitle.includes('shadow resistance')
+      ) {
+        cardIndex = 1;
+      } else if (
+        lowerTitle.includes('card 3') ||
+        lowerTitle.includes('card iii') ||
+        lowerTitle.includes('third card') ||
+        lowerTitle.includes('path forward') ||
+        lowerTitle.includes('highest potential')
+      ) {
+        cardIndex = 2;
+      }
+    }
+
+    const isDeepInterpretation =
+      lowerTitle.includes('interpretation') ||
+      lowerTitle.includes('full interpretation') ||
+      lowerTitle.includes('deep interpretation') ||
+      lowerTitle.includes('deep analysis') ||
+      lowerTitle.includes('channeled meaning') ||
+      lowerTitle.includes('channeled interpretation');
+
+    // Individual introduction page for a card (shows the card image)
+    const isTarotCardArt =
+      !isTarotSpread &&
+      !isDeepInterpretation &&
+      (lowerTitle.includes('visual') ||
+        lowerTitle.includes('intro') ||
+        lowerTitle.includes('introduction') ||
+        lowerTitle.includes('keyword') ||
+        lowerTitle.includes('keywords') ||
+        lowerTitle.includes('artwork') ||
+        lowerTitle.includes('embodiment') ||
+        (cardIndex !== undefined && (lowerTitle.includes('keywords / energy') || lowerTitle.includes('overview') || lowerTitle.includes('focal point'))));
+
+    // Deep interpretation page for a card (text only, NO card image)
+    const isTarotInterpretation =
+      !isTarotSpread &&
+      !isTarotCardArt &&
+      (isDeepInterpretation ||
+        lowerTitle.includes('interpretation') ||
+        (cardIndex !== undefined && !isTarotCardArt) ||
+        (lowerTitle.includes('tarot card') && !isTarotCardArt));
+
+    const isNumerology =
+      lowerTitle.includes('numerology') ||
+      lowerTitle.includes('life path') ||
+      lowerTitle.includes('core vibrations') ||
+      lowerTitle.includes('pythagorean');
+
+    const isClosingDisclaimer =
+      lowerTitle.includes('closing') ||
+      lowerTitle.includes('disclaimer') ||
+      lowerTitle.includes('review message');
+
+    pages.push({
+      pageNumber,
+      title,
+      content,
+      paragraphs,
+      isCover,
+      isWelcomeLetter,
+      isTarotSpread,
+      isTarotCardArt,
+      isTarotInterpretation,
+      isNumerology,
+      cardIndex,
+      isClosingDisclaimer,
+    });
+  }
+
+  return pages;
+}
+
 export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): ParsedReadingData => {
+  const pageByPage = parsePageByPageOutput(markdown);
   const lines = markdown.split('\n');
 
-  // Extract main headline (e.g. # EXTREMELY DEEP LOVE PSYCHIC READING)
+  // Extract main headline (e.g. # EXTREMELY DEEP LOVE PSYCHIC READING or from PAGE 1)
   let mainHeadline = fallbackTopic || 'SACRED TAROT & NUMEROLOGY ORACLE';
   const h1Match = markdown.match(/^#\s+(.+)$/m);
   if (h1Match) {
     mainHeadline = cleanHeadingText(h1Match[1], fallbackTopic || 'SACRED TAROT & NUMEROLOGY ORACLE');
+  } else if (pageByPage.length > 0 && pageByPage[0].title && !pageByPage[0].title.toLowerCase().includes('cover page')) {
+    mainHeadline = cleanHeadingText(pageByPage[0].title, fallbackTopic || 'SACRED TAROT & NUMEROLOGY ORACLE');
   }
 
   // Split into sections by H2 (## )
@@ -390,8 +542,34 @@ export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): 
       { name: 'Heart-Centered Grounding Breath', description: 'Place both hands over the high heart, inhale for 4 counts holding golden light, and exhale for 6 counts releasing tension.' }
     ];
 
+  // Extract any additional custom markdown sections that aren't mapped to standard categories
+  const knownKeywords = [
+    'numerology', 'life path', '3-card', 'energy overview', 'cards',
+    'synthesis', 'cosmic', 'q&a', 'insights', 'questions', 'predictions',
+    'forecast', 'monthly', 'action', 'reflection', 'mantras', 'affirmations',
+    'soul inquiries', 'inquiries', 'journaling', 'prescription'
+  ];
+
+  const customSections: { title: string; paragraphs: string[] }[] = [];
+  for (const [secKey, secContent] of Object.entries(sections)) {
+    const isKnown = knownKeywords.some(kw => secKey.includes(kw));
+    if (!isKnown && secContent.trim().length > 30) {
+      const pList = secContent
+        .split('\n\n')
+        .map(p => cleanMarkdownText(p.trim()))
+        .filter(p => p.length > 20 && !p.startsWith('#'));
+      if (pList.length > 0) {
+        customSections.push({
+          title: cleanHeadingText(secKey.replace(/[-_]/g, ' ').toUpperCase(), 'SACRED TRANSMISSION'),
+          paragraphs: pList
+        });
+      }
+    }
+  }
+
   return {
     mainHeadline,
+    pageByPage: pageByPage.length > 0 ? pageByPage : undefined,
     numerology,
     cards: {
       card1,
@@ -428,6 +606,7 @@ export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): 
       crystals,
       botanicals,
       mindfulness
-    }
+    },
+    customSections: customSections.length > 0 ? customSections : undefined
   };
 };

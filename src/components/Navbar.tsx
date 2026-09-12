@@ -8,7 +8,7 @@ interface NavbarProps {
   onOpenHistory: () => void;
   onOpenGuide: () => void;
   onOpenApiKeyModal: () => void;
-  onOpenCategories: () => void;
+  onOpenCategories?: () => void;
   hasCustomApiKey: boolean;
   hasServerKey?: boolean;
   historyCount: number;
@@ -20,11 +20,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenHistory,
   onOpenGuide,
   onOpenApiKeyModal,
-  onOpenCategories,
   hasCustomApiKey,
   hasServerKey = false,
   historyCount,
-  activeView = 'oracle'
 }) => {
   const [showPresetsMenu, setShowPresetsMenu] = useState(false);
   const isAiActive = hasCustomApiKey || hasServerKey;
@@ -39,31 +37,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-[0.2em] text-[#8C7B6A] font-bold">
-              Tarot & Numerology
+              Psychic & Tarot Readings
             </div>
             <h1 className="text-lg md:text-xl font-serif italic text-[#4A3F35] leading-tight">
-              Sacred Oracle
+              Daisy&apos;s Sacred Oracle
             </h1>
           </div>
         </div>
 
         {/* Action Tools */}
         <div className="flex items-center gap-2">
-          {/* Categories & Listings Studio Tab Button */}
-          <button
-            onClick={onOpenCategories}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm border text-xs font-semibold transition-all shadow-xs ${
-              activeView === 'categories'
-                ? 'bg-[#4A3F35] border-[#4A3F35] text-[#FCFAF7]'
-                : 'bg-white border-[#BC6C25]/40 text-[#BC6C25] hover:bg-[#F2EDE8]'
-            }`}
-            title="Add & Customize Listing Categories"
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Category Studio</span>
-          </button>
-
-          {/* Gemini API Key Button */}
+          {/* AI Model / API Key Button */}
           <button
             onClick={onOpenApiKeyModal}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm border text-xs font-semibold transition-all shadow-xs ${
@@ -71,11 +55,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? 'bg-[#F2EDE8] border-[#BC6C25]/40 text-[#BC6C25] hover:border-[#BC6C25]'
                 : 'bg-white border-[#E0D7CC] text-[#5C554E] hover:border-[#4A3F35]'
             }`}
-            title="Configure Google Gemini API Key"
+            title="Configure Luna 5.6 & AI Keys"
           >
             <Key className="w-3.5 h-3.5 text-[#BC6C25]" />
             <span className="hidden sm:inline">
-              {isAiActive ? (hasCustomApiKey ? 'Gemini AI' : 'Gemini (.env)') : 'API Key'}
+              {isAiActive ? 'Luna 5.6 Active' : 'Luna AI Key'}
             </span>
             <span className={`w-1.5 h-1.5 rounded-full ${isAiActive ? 'bg-emerald-500' : 'bg-[#D4A373]'}`} />
           </button>

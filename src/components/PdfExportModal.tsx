@@ -16,10 +16,12 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
+  Pencil
 } from 'lucide-react';
 import { ReadingInputs, ReadingTier } from '../types';
 import { PdfPagesRenderer } from './PdfPagesRenderer';
 import { PdfTemplateUploader } from './PdfTemplateUploader';
+import { ReadingContentEditor } from './ReadingContentEditor';
 import { generateAndDownloadPdf, PdfGenerationProgress } from '../utils/pdfDownloadHelper';
 import { getCategorySpecByTopic } from '../data/categoryConfig';
 import { getTopicMasterBlueprint } from '../utils/categoryPageHelper';
@@ -30,6 +32,7 @@ interface PdfExportModalProps {
   onClose: () => void;
   inputs: ReadingInputs;
   markdown: string;
+  onUpdateMarkdown?: (newMarkdown: string) => void;
 }
 
 export const PdfExportModal: React.FC<PdfExportModalProps> = ({
@@ -37,6 +40,7 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
   onClose,
   inputs,
   markdown,
+  onUpdateMarkdown,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState<PdfGenerationProgress | null>(null);
@@ -45,6 +49,7 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
   const [selectedTier, setSelectedTier] = useState<ReadingTier>(inputs.tier || 'detailed');
   const [showSectionsDirectory, setShowSectionsDirectory] = useState(false);
   const [selectedDomainFilter, setSelectedDomainFilter] = useState<MasterSectionDomain | 'all'>('all');
+  const [isEditingContent, setIsEditingContent] = useState(false);
 
   const categorySpec = getCategorySpecByTopic(inputs.topic || 1);
   const hasDob = Boolean(inputs.dob && inputs.dob.trim().length > 3);
@@ -149,6 +154,20 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {onUpdateMarkdown && (
+              <button
+                onClick={() => setIsEditingContent(!isEditingContent)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xs text-xs font-semibold border transition-all cursor-pointer ${
+                  isEditingContent
+                    ? 'bg-[#BC6C25] text-white border-[#BC6C25]'
+                    : 'bg-[#F2EDE8] text-[#4A3F35] border-[#D8CEBE] hover:bg-[#EAE2D8]'
+                }`}
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span>{isEditingContent ? 'Back to PDF' : 'Edit Content'}</span>
+              </button>
+            )}
+
             <button
               onClick={() => setShowSectionsDirectory(!showSectionsDirectory)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xs text-xs font-semibold border transition-all cursor-pointer ${
@@ -337,30 +356,47 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
           </div>
         )}
 
-        {/* Live Scrollable Pages View */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 bg-[#2B2621]">
-          <div className="max-w-4xl mx-auto flex flex-col items-center">
-            <div className="mb-4 text-center text-xs text-[#E0D7CC] flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-[#D4A373]" />
-              <span>
-                {customTemplatePages && customTemplatePages.length > 0
-                  ? `Rendering text on top of your original uploaded PDF base pages (${customTemplatePages.length} pages loaded):`
-                  : `All ${renderedTotalPages} pages rendered in ${selectedTier.toUpperCase()} edition:`}
-              </span>
-            </div>
-
-            {/* Renderer for dynamic pages */}
-            <div className="transform origin-top scale-[0.8] sm:scale-[0.9] lg:scale-100 transition-transform">
-              <PdfPagesRenderer
-                inputs={inputs}
-                markdown={markdown}
-                customTemplatePages={customTemplatePages}
-                overrideTier={selectedTier}
-                onTotalPagesCalculated={(cnt) => setRenderedTotalPages(cnt)}
+        {/* Live Content Area: Either Live PDF Preview or In-Modal Content Editor */}
+        {isEditingContent ? (
+          <div className="flex-1 overflow-y-auto p-4 bg-[#FAF7F2]">
+            <div className="max-w-4xl mx-auto">
+              <ReadingContentEditor
+                initialMarkdown={markdown}
+                onSave={(newMd) => {
+                  onUpdateMarkdown?.(newMd);
+                  setIsEditingContent(false);
+                }}
+                onCancel={() => setIsEditingContent(false)}
+                isModal={true}
               />
             </div>
           </div>
-        </div>
+        ) : (
+          /* Live Scrollable Pages View */
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 bg-[#2B2621]">
+            <div className="max-w-4xl mx-auto flex flex-col items-center">
+              <div className="mb-4 text-center text-xs text-[#E0D7CC] flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-[#D4A373]" />
+                <span>
+                  {customTemplatePages && customTemplatePages.length > 0
+                    ? `Rendering text on top of your original uploaded PDF base pages (${customTemplatePages.length} pages loaded):`
+                    : `All ${renderedTotalPages} pages rendered in ${selectedTier.toUpperCase()} edition:`}
+                </span>
+              </div>
+
+              {/* Renderer for dynamic pages */}
+              <div className="transform origin-top scale-[0.8] sm:scale-[0.9] lg:scale-100 transition-transform">
+                <PdfPagesRenderer
+                  inputs={inputs}
+                  markdown={markdown}
+                  customTemplatePages={customTemplatePages}
+                  overrideTier={selectedTier}
+                  onTotalPagesCalculated={(cnt) => setRenderedTotalPages(cnt)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </motion.div>
     </div>
   );

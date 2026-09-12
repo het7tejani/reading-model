@@ -7,6 +7,13 @@ import {
   testGeminiApiKey,
   generateReading,
 } from "./src/server/geminiService.ts";
+import {
+  getLunaApiKey,
+  getLunaApiBaseUrl,
+  getLunaModelName,
+  testLunaApiKey,
+  generateLunaReading,
+} from "./src/server/lunaService.ts";
 
 // Explicitly load .env file variables into process.env
 dotenv.config();
@@ -20,13 +27,36 @@ async function startServer() {
 
   // API Route: Server and AI status config
   app.get("/api/config", (req, res) => {
-    const envKey = getGeminiApiKey();
+    const geminiKey = getGeminiApiKey();
+    const lunaKey = getLunaApiKey();
+    const lunaBaseUrl = getLunaApiBaseUrl();
+    const lunaModel = getLunaModelName();
+
     res.json({
       status: "ok",
-      hasEnvApiKey: Boolean(envKey),
-      hasServerKey: Boolean(envKey),
-      supportedModels: ["gemini-3.7-flash", "gemini-2.5-flash"],
+      hasEnvApiKey: Boolean(geminiKey || lunaKey),
+      hasServerKey: Boolean(geminiKey || lunaKey),
+      hasGeminiKey: Boolean(geminiKey),
+      hasLunaKey: Boolean(lunaKey),
+      lunaBaseUrl,
+      lunaModel,
+      supportedModels: [lunaModel, "gemini-3.7-flash", "gemini-2.5-flash"],
     });
+  });
+
+  // API Route: Test Luna 5.6 API key & connection
+  app.post("/api/test-luna-key", async (req, res) => {
+    try {
+      const result = await testLunaApiKey(req.body);
+      if (result.success) {
+        return res.json(result);
+      } else {
+        return res.status(400).json(result);
+      }
+    } catch (err: any) {
+      console.error("[Test Luna Key Error]", err);
+      return res.status(400).json({ error: err.message || "Invalid Luna API Key or Endpoint" });
+    }
   });
 
   // API Route: Test Gemini API key
@@ -44,9 +74,24 @@ async function startServer() {
     }
   });
 
-  // API Route: Generate Tarot & Numerology reading
+  // API Route: Generate reading using Luna 5.6 or Gemini AI
+  app.post("/api/generate-luna", async (req, res) => {
+    try {
+      const result = await generateLunaReading(req.body);
+      return res.json(result);
+    } catch (err: any) {
+      console.error("[Generate Luna Reading Error]", err);
+      return res.status(400).json({ error: err.message || "Failed to generate reading via Luna 5.6" });
+    }
+  });
+
+  // API Route: Standard reading endpoint powered by Gemini API
   app.post("/api/reading", async (req, res) => {
     try {
+      if (req.body?.useLuna && (getLunaApiKey() || req.body?.lunaApiKey)) {
+        const result = await generateLunaReading(req.body);
+        return res.json(result);
+      }
       const result = await generateReading(req.body);
       return res.json(result);
     } catch (err: any) {
@@ -76,7 +121,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Tarot & Numerology server running on http://localhost:${PORT}`);
+    console.log(`Tarot, Numerology & Luna 5.6 AI server running on http://localhost:${PORT}`);
   });
 }
 

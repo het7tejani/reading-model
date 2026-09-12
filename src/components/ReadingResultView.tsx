@@ -12,11 +12,14 @@ import {
   Code,
   Bookmark,
   Sparkles,
-  FileText
+  FileText,
+  Pencil
 } from 'lucide-react';
 import { ReadingInputs } from '../types';
 import { calculateLifePath } from '../utils/numerology';
+import { getTarotCardImageUrl } from '../utils/tarotImageMapper';
 import { PdfExportModal } from './PdfExportModal';
+import { ReadingContentEditor } from './ReadingContentEditor';
 
 interface ReadingResultViewProps {
   markdown: string;
@@ -24,8 +27,9 @@ interface ReadingResultViewProps {
   onEditInputs: () => void;
   onSaveReading: () => void;
   isSaved: boolean;
-  source?: 'gemini-ai' | 'algorithmic';
+  source?: 'luna-ai' | 'gemini-ai' | 'algorithmic';
   model?: string;
+  onUpdateMarkdown?: (newMarkdown: string) => void;
 }
 
 export const ReadingResultView: React.FC<ReadingResultViewProps> = ({
@@ -34,12 +38,16 @@ export const ReadingResultView: React.FC<ReadingResultViewProps> = ({
   onEditInputs,
   onSaveReading,
   isSaved,
-  source = 'gemini-ai',
-  model = 'gemini-3.7-flash'
+  source = 'luna-ai',
+  model = 'luna-5.6',
+  onUpdateMarkdown
 }) => {
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState<'illuminated' | 'markdown'>('illuminated');
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [isEditingContent, setIsEditingContent] = useState(false);
+  const [originalAiMarkdown] = useState<string>(markdown);
+  const [focusedSectionId, setFocusedSectionId] = useState<string | undefined>(undefined);
 
   const numerology = calculateLifePath(inputs.dob);
 
@@ -81,6 +89,7 @@ export const ReadingResultView: React.FC<ReadingResultViewProps> = ({
         onClose={() => setIsPdfModalOpen(false)}
         inputs={inputs}
         markdown={markdown}
+        onUpdateMarkdown={onUpdateMarkdown}
       />
 
       {/* Top Navigation & Action Controls Bar */}
@@ -124,6 +133,22 @@ export const ReadingResultView: React.FC<ReadingResultViewProps> = ({
 
         {/* Action Buttons */}
         <div className="flex items-center flex-wrap gap-2">
+          {/* Edit Reading Content Button */}
+          <button
+            onClick={() => {
+              setViewMode('illuminated');
+              setIsEditingContent(!isEditingContent);
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xs text-xs font-semibold transition-all border cursor-pointer ${
+              isEditingContent
+                ? 'bg-[#4A3F35] text-[#FCFAF7] border-[#4A3F35] shadow-xs'
+                : 'bg-white hover:bg-[#F2EDE8] border-[#E0D7CC] text-[#4A3F35]'
+            }`}
+          >
+            <Pencil className="w-3.5 h-3.5 text-[#BC6C25]" />
+            <span>{isEditingContent ? 'Viewing Mode' : 'Edit Content'}</span>
+          </button>
+
           {/* Primary Client PDF Export Button */}
           <button
             onClick={() => setIsPdfModalOpen(true)}
@@ -191,14 +216,19 @@ export const ReadingResultView: React.FC<ReadingResultViewProps> = ({
               <span className="text-[10px] uppercase tracking-[0.2em] text-[#8C7B6A] font-bold">
                 Customized Sacred Reading
               </span>
-              {source === 'gemini-ai' ? (
+              {source === 'luna-ai' ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xs bg-[#FAF7EE] border border-[#BC6C25]/40 text-[#4A3F35] text-[9px] font-bold uppercase tracking-wider font-mono">
+                  <Sparkles className="w-2.5 h-2.5 text-[#BC6C25]" />
+                  Luna 5.6 AI Model ({model})
+                </span>
+              ) : source === 'gemini-ai' ? (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xs bg-[#F2EDE8] border border-[#BC6C25]/30 text-[#BC6C25] text-[9px] font-bold uppercase tracking-wider font-mono">
                   <Sparkles className="w-2.5 h-2.5 text-[#BC6C25]" />
                   Google Gemini AI ({model})
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xs bg-[#F2EDE8] border border-[#E0D7CC] text-[#8C7B6A] text-[9px] font-bold uppercase tracking-wider font-mono">
-                  Synthesized Oracle
+                  Synthesized Oracle Engine
                 </span>
               )}
             </div>
@@ -227,12 +257,21 @@ export const ReadingResultView: React.FC<ReadingResultViewProps> = ({
           {inputs.cards.map((card, index) => {
             const titles = ['Position 01: Current', 'Position 02: Blockage', 'Position 03: Path Forward'];
             if (!card) return null;
+            const cardImg = getTarotCardImageUrl(card.name);
             return (
               <div
                 key={index}
                 className="p-3 rounded-xs bg-[#FCFAF7] border border-[#EEEAE5] flex items-center gap-3"
               >
-                <div className="text-2xl">{card.symbol}</div>
+                <div className="w-11 h-16 rounded overflow-hidden border border-[#D8CEBE] shrink-0 bg-[#F7F3EB] shadow-xs flex items-center justify-center">
+                  <img
+                    src={cardImg}
+                    alt={card.name}
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
                 <div className="min-w-0">
                   <span className="text-[9px] font-bold text-[#8C7B6A] uppercase tracking-widest block">
                     {titles[index]}
@@ -248,14 +287,60 @@ export const ReadingResultView: React.FC<ReadingResultViewProps> = ({
 
       {/* Main Content Area: Illuminated or Raw Markdown */}
       {viewMode === 'illuminated' ? (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className="p-6 md:p-12 rounded-sm bg-white border border-[#E0D7CC] shadow-xs reading-content max-w-none"
-        >
-          <ReactMarkdown>{markdown}</ReactMarkdown>
-        </motion.div>
+        isEditingContent ? (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ReadingContentEditor
+              initialMarkdown={markdown}
+              originalAiMarkdown={originalAiMarkdown}
+              onSave={(newMd) => {
+                onUpdateMarkdown?.(newMd);
+                setIsEditingContent(false);
+              }}
+              onCancel={() => setIsEditingContent(false)}
+              initialFocusedSectionId={focusedSectionId}
+            />
+          </motion.div>
+        ) : (
+          <div className="space-y-0">
+            {/* Illuminated Top Control Banner */}
+            <div className="p-3 bg-[#FAF7F2] rounded-t-sm border border-b-0 border-[#E0D7CC] flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-[#4A3F35] text-white flex items-center justify-center">
+                  <BookOpen className="w-3.5 h-3.5 text-[#D4A373]" />
+                </div>
+                <span className="font-serif italic font-bold text-sm text-[#4A3F35]">
+                  Illuminated Reading View
+                </span>
+                <span className="text-[11px] text-[#8C7B6A] hidden sm:inline">
+                  • Fully formatted transmission for {inputs.name || 'Querent'}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setFocusedSectionId(undefined);
+                  setIsEditingContent(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-xs bg-white hover:bg-[#F2EDE8] border border-[#E0D7CC] text-xs font-bold text-[#4A3F35] uppercase tracking-wider transition-colors shadow-2xs cursor-pointer"
+              >
+                <Pencil className="w-3 h-3 text-[#BC6C25]" />
+                <span>Edit Content</span>
+              </button>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="p-6 md:p-12 rounded-b-sm bg-white border border-[#E0D7CC] shadow-xs reading-content max-w-none"
+            >
+              <ReactMarkdown>{markdown}</ReactMarkdown>
+            </motion.div>
+          </div>
+        )
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 8 }}

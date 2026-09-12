@@ -6,37 +6,12 @@ import { getTarotCardImageUrl } from '../utils/tarotImageMapper';
 import { cleanTopicTitle } from '../data/readingTopics';
 import { getCategorySpecByTopic } from '../data/categoryConfig';
 import {
-  getTopicMasterBlueprint,
-  buildDeepDiveItems,
-  buildTwelveMonthItems,
-} from '../utils/categoryPageHelper';
-import { getZodiacProfile, getZodiacFromDob } from '../utils/astrology';
-import {
   TarotCoverEmblemSvg,
   TarotWelcomeEmblemSvg,
   TripleArchOverCardsSvg,
   UniversalPageDecorations,
 } from './PdfPageBackgrounds';
-import {
-  MasterTitleSubtitlePage,
-  MasterTableOfContentsPage,
-  MasterNavigationGuidePage,
-  MasterPersonalYearPage,
-  MasterElementalBalancePage,
-  MasterChakraAlignmentPage,
-  MasterVedicRemediesPage,
-  MasterCareerWealthPage,
-  MasterLoveDynamicsPage,
-  UniversalDynamicPage1,
-  UniversalDynamicPage2,
-  UniversalDynamicPage3,
-  MasterExtendedShadowWorkPage,
-  MasterRelationalSigilPage,
-  MasterLunarRomancePage,
-  MasterEsotericGlossaryPage,
-  FiveCardAltarSpreadPage,
-} from './MasterSectionPages';
-import { getCategoryTOCDef } from '../data/categoryTOCRegistry';
+import { UniversalPageContainer } from './UniversalPageContainer';
 
 interface PdfPagesRendererProps {
   inputs: ReadingInputs;
@@ -56,20 +31,17 @@ interface PageBlock {
 export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
   inputs,
   markdown,
-  customTemplatePages,
   onTotalPagesCalculated,
   overrideTier,
 }) => {
   const activeTier: ReadingTier = overrideTier || inputs.tier || 'detailed';
   const hasDob = Boolean(inputs.dob && inputs.dob.trim().length > 3);
 
-  const safeTopic = cleanTopicTitle(inputs.topic || 'Future Relationship');
+  const safeTopic = cleanTopicTitle(inputs.topic || 'Future Direction & Soul Purpose');
   const categorySpec = getCategorySpecByTopic(inputs.topic || 1);
-  const blueprint = getTopicMasterBlueprint(inputs.topic || categorySpec.id, activeTier, hasDob);
 
   const parsed = parseReadingMarkdown(markdown, safeTopic);
   const numerology = hasDob ? calculateLifePath(inputs.dob) : null;
-  const zodiacProfile = getZodiacProfile(inputs.zodiacSign || inputs.dob);
 
   // Compute detailed calculation steps for Numerology Page (if DOB provided)
   const computeNumerologySteps = (dobStr: string) => {
@@ -169,7 +141,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
   const card1 = inputs.cards[0] || {
     id: 'card1',
     name: parsed.cards.card1.name || 'Two of Cups',
-    keywords: parsed.cards.card1.keywords.length > 0 ? parsed.cards.card1.keywords : ['relationship', 'love', 'romance', 'meeting', 'healing'],
+    keywords: parsed.cards.card1.keywords.length > 0 ? parsed.cards.card1.keywords : ['connection', 'reciprocity', 'harmony', 'vulnerability', 'healing'],
     element: 'Water',
     symbol: '✨',
     arcana: 'minor',
@@ -181,7 +153,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
   const card2 = inputs.cards[1] || {
     id: 'card2',
     name: parsed.cards.card2.name || 'Eight of Swords',
-    keywords: parsed.cards.card2.keywords.length > 0 ? parsed.cards.card2.keywords : ['restriction', 'limitation', 'stuck', 'isolation'],
+    keywords: parsed.cards.card2.keywords.length > 0 ? parsed.cards.card2.keywords : ['restriction', 'limitation', 'overthinking', 'self-doubt', 'isolation'],
     element: 'Air',
     symbol: '⚔️',
     arcana: 'minor',
@@ -193,7 +165,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
   const card3 = inputs.cards[2] || {
     id: 'card3',
     name: parsed.cards.card3.name || 'The Star',
-    keywords: parsed.cards.card3.keywords.length > 0 ? parsed.cards.card3.keywords : ['hope', 'healing', 'inspiration', 'renewal'],
+    keywords: parsed.cards.card3.keywords.length > 0 ? parsed.cards.card3.keywords : ['hope', 'healing', 'inspiration', 'renewal', 'illumination'],
     element: 'Air',
     symbol: '⭐',
     arcana: 'major',
@@ -202,35 +174,9 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     color: 'from-purple-400 to-pink-600',
   };
 
-  const card4: TarotCard = (inputs.cards as any)[3] || {
-    id: 'card4',
-    name: 'The Moon',
-    keywords: ['intuition', 'unconscious', 'veiled truth', 'subconscious', 'illusions'],
-    element: 'Water',
-    symbol: '🌙',
-    arcana: 'major',
-    archetype: 'The Veiled Mirror',
-    affirmation: 'I look beyond illusions to perceive the unspoken truth of the heart.',
-    color: 'from-blue-500 to-indigo-700',
-  };
-
-  const card5: TarotCard = (inputs.cards as any)[4] || {
-    id: 'card5',
-    name: 'The Lovers',
-    keywords: ['union', 'reciprocity', 'soulmate bond', 'harmony', 'vulnerability'],
-    element: 'Air',
-    symbol: '💖',
-    arcana: 'major',
-    archetype: 'The Divine Union',
-    affirmation: 'I open my heart to authentic, reciprocal, and elevated soul connection.',
-    color: 'from-rose-400 to-amber-600',
-  };
-
   const card1Img = getTarotCardImageUrl(card1.name);
   const card2Img = getTarotCardImageUrl(card2.name);
   const card3Img = getTarotCardImageUrl(card3.name);
-  const card4Img = getTarotCardImageUrl(card4.name);
-  const card5Img = getTarotCardImageUrl(card5.name);
 
   const querentName = inputs.name || 'Seeker';
   const topicUpper = safeTopic.toUpperCase();
@@ -238,173 +184,725 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
 
   const numCoreText =
     parsed.numerology.coreParagraph ||
-    `As a Life Path ${calculatedLpNumber}, you channel the vibrational frequency of ${lpArchetypeObj.coreEnergyTitle}, guided by the planetary influence of ${lpArchetypeObj.governingPlanet}. ${lpArchetypeObj.description} At age ${inputs.age || 'this stage of your journey'}, your spirit is being summoned to honor your innate gifts of adaptability, intuitive insight, and authentic self-expression.`;
+    `As a Life Path ${calculatedLpNumber}, you channel the vibrational frequency of ${lpArchetypeObj.coreEnergyTitle}, guided by the planetary influence of ${lpArchetypeObj.governingPlanet}. ${lpArchetypeObj.description} At this stage of your journey, your spirit is being summoned to honor your innate gifts of adaptable resilience, intuitive discernment, and authentic self-expression.`;
   const numAppText =
     parsed.numerology.applicationParagraph ||
-    `In relation to your core inquiry regarding "${cleanProblem}", your Life Path ${calculatedLpNumber} blueprint calls you to recognize that feeling confined, stagnant, or restricted is a sacred signal that your energetic frequency is expanding. By standing sovereign in your truth as ${lpArchetypeObj.archetype}, you dismantle past limitations and invite expansive growth, freedom, and deep clarity into your reality.`;
+    `In relation to your core inquiry regarding "${cleanProblem}", your Life Path ${calculatedLpNumber} blueprint calls you to recognize that feeling confined or uncertain is a sacred catalyst for spiritual expansion. By standing sovereign in your truth as ${lpArchetypeObj.archetype}, you dismantle outdated limitations and invite expansive growth, freedom, and deep clarity into your reality.`;
 
-  const card1P1 = parsed.cards.card1.paragraphs[0] || 'The Two of Cups embodies reciprocal flow and authentic emotional connection.';
-  const card1P2 = parsed.cards.card1.paragraphs[1] || 'In your current energy, this reflects a pivotal moment for harmony and mutual understanding.';
+  const card1P1 = parsed.cards.card1.paragraphs[0] || `${card1.name} reveals foundational awareness and present emotional currents in your field.`;
+  const card1P2 = parsed.cards.card1.paragraphs[1] || 'In your current energy, this marks a sacred turning point to honor your peace without compromise.';
 
-  const card2P1 = parsed.cards.card2.paragraphs[0] || 'The Eight of Swords represents mental boundaries and self-imposed limitations.';
-  const card2P2 = parsed.cards.card2.paragraphs[1] || 'The blockage you face stems from fear and overthinking rather than external obstacles.';
+  const card2P1 = parsed.cards.card2.paragraphs[0] || `${card2.name} highlights subconscious defense patterns and perceived boundaries.`;
+  const card2P2 = parsed.cards.card2.paragraphs[1] || 'Your message is to stop negotiating with ambiguity and dismantle self-imposed hesitation.';
 
-  const card3P1 = parsed.cards.card3.paragraphs[0] || 'The Star shines as a beacon of renewed hope, peace, and spiritual renewal.';
-  const card3P2 = parsed.cards.card3.paragraphs[1] || 'Your path forward invites surrender to optimistic guidance and trusting your divine path.';
+  const card3P1 = parsed.cards.card3.paragraphs[0] || `${card3.name} radiates triumphant renewal, higher guidance, and expansive alignment.`;
+  const card3P2 = parsed.cards.card3.paragraphs[1] || 'Step boldly forward, trusting that your sovereign path leads directly to lasting fulfillment.';
 
   const card1Core = card1P1;
-  const card1Symbolism = `Symbolically rooted in the sacred realm of ${card1.element || 'Water'} and ${card1.arcana || 'Minor'} Arcana currents, ${card1.name} channels the archetype of ${card1.archetype || 'the Intuitive Oracle'}. It mirrors the energetic law of reciprocity—revealing how your inner willingness to receive shape-shifts your external circumstances into authentic alignment.`;
-  const card1Direct = card1P2 || 'In your current energy, this marks a sacred turning point to honor your emotional peace and sovereign boundaries without hesitation.';
+  const card1Symbolism = `Symbolically rooted in the sacred currents of ${card1.element || 'Water'} and ${card1.arcana || 'Minor'} Arcana guidance, ${card1.name} channels the archetype of ${card1.archetype || 'the Intuitive Oracle'}. It mirrors the energetic law of reciprocity—revealing how your willingness to receive shape-shifts your external circumstances into authentic alignment.`;
+  const card1Direct = card1P2;
 
   const card2Core = card2P1;
-  const card2Symbolism = `Governed by the intellectual currents of ${card2.element || 'Air'} and ${card2.arcana || 'Minor'} Arcana tension, ${card2.name} highlights how old mental defensive strategies now act as self-imposed boundaries. It symbolizes the fear of conflict or vulnerability that prevents you from stepping into full visibility.`;
-  const card2Direct = card2P2 || 'Your direct message is to stop negotiating with ambiguity. Release the exhausting habit of overthinking and trust that clarity is already within your grasp.';
+  const card2Symbolism = `Governed by the currents of ${card2.element || 'Air'} and ${card2.arcana || 'Minor'} Arcana tension, ${card2.name} highlights how old mental defensive strategies now act as self-imposed boundaries. It symbolizes the fear of conflict or vulnerability that keeps you caught in analysis loops.`;
+  const card2Direct = card2P2;
 
   const card3Core = card3P1;
-  const card3Symbolism = `Radiating the transformative celestial frequency of ${card3.element || 'Air/Fire'} and ${card3.arcana || 'Major'} Arcana illumination, ${card3.name} is an archetypal beacon of renewed hope, divine protection, and synchronicity. It signals that universal forces are aligning to meet your highest standards.`;
-  const card3Direct = card3P2 || 'Step boldly forward into this expansive new chapter. Anchor your decisions in joyful optimism, trusting that your sovereign path leads directly to lasting fulfillment.';
+  const card3Symbolism = `Radiating the transformative celestial frequency of ${card3.element || 'Air'} and ${card3.arcana || 'Major'} Arcana illumination, ${card3.name} is an archetypal beacon of renewed hope, divine protection, and synchronicity. It signals that universal forces are aligning to meet your highest standards.`;
+  const card3Direct = card3P2;
 
-  const card4Core = `In the position of The Blind Spot / What You Are Missing, ${card4.name} pulls back the veil on hidden emotional undercurrents. It asks you to look past surface behaviors and acknowledge the subtle, unexpressed needs that have remained unspoken.`;
-  const card4Symbolism = `Operating under the deep, intuitive current of ${card4.element || 'Water'}, ${card4.name} illuminates the subconscious mirror between partners—showing that what triggers emotional discomfort is often a call to heal an unmet childhood need for unconditional safety.`;
-  const card4Direct = 'Trust your intuitive gut over analytical second-guessing. What you sense beneath the words spoken is accurate; honor your emotional discernment without requiring external validation.';
-
-  const card5Core = `Anchoring the Immediate Path Forward & Healing Catalyst, ${card5.name} marks a profound spiritual turning point toward conscious union, emotional reciprocity, and joyful clarity.`;
-  const card5Symbolism = `Radiating the elevated frequency of ${card5.element || 'Air/Fire'}, ${card5.name} synthesizes personal boundaries with deep vulnerability, proving that true intimacy only flourishes when both individuals stand in mutual reverence and emotional sovereignty.`;
-  const card5Direct = 'Open your heart to genuine, reciprocal love. Take the bold step of expressing your true desires without fear of rejection, and watch the energetic dynamic elevate instantly.';
-
-  // Synthesis splitting
-  const synPars =
-    parsed.synthesisParagraphs.length > 0
-      ? parsed.synthesisParagraphs
-      : [
-          `Your Oracle reading weaves a transformative spiritual bridge between your inner vibrational frequency and the dynamic evolutionary passage from ${card1.name}, through ${card2.name}, into the triumphant blessing of ${card3.name}. At this pivotal moment in your journey, you stand at a sacred crossroads where old coping mechanisms are ready to be lovingly dissolved. Your soul is asking you to stop compromising your well-being for temporary comfort, inviting you instead to anchor your life in authentic sovereignty and conscious peace.`,
-          `Your core issue—"${cleanProblem}"—has served as a potent initiation for your boundaries and self-worth. While this circumstance has caused genuine emotional weight and restless reflection, it has simultaneously illuminated what is sacred and non-negotiable for your spirit. The foundational awareness embodied by ${card1.name} proves that you are no longer blind to what requires realignment; your intuition has already sounded the call for renewal and clarity.`,
-          `The blockage highlighted by ${card2.name} is not an insurmountable barrier, but an invitation to dismantle mental constructs rooted in fear of judgment or rejection. By recognizing that past disappointments do not hold authority over your future, you reclaim command of your vibrational frequency. When you refuse to negotiate with ambiguity, the path forward clears instantly.`,
-          `Moving decisively into the medicine of ${card3.name}, you enter a season of elevated synchronicity and profound emotional freedom. The universe is aligning tangible blessings that honor your loyalty, perseverance, and elevated standards. Trust the unfolding of this passage, for your highest destiny is meeting you at the exact altitude of your self-respect.`,
-        ];
-
-  const synthesisPart1 = [synPars[0], synPars[1] || synPars[0]].filter(Boolean);
-  const synthesisPart2 = [synPars[2] || synPars[0], synPars[3] || synPars[1] || synPars[0]].filter(Boolean);
-
-  // Module C items based on tier
-  const is12MonthTopic =
-    blueprint.moduleCMode === 'one_page_per_month' ||
-    safeTopic.toLowerCase().includes('12 month') ||
-    safeTopic.toLowerCase().includes('year forecast') ||
-    (parsed.monthlyForecasts && parsed.monthlyForecasts.length >= 6);
-
-  const twelveMonthItems = is12MonthTopic
-    ? (parsed.monthlyForecasts && parsed.monthlyForecasts.length >= 12
-        ? parsed.monthlyForecasts
-        : parsed.monthlyForecasts && parsed.monthlyForecasts.length > 0
-        ? parsed.monthlyForecasts.concat(
-            buildTwelveMonthItems(card1.name, card2.name, card3.name, calculatedLpNumber).slice(parsed.monthlyForecasts.length)
-          )
-        : buildTwelveMonthItems(card1.name, card2.name, card3.name, calculatedLpNumber))
-    : [];
-
-  const deepDiveItems = !is12MonthTopic
-    ? buildDeepDiveItems(categorySpec, inputs, parsed.qaInsights, card1.name, card2.name, card3.name, calculatedLpNumber, activeTier, hasDob)
-    : [];
+  // Synthesis paragraphs from AI
+  const synPars = parsed.synthesisParagraphs.length > 0 ? parsed.synthesisParagraphs : [
+    'The sacred synthesis of your numbers and cards indicates a profound turning point in your energetic trajectory. Your core vibrational coordinates reveal a soul designed for conscious evolution and authentic sovereignty, calling you to release old coping mechanisms and trust the wisdom of your lived experience.',
+    'As you navigate the current crossroads, the intersection between your Life Path blueprint and the cards drawn highlights an invaluable opportunity to transmute past emotional hesitation into expansive clarity and grounded peace.',
+    'By releasing the subconscious resistance and mental loops identified in your spread, you allow natural synchronicities and divine timing to realign your circumstances with reciprocal harmony and effortless truth.',
+    'Stepping decisively into the elevated medicine of your path forward brings sustainable peace, authentic connection, and joyful abundance into every facet of your life journey.'
+  ];
 
   // Parse Action Steps
-  const parseActionStep = (
-    raw: string | undefined,
-    defaultPhase: string,
-    defaultTitle: string,
-    defaultBody: string
-  ) => {
-    if (!raw) {
-      return {
-        phase: defaultPhase,
-        title: defaultTitle,
-        body: defaultBody,
-      };
-    }
-    let clean = raw
-      .replace(/^\[?\d+\]?[\.\)]?\s*/, '')
-      .replace(/^[-*•]\s*/, '')
-      .trim();
-
+  const parseActionStep = (raw: string | undefined, defaultPhase: string, defaultTitle: string, defaultBody: string) => {
+    if (!raw) return { phase: defaultPhase, title: defaultTitle, body: defaultBody };
+    let clean = raw.replace(/^\[?\d+\]?[\.\)]?\s*/, '').replace(/^[-*•]\s*/, '').trim();
     if (clean.includes(':')) {
       const parts = clean.split(':');
-      const rawHeader = parts[0];
-      const rawBody = parts.slice(1).join(':');
-
-      const stepHeader = cleanHeadingText(rawHeader, defaultTitle);
-      const stepBody = cleanMarkdownText(rawBody, defaultBody);
-
-      return {
-        phase: defaultPhase,
-        title: stepHeader,
-        body: stepBody.length > 8 ? stepBody : defaultBody,
-      };
+      const stepHeader = cleanHeadingText(parts[0], defaultTitle);
+      const stepBody = cleanMarkdownText(parts.slice(1).join(':'), defaultBody);
+      return { phase: defaultPhase, title: stepHeader, body: stepBody.length > 8 ? stepBody : defaultBody };
     }
-
     const cleanTitle = cleanHeadingText(clean, defaultTitle);
     const cleanBody = cleanMarkdownText(clean, defaultBody);
-
-    return {
-      phase: defaultPhase,
-      title: defaultTitle,
-      body: cleanBody.length > 15 ? cleanBody : defaultBody,
-    };
+    return { phase: defaultPhase, title: defaultTitle, body: cleanBody.length > 15 ? cleanBody : defaultBody };
   };
 
   const step1Parsed = parseActionStep(
     parsed.actionSteps[0],
     'Phase I • Energetic Sanctuary',
-    'Energetic Audit & Conscious Boundaries',
-    'Dedicate 15 minutes each morning to uncensored reflection. Identify every area where your energy is being depleted by people-pleasing or hesitation. Practice honoring your peace as non-negotiable.'
+    'Clarity & Boundary Audit',
+    'Dedicate 15 minutes each morning to uncensored journaling. Identify every area where your energy is being depleted by people-pleasing or hesitation. Practice honoring your peace as non-negotiable.'
   );
   const step2Parsed = parseActionStep(
     parsed.actionSteps[1],
     'Phase II • Shadow Transmutation',
-    'Dismantling Limiting Assumptions',
+    'Dissolving the Mental Loop',
     'Whenever overthinking or hesitation arises, pause immediately and place both hands over your heart center. Take slow diaphragmatic breaths and release the perceived need for control.'
   );
   const step3Parsed = parseActionStep(
     parsed.actionSteps[2],
     'Phase III • Sovereignty Activation',
-    `Activating Sovereign Authority`,
-    `Take one tangible, heart-aligned action reflecting solution-focused confidence. Step decisively into your natural authority, trusting divine universal support.`
+    'Executing Courageous Shift',
+    'Take one tangible, heart-aligned action reflecting solution-focused confidence. Step decisively into your natural authority, trusting divine universal support.'
   );
   const step4Parsed = parseActionStep(
     parsed.actionSteps[3],
     'Phase IV • Sacred Manifestation',
-    `Embodying ${card3.name} Radiant Vision`,
-    `Create a dedicated evening grounding ritual honoring your growth. Seal this journey by writing a letter of gratitude to your future self, anchoring unwavering trust in your destiny.`
+    'Anchoring Sovereign Blueprint',
+    'Create a dedicated evening grounding ritual honoring your growth. Seal this journey by writing a letter of gratitude to your future self, anchoring unwavering trust in your destiny.'
   );
 
-  // Mantras
-  const mantrasList =
-    parsed.mantras.length > 0
-      ? parsed.mantras
-      : [
-          'I AM sovereign, grounded, and aligned with my highest truth.',
-          'I AM releasing all anxiety and allowing divine flow to guide me.',
-          'I AM worthy of effortless abundance, deep clarity, and peace.',
-          'I AM stepping into my true power without fear or apology.',
-          'I AM anchored in love, protected by the universe, and completely free.',
-        ];
+  // Mantras list from AI
+  const mantrasList = parsed.mantras.length > 0 ? parsed.mantras : [
+    'I AM sovereign, grounded, and aligned with my highest truth.',
+    'I AM releasing all anxiety and allowing divine flow to guide me.',
+    'I AM worthy of effortless abundance, deep clarity, and peace.',
+    'I AM stepping into my true power without fear or apology.',
+    'I AM anchored in love, protected by the universe, and completely free.',
+  ];
 
-  // Inquiries
-  const inquiriesList =
-    parsed.soulInquiries.length > 0
-      ? parsed.soulInquiries
-      : [
-          'Where in my life am I still seeking external permission instead of trusting my divine inner knowing?',
-          'What outdated fear of conflict or rejection am I ready to release permanently?',
-          'What does my most peaceful, abundant, and joyful timeline look like in physical reality?',
-        ];
+  // Inquiries list from AI
+  const inquiriesList = parsed.soulInquiries.length > 0 ? parsed.soulInquiries : [
+    'Where in my life am I still seeking external permission instead of trusting my divine inner knowing?',
+    'What outdated fear of conflict or rejection am I ready to release permanently?',
+    'What does my most peaceful, abundant, and joyful timeline look like in physical reality?',
+  ];
 
   const effectiveShopName = (inputs.shopName || '').trim() || 'Sacred Intuitive Studio';
+
+  // =========================================================================
+  // REUSABLE PAGE TEMPLATE RENDERERS
+  // =========================================================================
+
+  // 1. Cover Page
+  const renderCover = (pageNumber: number, totalPages: number) => (
+    <div
+      className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between items-center z-10 text-center"
+      style={{ fontFamily: "'Times New Roman', Times, serif" }}
+    >
+      <div className="space-y-2 pt-2">
+        <h1
+          className="text-[26pt] font-bold tracking-tight text-[#1F1914] uppercase leading-tight"
+          style={{ fontFamily: "'Montserrat', sans-serif" }}
+        >
+          {effectiveShopName}
+        </h1>
+        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+        <p className="text-[12pt] italic text-[#4A3F35]">
+          Intuitive Tarot · Cosmic Alchemy · Soul Blueprint Channeling
+        </p>
+      </div>
+
+      <div className="relative flex flex-col items-center justify-center my-auto w-full max-w-[460px]">
+        <TarotCoverEmblemSvg className="w-[430px] h-[310px] text-[#2C241E]" />
+      </div>
+
+      <div className="space-y-3 max-w-xl pb-2">
+        <div className="border-t border-b border-[#D8CEBE] py-4 space-y-1.5">
+          <h2
+            className="text-[22pt] font-bold text-[#1F1914] leading-tight uppercase tracking-wider"
+            style={{ fontFamily: "'Montserrat', sans-serif" }}
+          >
+            SACRED TAROT & SPIRITUAL GUIDANCE
+          </h2>
+          <p className="text-[12pt] text-[#6B5E51] italic">
+            DIVINE INTUITIVE TRANSMISSION · {activeTier.toUpperCase()} EDITION
+          </p>
+        </div>
+      </div>
+
+      <div className="text-center text-[9pt] text-[#6B5E51] tracking-wider uppercase space-y-0.5 border-t border-[#E8E1D5] pt-2 w-full max-w-md">
+        <p>Channeled with Reverence by {effectiveShopName}</p>
+        <p className="text-[8pt] text-[#8C7D6D]">
+          © {new Date().getFullYear()} {effectiveShopName} · All Rights Reserved
+        </p>
+      </div>
+    </div>
+  );
+
+  // 2. Tarot Spread Overview
+  const renderTarotSpread = (title = 'The 3-Card Sacred Oracle Spread', paragraphs?: string[]) => {
+    const rawParagraphs =
+      paragraphs && paragraphs.length > 0
+        ? paragraphs
+        : [
+            `This three-card spread operates as an organic energetic gateway: moving from present vibrational alignment (${card1.name}), illuminating the shadow resistance (${card2.name}), and unlocking your highest breakthrough potential (${card3.name}).`,
+          ];
+
+    // Filter out redundant lines that simply list "Card 1: ... Card 2: ... Card 3: ..."
+    // since the 3 cards are already prominently displayed with their artwork, names, and positions
+    const displayParagraphs = rawParagraphs.filter((p) => {
+      const trimmed = p.trim();
+      if (!trimmed) return false;
+      const lower = trimmed.toLowerCase();
+      if (
+        lower.startsWith('card 1:') &&
+        lower.includes('card 2:') &&
+        lower.includes('card 3:')
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    return (
+      <div
+        className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between items-center z-10"
+        style={{ fontFamily: "'Times New Roman', Times, serif" }}
+      >
+        <div className="text-center space-y-1.5 pt-2">
+          <h1
+            className="text-[24px] font-bold text-[#1F1914] uppercase tracking-wide"
+            style={{ fontFamily: "'Montserrat', sans-serif" }}
+          >
+            {title}
+          </h1>
+          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+          <p className="text-[14px] italic text-[#4A3F35]">
+            The foundational energetic triad anchoring your reading
+          </p>
+        </div>
+
+        <div className="my-auto w-full max-w-xl flex flex-col items-center">
+          <div className="w-full flex justify-center mb-1 text-[#2C241E]">
+            <TripleArchOverCardsSvg className="w-[320px] h-[34px] text-[#A89884]/70" />
+          </div>
+
+          <div className="grid grid-cols-3 gap-5 w-full items-end justify-center py-2">
+            {/* Card 1 */}
+            <div className="flex flex-col items-center space-y-2">
+              <div className="w-[125px] aspect-[2/3] p-1.5 bg-[#FAF7EE] rounded border border-[#A89884]/80 shadow-md">
+                <div className="w-full h-full rounded-sm overflow-hidden border border-[#D8CEBE] bg-[#F7F3EB] flex items-center justify-center">
+                  <img
+                    src={card1Img}
+                    alt={card1.name}
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    className="w-full h-full object-contain"
+                    style={{ objectFit: 'contain' }}
+                  />
+                </div>
+              </div>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B5E51] font-semibold" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                Card I · Present
+              </span>
+              <p
+                className="font-bold text-[14px] text-[#1F1914] leading-tight text-center"
+                style={{ fontFamily: "'Montserrat', sans-serif" }}
+              >
+                {card1.name}
+              </p>
+            </div>
+
+            {/* Card 2 */}
+            <div className="flex flex-col items-center space-y-2">
+              <div className="w-[125px] aspect-[2/3] p-1.5 bg-[#FAF7EE] rounded border border-[#A89884]/80 shadow-md">
+                <div className="w-full h-full rounded-sm overflow-hidden border border-[#D8CEBE] bg-[#F7F3EB] flex items-center justify-center">
+                  <img
+                    src={card2Img}
+                    alt={card2.name}
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    className="w-full h-full object-contain"
+                    style={{ objectFit: 'contain' }}
+                  />
+                </div>
+              </div>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B5E51] font-semibold" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                Card II · Blockage
+              </span>
+              <p
+                className="font-bold text-[14px] text-[#1F1914] leading-tight text-center"
+                style={{ fontFamily: "'Montserrat', sans-serif" }}
+              >
+                {card2.name}
+              </p>
+            </div>
+
+            {/* Card 3 */}
+            <div className="flex flex-col items-center space-y-2">
+              <div className="w-[125px] aspect-[2/3] p-1.5 bg-[#FAF7EE] rounded border border-[#A89884]/80 shadow-md">
+                <div className="w-full h-full rounded-sm overflow-hidden border border-[#D8CEBE] bg-[#F7F3EB] flex items-center justify-center">
+                  <img
+                    src={card3Img}
+                    alt={card3.name}
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    className="w-full h-full object-contain"
+                    style={{ objectFit: 'contain' }}
+                  />
+                </div>
+              </div>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B5E51] font-semibold" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                Card III · Forward
+              </span>
+              <p
+                className="font-bold text-[14px] text-[#1F1914] leading-tight text-center"
+                style={{ fontFamily: "'Montserrat', sans-serif" }}
+              >
+                {card3.name}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-xl text-center space-y-2.5 pb-2">
+          {displayParagraphs.map((par, pIdx) => (
+            <p
+              key={pIdx}
+              className="text-[16px] text-[#1F1914] leading-[1.6] italic text-center"
+              style={{ fontFamily: "'Times New Roman', Times, serif" }}
+            >
+              {par}
+            </p>
+          ))}
+        </div>
+
+        <div className="w-full border-t border-[#E8E1D5] pt-2 text-center">
+          <p className="text-[12px] italic text-[#6B5E51]">
+            ✦ The Cards Reflected Here Form the Foundation of Your Transmission ✦
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  // 3. Card Artwork & Embodiment Page (Individual Introduction Page)
+  const renderCardArt = (
+    targetCard: TarotCard,
+    targetImg: string,
+    romanNum: string,
+    roleLabel: string,
+    affirmationOverride?: string,
+    paragraphs?: string[]
+  ) => {
+    const quoteText =
+      affirmationOverride ||
+      (paragraphs && paragraphs.length > 0 ? paragraphs[0] : undefined) ||
+      targetCard.affirmation ||
+      'I align with divine flow and emotional reciprocity.';
+
+    return (
+      <div
+        className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between items-center z-10 text-center"
+        style={{ fontFamily: "'Times New Roman', Times, serif" }}
+      >
+        <div className="space-y-1.5 pt-2">
+          <h1
+            className="text-[24px] font-bold text-[#1F1914] leading-tight uppercase tracking-wide"
+            style={{ fontFamily: "'Montserrat', sans-serif" }}
+          >
+            {targetCard.name}
+          </h1>
+          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+          <p className="text-[14px] italic text-[#4A3F35]">
+            Card {romanNum} · {roleLabel} · Element: {targetCard.element || 'Universal'} · Arcana: {targetCard.arcana || 'Major'}
+          </p>
+        </div>
+
+        <div className="my-auto flex flex-col items-center justify-center w-full py-1">
+          <div className="w-[230px] max-w-[230px] aspect-[2/3] p-2 bg-[#FAF7EE] rounded border border-[#A89884]/80 shadow-lg flex items-center justify-center">
+            <div className="w-full h-full rounded-sm overflow-hidden border border-[#D8CEBE] bg-[#F7F3EB] flex items-center justify-center">
+              <img
+                src={targetImg}
+                alt={targetCard.name}
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
+                className="w-full h-full object-contain"
+                style={{ objectFit: 'contain' }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2 w-full max-w-xl pb-2">
+          <span
+            className="text-[12px] uppercase tracking-[0.24em] text-[#6B5E51] block font-semibold"
+            style={{ fontFamily: "'Montserrat', sans-serif" }}
+          >
+            Core Keywords & Frequencies
+          </span>
+          <p className="text-[18px] text-[#1F1914] tracking-wide">
+            {targetCard.keywords.join('  ·  ')}
+          </p>
+        </div>
+
+        <div className="w-full border-t border-[#E8E1D5] pt-2 text-center">
+          <p className="text-[16px] italic text-[#1F1914]">
+            &ldquo;{quoteText}&rdquo;
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  // 3b. Tarot Card Deep Interpretation Page (Text only, NO card image)
+  const renderTarotInterpretationPage = (
+    targetCard: TarotCard,
+    roman: string,
+    roleLabel: string,
+    pageTitle: string,
+    paragraphs?: string[],
+    pageNumber?: number
+  ) => {
+    // Filter disclaimers
+    const rawParagraphs =
+      paragraphs && paragraphs.length > 0
+        ? paragraphs
+        : [
+            `${targetCard.name} brings profound energetic illumination to your path, signaling conscious evolution and heightened spiritual discernment.`,
+            `Embrace the sovereign frequency of this vibration to dissolve self-imposed doubt and step courageously into alignment.`,
+          ];
+
+    const displayParagraphs = rawParagraphs.filter((par) => {
+      const lower = par.toLowerCase();
+      if (
+        lower.includes('sacred divination disclaimer') ||
+        lower.includes('for entertainment purposes') ||
+        lower.includes('medical, psychological, legal') ||
+        lower.includes('not constitute or substitute')
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    return (
+      <UniversalPageContainer
+        title={pageTitle || `Card ${roman} · ${targetCard.name}`}
+        subtitle={`${roleLabel} · Element: ${targetCard.element || 'Universal'} · Arcana: ${targetCard.arcana || 'Major'}`}
+        footerText="✦ Deep Energetic Meaning & Channeled Guidance ✦"
+      >
+        <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto w-full">
+          {displayParagraphs.map((par, pIdx) => (
+            <React.Fragment key={pIdx}>
+              {pIdx > 0 && (
+                <div className="text-[#A89884] text-center text-xs my-0.5 select-none">
+                  ✦  ·  ✦  ·  ✦
+                </div>
+              )}
+              <p
+                className="text-[20px] leading-[1.8] text-[#1F1914] text-center"
+                style={{ fontFamily: "'Times New Roman', Times, serif" }}
+              >
+                {par}
+              </p>
+            </React.Fragment>
+          ))}
+        </div>
+      </UniversalPageContainer>
+    );
+  };
+
+  // 4. Numerology Template Page
+  const renderNumerology = (paragraphs?: string[]) => {
+    const p1 = (paragraphs && paragraphs[0]) || numCoreText;
+    const p2 = (paragraphs && paragraphs[1]) || numAppText;
+
+    return (
+      <UniversalPageContainer
+        title={`Life Path ${calculatedLpNumber} · ${lpArchetypeObj.coreEnergyTitle}`}
+        subtitle={`Derived from Date of Birth: ${inputs.dob || 'Client DOB'} (${steps.finalReduction})`}
+        footerText="✦ Numbers Are the Sacred Geometry of Cosmic Consciousness ✦"
+      >
+        <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto">
+          <div className="space-y-2 text-center">
+            <h2
+              className="font-bold text-[20px] text-[#1F1914] text-center uppercase"
+              style={{ fontFamily: "'Montserrat', sans-serif" }}
+            >
+              ✦ Core Vibrational Essence ✦
+            </h2>
+            <p
+              className="text-[20px] leading-[1.8] text-[#1F1914] text-center"
+              style={{ fontFamily: "'Times New Roman', Times, serif" }}
+            >
+              {p1}
+            </p>
+          </div>
+
+          <div className="text-[#A89884] text-center text-xs my-0.5 select-none">✦  ·  ✦  ·  ✦</div>
+
+          <div className="space-y-2 text-center">
+            <h2
+              className="font-bold text-[20px] text-[#1F1914] text-center uppercase"
+              style={{ fontFamily: "'Montserrat', sans-serif" }}
+            >
+              ✦ Application to Your Situation ✦
+            </h2>
+            <p
+              className="text-[20px] leading-[1.8] text-[#1F1914] text-center"
+              style={{ fontFamily: "'Times New Roman', Times, serif" }}
+            >
+              {p2}
+            </p>
+          </div>
+
+          <div className="pt-2 text-center">
+            <p className="text-[15px] italic text-[#6B5E51] text-center">
+              Governing Planetary Archetype: <strong className="text-[#1F1914]">{lpArchetypeObj.governingPlanet}</strong> · The {lpArchetypeObj.archetype}
+            </p>
+          </div>
+        </div>
+      </UniversalPageContainer>
+    );
+  };
+
+  // 5. Universal Page Design (Title: 24px top center in Montserrat, Body: 20px center aligned in Times New Roman)
+  const renderUniversalPage = (
+    title: string,
+    paragraphs: string[],
+    pageNum: number,
+    isClosing?: boolean
+  ) => {
+    // Filter out duplicate disclaimer content from the text paragraphs so only the small footer disclaimer remains
+    const rawParagraphs =
+      paragraphs && paragraphs.length > 0 ? paragraphs : ['Content unfolding in divine timing.'];
+    const filteredParagraphs = rawParagraphs.filter((par) => {
+      const lower = par.toLowerCase().trim();
+      return (
+        !lower.includes('sacred divination disclaimer') &&
+        !lower.includes('legal disclaimer') &&
+        !lower.includes('this reading is provided for personal reflection') &&
+        !lower.includes('tarot, astrology, and numerology readings are offered solely') &&
+        !lower.includes('entertainment purposes') &&
+        !lower.startsWith('disclaimer:') &&
+        !lower.startsWith('✦ disclaimer') &&
+        !lower.startsWith('✦ sacred divination disclaimer')
+      );
+    });
+
+    const displayParagraphs =
+      filteredParagraphs.length > 0 ? filteredParagraphs : rawParagraphs;
+
+    return (
+      <UniversalPageContainer
+        title={title}
+        footerText={
+          isClosing
+            ? `© ${new Date().getFullYear()} ${effectiveShopName} · All Rights Reserved`
+            : '✦ Grounded in Love, Guided by Wisdom, Anchored in Sovereignty ✦'
+        }
+      >
+        <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto w-full">
+          {displayParagraphs.map((par, pIdx) => {
+            const isMantra =
+              par.startsWith('✦') ||
+              par.startsWith('"') ||
+              par.startsWith('“') ||
+              par.startsWith('I AM');
+            return (
+              <React.Fragment key={pIdx}>
+                {pIdx > 0 && (
+                  <div className="text-[#A89884] text-center text-xs my-0.5 select-none">
+                    ✦  ·  ✦  ·  ✦
+                  </div>
+                )}
+                <p
+                  className={`text-[20px] leading-[1.8] text-[#1F1914] text-center ${
+                    isMantra ? 'italic font-medium' : ''
+                  }`}
+                  style={{ fontFamily: "'Times New Roman', Times, serif" }}
+                >
+                  {par}
+                </p>
+              </React.Fragment>
+            );
+          })}
+
+          {isClosing && (
+            <div className="space-y-1 text-center border-t border-[#E8E1D5] pt-3 max-w-lg mx-auto mt-2">
+              <p
+                className="text-[11px] font-bold uppercase tracking-wider text-[#1F1914] text-center"
+                style={{ fontFamily: "'Montserrat', sans-serif" }}
+              >
+                ✦ Sacred Divination Disclaimer ✦
+              </p>
+              <p
+                className="text-[11px] leading-relaxed text-[#6B5E51] text-center"
+                style={{ fontFamily: "'Times New Roman', Times, serif" }}
+              >
+                Tarot, astrology, and numerology readings are offered solely for personal insight,
+                self-reflection, spiritual exploration, and entertainment purposes. Guidance
+                provided is intended to inspire contemplation and does not constitute or
+                substitute for licensed medical, psychological, legal, or financial counsel.
+              </p>
+            </div>
+          )}
+        </div>
+      </UniversalPageContainer>
+    );
+  };
+
+  // Helper to match card for visual card pages
+  const getCardForPage = (
+    item: { title: string; cardIndex?: number },
+    c1: TarotCard,
+    c2: TarotCard,
+    c3: TarotCard
+  ) => {
+    const lower = item.title.toLowerCase();
+    if (
+      item.cardIndex === 1 ||
+      lower.includes('card 2') ||
+      lower.includes('card ii') ||
+      lower.includes('second card') ||
+      lower.includes('blockage') ||
+      lower.includes(c2.name.toLowerCase())
+    ) {
+      return { card: c2, roman: 'II', role: 'The Blockage', img: card2Img };
+    }
+    if (
+      item.cardIndex === 2 ||
+      lower.includes('card 3') ||
+      lower.includes('card iii') ||
+      lower.includes('third card') ||
+      lower.includes('path forward') ||
+      lower.includes('forward') ||
+      lower.includes(c3.name.toLowerCase())
+    ) {
+      return { card: c3, roman: 'III', role: 'Path Forward', img: card3Img };
+    }
+    return { card: c1, roman: 'I', role: 'Current Energy', img: card1Img };
+  };
 
   // =========================================================================
   // DYNAMIC PAGE ASSEMBLY
   // =========================================================================
   const pages: PageBlock[] = [];
 
+  // If page-by-page output is present from the AI, map dynamically (Unlimited pages)
+  if (parsed.pageByPage && parsed.pageByPage.length > 0) {
+    parsed.pageByPage.forEach((item, idx) => {
+      const pageNumber = item.pageNumber || idx + 1;
+      const cleanTitle = cleanHeadingText(item.title, `Page ${pageNumber}`);
+      const lowerTitle = cleanTitle.toLowerCase();
+
+      // 1. Cover Page (First Page)
+      if (
+        item.isCover ||
+        (pageNumber === 1 && (lowerTitle.includes('cover') || lowerTitle.includes('reading')))
+      ) {
+        pages.push({
+          key: `page-${pageNumber}-cover`,
+          headerTitle: effectiveShopName.toUpperCase(),
+          render: (pNum, totalPages) => renderCover(pNum, totalPages),
+        });
+        return;
+      }
+
+      // 2. Tarot Spread Overview / Card Energy Overview Page (SHOWS ALL 3 CARDS)
+      const isSpreadOverview =
+        item.isTarotSpread ||
+        lowerTitle.includes('card energy overview') ||
+        lowerTitle.includes('cards energy overview') ||
+        lowerTitle.includes('energy overview') ||
+        lowerTitle.includes('tarot spread') ||
+        lowerTitle.includes('spread overview') ||
+        lowerTitle.includes('3-card energy') ||
+        lowerTitle.includes('3 card energy') ||
+        lowerTitle.includes('3-card spread') ||
+        lowerTitle.includes('3 card spread') ||
+        lowerTitle.includes('oracle spread') ||
+        lowerTitle.includes('cards drawn') ||
+        lowerTitle.includes('cards overview');
+
+      if (isSpreadOverview) {
+        pages.push({
+          key: `page-${pageNumber}-tarot-spread`,
+          headerTitle: cleanTitle.toUpperCase() || 'CARD ENERGY OVERVIEW',
+          render: () => renderTarotSpread(cleanTitle, item.paragraphs),
+        });
+        return;
+      }
+
+      // 3. Tarot Card Art / Visual / Individual Introduction Page (SHOWS CARD IMAGE)
+      const isCardIntro =
+        item.isTarotCardArt ||
+        (!isSpreadOverview &&
+          !lowerTitle.includes('interpretation') &&
+          !lowerTitle.includes('deep') &&
+          !lowerTitle.includes('channeled') &&
+          (lowerTitle.includes('visual') ||
+            lowerTitle.includes('intro') ||
+            lowerTitle.includes('introduction') ||
+            lowerTitle.includes('keyword') ||
+            lowerTitle.includes('artwork') ||
+            lowerTitle.includes('embodiment') ||
+            lowerTitle.includes('card into')));
+
+      if (isCardIntro) {
+        const cardInfo = getCardForPage(item, card1, card2, card3);
+        pages.push({
+          key: `page-${pageNumber}-card-${cardInfo.roman}-art`,
+          headerTitle: `CARD ${cardInfo.roman} · ${cardInfo.role.toUpperCase()}`,
+          render: () =>
+            renderCardArt(
+              cardInfo.card,
+              cardInfo.img,
+              cardInfo.roman,
+              cardInfo.role,
+              item.paragraphs[0],
+              item.paragraphs
+            ),
+        });
+        return;
+      }
+
+      // 4. Tarot Card Deep Interpretation Page (Text only, NO card image)
+      if (item.isTarotInterpretation || item.cardIndex !== undefined) {
+        const cardInfo = getCardForPage(item, card1, card2, card3);
+        pages.push({
+          key: `page-${pageNumber}-card-${cardInfo.roman}-interpretation`,
+          headerTitle: `CARD ${cardInfo.roman} · ${cardInfo.role.toUpperCase()}`,
+          render: () =>
+            renderTarotInterpretationPage(
+              cardInfo.card,
+              cardInfo.roman,
+              cardInfo.role,
+              cleanTitle,
+              item.paragraphs,
+              pageNumber
+            ),
+        });
+        return;
+      }
+
+      // 5. Numerology Template Page
+      if (item.isNumerology) {
+        pages.push({
+          key: `page-${pageNumber}-numerology`,
+          headerTitle: 'COSMIC NUMEROLOGY PROFILE',
+          render: () => renderNumerology(item.paragraphs),
+        });
+        return;
+      }
+
+      // 5. ALL OTHER PAGES -> Universal Page Design (24px Title Top Center, 18/20px Text Centered)
+      pages.push({
+        key: `page-${pageNumber}-universal`,
+        headerTitle: cleanTitle.toUpperCase().slice(0, 32),
+        render: () =>
+          renderUniversalPage(
+            cleanTitle,
+            item.paragraphs.length > 0
+              ? item.paragraphs
+              : [item.content || 'Content unfolding in divine timing.'],
+            pageNumber,
+            item.isClosingDisclaimer
+          ),
+      });
+    });
+  }
+
+  // Fallback if no pageByPage data available
+  if (pages.length === 0) {
   // 1. Cover Page
   pages.push({
     key: 'cover',
@@ -429,24 +927,15 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         </div>
 
         <div className="space-y-3 max-w-xl pb-2">
-          <div className="space-y-1">
-            <span className="text-[8.5pt] uppercase tracking-[0.28em] text-[#6B5E51] font-sans font-semibold">
-              Sacred Oracle Transmission For
-            </span>
-            <h2 className="text-[22pt] font-serif font-bold text-[#1F1914] leading-tight">
-              {querentName}
+          <div className="border-t border-b border-[#D8CEBE] py-4 space-y-1.5">
+            <h2
+              className="text-[22pt] font-bold text-[#1F1914] leading-tight uppercase tracking-wider"
+              style={{ fontFamily: "'Montserrat', sans-serif" }}
+            >
+              SACRED TAROT & SPIRITUAL GUIDANCE
             </h2>
-          </div>
-
-          <div className="border-t border-b border-[#D8CEBE] py-3.5 space-y-1">
-            <span className="text-[8pt] uppercase tracking-[0.24em] text-[#6B5E51] font-sans block font-semibold">
-              Inquiry Focus & Theme
-            </span>
-            <p className="text-[14pt] font-serif font-bold text-[#1F1914]">
-              {categorySpec.headline || topicUpper}
-            </p>
-            <p className="text-[9.5pt] text-[#6B5E51] italic">
-              {categorySpec.title} · {activeTier.toUpperCase()} EDITION ({totalPages} Pages)
+            <p className="text-[12pt] text-[#6B5E51] italic">
+              DIVINE INTUITIVE TRANSMISSION · {activeTier.toUpperCase()} EDITION ({totalPages} Pages)
             </p>
           </div>
         </div>
@@ -461,350 +950,100 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     ),
   });
 
-  // Master Section: Title & Subtitle Page (Premium Tier)
-  if (activeTier === 'premium') {
-    pages.push({
-      key: 'title-subtitle-frontispiece',
-      headerTitle: 'SACRED FRONTISPIECE & INVOCATION',
-      render: () => (
-        <MasterTitleSubtitlePage
-          inputs={inputs}
-          categorySpec={categorySpec}
-          effectiveShopName={effectiveShopName}
-          card1={card1}
-          card2={card2}
-          card3={card3}
-          calculatedLpNumber={calculatedLpNumber}
-        />
-      ),
-    });
-  }
-
-  // Master Section: How to Navigate & Integrate (Premium Tier)
-  if (activeTier === 'premium') {
-    pages.push({
-      key: 'navigation-guide',
-      headerTitle: 'ORACLE INTEGRATION GUIDE',
-      render: () => <MasterNavigationGuidePage />,
-    });
-  }
-
-  // 2. Client Welcome & Energy Alignment
+  // 2. Querent Sacred Focus & Blueprint (Universal Page Design)
   pages.push({
-    key: 'welcome',
-    headerTitle: 'WELCOME & ENERGY ALIGNMENT',
+    key: 'intake-blueprint',
+    headerTitle: 'QUERENT INTAKE & SACRED BLUEPRINT',
     render: () => (
-      <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between items-center z-10 text-center font-serif">
-        <div className="space-y-1.5 pt-2">
-          <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-            Sacred Alignment & Intention
-          </span>
-          <h1 className="text-[24pt] font-serif font-bold text-[#1F1914]">
+      <UniversalPageContainer
+        eyebrow="Sacred Intention & Querent Blueprint"
+        title="Querent Sacred Focus & Coordinates"
+        subtitle="Honoring your divine presence, inquiry, and soul crossroads"
+        footerText="✦ Your Intentions Anchor the Divine Channeling Space ✦"
+      >
+        <div className="flex flex-col items-center justify-center text-center space-y-4 max-w-xl mx-auto">
+          <p className="text-[20px] font-serif font-bold text-[#1F1914] text-center">
             Welcome, Beloved {querentName}
-          </h1>
-          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-          <p className="text-[10pt] font-serif italic text-[#6B5E51]">
-            Entering a quiet space of intuitive resonance and soul clarity
+            {inputs.age ? ` (${inputs.age} Years)` : ''}
           </p>
-        </div>
 
-        <div className="relative flex flex-col items-center justify-center my-3">
-          <TarotWelcomeEmblemSvg className="w-[200px] h-[48px] text-[#4A3F35]" />
-        </div>
+          <div className="w-12 h-[1px] bg-[#C4B6A4] mx-auto my-1"></div>
 
-        <div className="max-w-xl text-justify space-y-4 my-auto">
-          <p className="text-[10.5pt] leading-[1.65] text-[#1F1914]">
-            You have been guided to this sacred reading by divine synchronicity. The universe does not operate on coincidence; every card drawn, archetype illuminated, and vibrational frequency in this document was channeled with focused intention to support your highest alignment.
-          </p>
-          <p className="text-[10.5pt] leading-[1.65] text-[#1F1914]">
-            This reading is designed not as a rigid prediction, but as a sovereign mirror of your energetic field. It honors your free will while offering deep clarity on what subconscious blocks are ready to be dissolved and what triumphant blessings are preparing to enter your reality.
-          </p>
-          <div className="border-t border-b border-[#D8CEBE] py-3 text-center my-2">
-            <p className="text-[10.5pt] italic text-[#4A3F35] font-serif">
-              &ldquo;Before you explore the pages ahead, take three slow diaphragmatic breaths. Place your hands over your heart and allow your nervous system to settle into receptive peace.&rdquo;
+          <div className="space-y-1.5 w-full text-center">
+            <span className="text-[18px] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block text-center">
+              ✦ Core Situation & Crossroads ✦
+            </span>
+            <p className="text-[18px] leading-[1.7] text-[#1F1914] font-serif italic text-center">
+              &ldquo;{inputs.problem || 'Navigating a key vibrational turning point of decision, sovereign realignment, and soul growth.'}&rdquo;
+            </p>
+          </div>
+
+          <div className="w-12 h-[1px] bg-[#C4B6A4] mx-auto my-1"></div>
+
+          <div className="space-y-1.5 w-full text-center">
+            <span className="text-[18px] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block text-center">
+              ✦ Direct Soul Inquiry ✦
+            </span>
+            <p className="text-[19px] leading-[1.7] text-[#1F1914] font-serif italic font-medium text-center">
+              &ldquo;{inputs.question || 'What is the highest alignment and next aligned action for my sacred path?'}&rdquo;
+            </p>
+          </div>
+
+          <div className="pt-2 text-center">
+            <p className="text-[18px] font-serif text-[#6B5E51] text-center">
+              Transmission Modality: <strong className="text-[#1F1914]">{categorySpec.title}</strong> · {activeTier.toUpperCase()} Edition
             </p>
           </div>
         </div>
-
-        <div className="w-full border-t border-[#E8E1D5] pt-2 text-center">
-          <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-            ✦ Grounded in Love, Guided by Wisdom, Anchored in Sovereignty ✦
-          </p>
-        </div>
-      </div>
+      </UniversalPageContainer>
     ),
   });
 
-  // 3. Cosmic Numerology Profile (RENDERED ONLY IF DOB IS PROVIDED)
+  // 3. Cosmic Numerology Profile (Universal Page Design - if DOB provided)
   if (hasDob) {
     pages.push({
       key: 'numerology',
       headerTitle: 'COSMIC NUMEROLOGY PROFILE',
       render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Cosmic Numerology Profile
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              Life Path {calculatedLpNumber} · {lpArchetypeObj.coreEnergyTitle}
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif italic text-[#4A3F35]">
-              Vibrational calculation derived from your Date of Birth ({inputs.dob})
-            </p>
-          </div>
-
-          <div className="border-t border-b border-[#D8CEBE] py-3.5 my-auto max-w-2xl mx-auto w-full space-y-2.5">
-            <div className="flex items-center justify-between text-[8.5pt] font-sans text-[#6B5E51] uppercase tracking-wider pb-1 border-b border-[#E8E1D5]">
-              <span className="font-semibold">Mathematical Step Breakdown</span>
-              <span>DOB: {inputs.dob}</span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 text-center text-[10pt] font-sans py-1">
-              <div>
-                <span className="text-[8pt] font-bold text-[#6B5E51] block uppercase tracking-widest mb-0.5">Month</span>
-                <span className="font-medium text-[#1F1914]">{steps.monthSteps}</span>
-              </div>
-              <div>
-                <span className="text-[8pt] font-bold text-[#6B5E51] block uppercase tracking-widest mb-0.5">Day</span>
-                <span className="font-medium text-[#1F1914]">{steps.daySteps}</span>
-              </div>
-              <div>
-                <span className="text-[8pt] font-bold text-[#6B5E51] block uppercase tracking-widest mb-0.5">Year</span>
-                <span className="font-medium text-[#1F1914]">{steps.yearSteps}</span>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-[#E8E1D5] flex items-center justify-between text-[9.5pt] font-sans text-[#1F1914]">
-              <span><strong>Sum:</strong> {steps.sumComponents}</span>
-              <span><strong>Final Reduction:</strong> {steps.finalReduction} → <strong className="text-[#6B5E51]">Life Path {calculatedLpNumber}</strong></span>
-            </div>
-          </div>
-
-          <div className="space-y-4 my-auto max-w-2xl mx-auto">
-            <div className="space-y-1">
-              <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                ✦ Core Vibrational Essence
+        <UniversalPageContainer
+          eyebrow="Pythagorean Numerology Blueprint"
+          title={`Life Path ${calculatedLpNumber} · ${lpArchetypeObj.coreEnergyTitle}`}
+          subtitle={`Derived from Date of Birth: ${inputs.dob} (${steps.finalReduction})`}
+          footerText="✦ Numbers Are the Sacred Geometry of Cosmic Consciousness ✦"
+        >
+          <div className="flex flex-col items-center justify-center text-center space-y-4 max-w-xl mx-auto">
+            <div className="space-y-1.5 text-center">
+              <h2 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                ✦ Core Vibrational Essence ✦
               </h2>
-              <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
+              <p className="text-[18px] leading-[1.75] text-[#1F1914] font-serif text-center">
                 {numCoreText}
               </p>
             </div>
 
-            <div className="space-y-1">
-              <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                ✦ Application to Your Journey
+            <div className="w-12 h-[1px] bg-[#C4B6A4] mx-auto my-1"></div>
+
+            <div className="space-y-1.5 text-center">
+              <h2 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                ✦ Application to Your Situation ✦
               </h2>
-              <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
+              <p className="text-[18px] leading-[1.75] text-[#1F1914] font-serif text-center">
                 {numAppText}
               </p>
             </div>
-          </div>
 
-          <div className="border-t border-[#E8E1D5] pt-2 flex items-center justify-between text-[8pt] font-sans text-[#6B5E51] uppercase tracking-wider">
-            <span>Governing Planet: {lpArchetypeObj.governingPlanet}</span>
-            <span>Archetype: {lpArchetypeObj.archetype}</span>
+            <div className="pt-2 text-center">
+              <p className="text-[18px] font-serif italic text-[#6B5E51] text-center">
+                Governing Planetary Archetype: <strong className="text-[#1F1914]">{lpArchetypeObj.governingPlanet}</strong> · The {lpArchetypeObj.archetype}
+              </p>
+            </div>
           </div>
-        </div>
+        </UniversalPageContainer>
       ),
     });
-
-    // Master Section: Personal Year Epicycle (Premium Tier)
-    if (activeTier === 'premium') {
-      pages.push({
-        key: 'personal-year-cycles',
-        headerTitle: 'PERSONAL YEAR & EPICYCLE TIMING',
-        render: () => (
-          <MasterPersonalYearPage
-            inputs={inputs}
-            categorySpec={categorySpec}
-            effectiveShopName={effectiveShopName}
-            card1={card1}
-            card2={card2}
-            card3={card3}
-            calculatedLpNumber={calculatedLpNumber}
-          />
-        ),
-      });
-    }
   }
 
-  // 4. Querent Intake & Sacred Soul Blueprint Page
-  pages.push({
-    key: 'intake-blueprint',
-    headerTitle: 'QUERENT INTAKE & SACRED BLUEPRINT',
-    render: () => (
-      <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-        <div className="text-center space-y-1.5 pt-2">
-          <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-            Inquiry Blueprint & Query Resonance
-          </span>
-          <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-            Sacred Focus & Channeling Parameters
-          </h1>
-          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-          <p className="text-[10pt] font-serif italic text-[#4A3F35]">
-            Querent coordinate and divine inquiry anchoring this sacred transmission
-          </p>
-        </div>
-
-        <div className="space-y-4 my-auto max-w-2xl mx-auto w-full">
-          <div className="grid grid-cols-2 gap-4 border-b border-[#E8E1D5] pb-3">
-            <div>
-              <span className="text-[8pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block mb-0.5">
-                Querent Name
-              </span>
-              <p className="font-serif font-bold text-[12pt] text-[#1F1914]">{querentName}</p>
-            </div>
-            <div>
-              <span className="text-[8pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block mb-0.5">
-                Age & Cosmic Identity
-              </span>
-              <p className="font-serif font-bold text-[12pt] text-[#1F1914]">
-                {inputs.age ? `${inputs.age} Years` : 'Sacred Seeker'} {hasDob ? `· Life Path ${calculatedLpNumber}` : ''}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-1.5 border-b border-[#E8E1D5] pb-3">
-            <span className="text-[8pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block">
-              Core Crossroads / Situation
-            </span>
-            <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] font-serif text-justify">
-              {inputs.problem || 'Navigating a key vibrational turning point of decision, sovereign realignment, and soul growth.'}
-            </p>
-          </div>
-
-          <div className="space-y-1.5 border-b border-[#E8E1D5] pb-3">
-            <span className="text-[8pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block">
-              Direct Soul Inquiry
-            </span>
-            <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] font-serif italic text-justify">
-              &ldquo;{inputs.question || 'What is the highest alignment and next aligned action for my sacred path?'}&rdquo;
-            </p>
-          </div>
-
-          <div className="p-3 bg-[#FAF7EE] rounded border border-[#E0D7CC] space-y-1">
-            <span className="text-[8pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block">
-              Reading Category & Modality
-            </span>
-            <p className="font-serif text-[11pt] font-bold text-[#1F1914]">
-              {categorySpec.title} — {activeTier.toUpperCase()} TRANSMISSION
-            </p>
-            <p className="text-[9pt] font-sans text-[#6B5E51]">
-              Customized multi-page oracle sequence optimized for high-vibrational clarity, shadow release, and practical realization.
-            </p>
-          </div>
-        </div>
-
-        <div className="text-center border-t border-[#E8E1D5] pt-2">
-          <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-            ✦ Your Intentions Anchor the Divine Channeling Space ✦
-          </p>
-        </div>
-      </div>
-    ),
-  });
-
-  // 5. Cosmic Astrological Alignment Page (INCLUDED IN DETAILED & PREMIUM TIERS, OR IF ZODIAC/DOB PROVIDED)
-  if (activeTier !== 'standard' || inputs.zodiacSign || hasDob) {
-    pages.push({
-      key: 'astrology-alignment',
-      headerTitle: 'COSMIC ASTROLOGICAL ALIGNMENT',
-      render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Cosmic Astrological Alignment & Celestial Synergy
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              {zodiacProfile.symbol} {zodiacProfile.name} · {zodiacProfile.archetype}
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif italic text-[#4A3F35]">
-              Element: {zodiacProfile.element} · Modality: {zodiacProfile.modality} · Ruling Planet: {zodiacProfile.rulingPlanet}
-            </p>
-          </div>
-
-          <div className="space-y-4 my-auto max-w-2xl mx-auto w-full">
-            <div className="grid grid-cols-2 gap-4 border-b border-[#E8E1D5] pb-3 text-center">
-              <div className="p-2.5 bg-[#FAF7EE] border border-[#E0D7CC] rounded-xs">
-                <span className="text-[8pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block mb-0.5">
-                  Cosmic Archetype & Dates
-                </span>
-                <p className="font-serif font-bold text-[11pt] text-[#1F1914]">
-                  {zodiacProfile.dates}
-                </p>
-              </div>
-              <div className="p-2.5 bg-[#FAF7EE] border border-[#E0D7CC] rounded-xs">
-                <span className="text-[8pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block mb-0.5">
-                  Ruling Frequency
-                </span>
-                <p className="font-serif font-bold text-[11pt] text-[#1F1914]">
-                  {zodiacProfile.rulingPlanet} ({zodiacProfile.element} Energy)
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <h2 className="font-serif font-bold text-[12.5pt] text-[#1F1914]">
-                ✦ Core Celestial Essence & Soul Gifts
-              </h2>
-              <p className="text-[10pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
-                As an archetype of {zodiacProfile.name} ({zodiacProfile.element} element), your energetic field operates with intrinsic qualities of {zodiacProfile.essence.toLowerCase()} When navigating this chapter, your celestial frequency gives you the instinctual capability to cut through illusion and claim sovereign stability.
-              </p>
-            </div>
-
-            <div className="space-y-1 border-t border-[#E8E1D5] pt-2.5">
-              <h2 className="font-serif font-bold text-[12.5pt] text-[#1F1914]">
-                ✦ Karmic Shadow & Realignment
-              </h2>
-              <p className="text-[10pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
-                The primary shadow challenge for {zodiacProfile.name} during this passage is {zodiacProfile.shadow.toLowerCase()} By actively witnessing this instinct without judgment, you transform defensive friction into conscious leadership and emotional peace.
-              </p>
-            </div>
-
-            <div className="space-y-1 border-t border-[#E8E1D5] pt-2.5">
-              <h2 className="font-serif font-bold text-[12.5pt] text-[#1F1914]">
-                ✦ Current Celestial Transit Focus
-              </h2>
-              <p className="text-[10pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
-                {zodiacProfile.transitFocus} Combined with the triad of {card1.name}, {card2.name}, and {card3.name}, this transit accelerates your evolutionary timeline.
-              </p>
-            </div>
-          </div>
-
-          <div className="text-center border-t border-[#E8E1D5] pt-2">
-            <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-              ✦ As Above, So Below — The Stars Illuminate Your Innate Mastery ✦
-            </p>
-          </div>
-        </div>
-      ),
-    });
-
-    // Master Section: Elemental Balance Page (Premium Tier)
-    if (activeTier === 'premium') {
-      pages.push({
-        key: 'elemental-energy-balance',
-        headerTitle: 'ELEMENTAL ENERGY BALANCE & CONSTITUTION',
-        render: () => (
-          <MasterElementalBalancePage
-            inputs={inputs}
-            categorySpec={categorySpec}
-            effectiveShopName={effectiveShopName}
-            card1={card1}
-            card2={card2}
-            card3={card3}
-            calculatedLpNumber={calculatedLpNumber}
-          />
-        ),
-      });
-    }
-  }
-
-  // 6. Tarot Spread Overview & Triad Methodology
+  // 5. Tarot Spread Overview & Triad Methodology (Kept as is)
   pages.push({
     key: 'tarot-overview',
     headerTitle: 'TAROT SPREAD OVERVIEW',
@@ -833,6 +1072,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                   <img
                     src={card1Img}
                     alt={card1.name}
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
                     className="w-full h-full object-contain"
                     style={{ objectFit: 'contain' }}
                   />
@@ -852,6 +1093,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                   <img
                     src={card2Img}
                     alt={card2.name}
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
                     className="w-full h-full object-contain"
                     style={{ objectFit: 'contain' }}
                   />
@@ -871,6 +1114,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                   <img
                     src={card3Img}
                     alt={card3.name}
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
                     className="w-full h-full object-contain"
                     style={{ objectFit: 'contain' }}
                   />
@@ -904,7 +1149,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     ),
   });
 
-  // 7. Card 1 Embodiment & Artwork
+  // 6. Card 1 Embodiment & Artwork (Kept as is)
   pages.push({
     key: 'card1-art',
     headerTitle: 'CARD I · CURRENT ENERGY',
@@ -929,6 +1174,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
               <img
                 src={card1Img}
                 alt={card1.name}
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
                 className="w-full h-full object-contain"
                 style={{ objectFit: 'contain' }}
               />
@@ -954,7 +1201,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     ),
   });
 
-  // 8. Card 1 Channeled Interpretation
+  // 7. Card 1 Channeled Interpretation (Kept as is)
   pages.push({
     key: 'card1-meaning',
     headerTitle: 'CARD I · CHANNELED MEANING',
@@ -1011,7 +1258,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     ),
   });
 
-  // 9. Card 2 Embodiment & Artwork
+  // 8. Card 2 Embodiment & Artwork (Kept as is)
   pages.push({
     key: 'card2-art',
     headerTitle: 'CARD II · THE BLOCKAGE',
@@ -1036,6 +1283,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
               <img
                 src={card2Img}
                 alt={card2.name}
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
                 className="w-full h-full object-contain"
                 style={{ objectFit: 'contain' }}
               />
@@ -1061,7 +1310,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     ),
   });
 
-  // 10. Card 2 Channeled Interpretation
+  // 9. Card 2 Channeled Interpretation (Kept as is)
   pages.push({
     key: 'card2-meaning',
     headerTitle: 'CARD II · CHANNELED MEANING',
@@ -1118,7 +1367,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     ),
   });
 
-  // 11. Card 3 Embodiment & Artwork
+  // 10. Card 3 Embodiment & Artwork (Kept as is)
   pages.push({
     key: 'card3-art',
     headerTitle: 'CARD III · PATH FORWARD',
@@ -1143,6 +1392,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
               <img
                 src={card3Img}
                 alt={card3.name}
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
                 className="w-full h-full object-contain"
                 style={{ objectFit: 'contain' }}
               />
@@ -1168,7 +1419,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     ),
   });
 
-  // 12. Card 3 Channeled Interpretation
+  // 11. Card 3 Channeled Interpretation (Kept as is)
   pages.push({
     key: 'card3-meaning',
     headerTitle: 'CARD III · CHANNELED MEANING',
@@ -1225,1242 +1476,558 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     ),
   });
 
-  // 13. Sacred Synthesis (1 Page in Standard, 2 Pages in Detailed / Premium)
-  if (activeTier === 'standard') {
+  // =========================================================================
+  // UNIVERSAL CONTENT PAGES (UNLIMITED DYNAMIC PAGINATION)
+  // All remaining details rendered in the universal page design:
+  // Title: 24px font, Text: 18/20px font, Aligned center.
+  // =========================================================================
+
+  // 1. Sacred Synthesis (Dynamic 2-paragraph chunks)
+  const synChunkSize = 2;
+  const synPagesCount = Math.max(1, Math.ceil(synPars.length / synChunkSize));
+  for (let pIdx = 0; pIdx < synPagesCount; pIdx++) {
+    const chunkPars = synPars.slice(pIdx * synChunkSize, (pIdx + 1) * synChunkSize);
+    const isSingle = synPagesCount === 1;
+    const pageTitle = isSingle
+      ? 'Sacred Synthesis & Soul Weaving'
+      : `Sacred Synthesis · Part ${pIdx + 1}`;
+    const pageSubtitle = pIdx === 0
+      ? 'Harmonizing the 3 Cards and Life Path vibration into unified sovereignty'
+      : 'Transmuting old resistance into effortless momentum and clear truth';
+
     pages.push({
-      key: 'synthesis-standard',
-      headerTitle: 'SACRED SYNTHESIS & WEAVING',
+      key: `synthesis-page-${pIdx + 1}`,
+      headerTitle: isSingle ? 'SACRED SYNTHESIS' : `SYNTHESIS · PART ${pIdx + 1}`,
       render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Holistic Oracle Synthesis
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              Synthesis & Breakthrough Pathway
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif italic text-[#4A3F35]">
-              Harmonizing the 3 Cards into a unified message of sovereignty and peace
-            </p>
-          </div>
-
-          <div className="space-y-[18px] my-auto max-w-2xl mx-auto">
-            <div className="space-y-1.5">
-              <h2 className="font-serif font-bold text-[12.5pt] text-[#1F1914]">
-                ✦ 1. Core Synthesis & Life Mirror
-              </h2>
-              <p className="text-[10pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
-                {synPars[0] || 'Your Oracle reading weaves an evolutionary passage from present awareness into triumphant alignment.'}
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <h2 className="font-serif font-bold text-[12.5pt] text-[#1F1914]">
-                ✦ 2. Transmuting the Central Blockage
-              </h2>
-              <p className="text-[10pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
-                {synPars[2] || synPars[1] || 'The resistance highlighted by Card 2 is an invitation to dissolve fear and trust your discernment.'}
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <h2 className="font-serif font-bold text-[12.5pt] text-[#1F1914]">
-                ✦ 3. Stepping into Triumphant Grace
-              </h2>
-              <p className="text-[10pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
-                {synPars[3] || 'Trust the unfolding of this passage, for your highest destiny meets you at the exact altitude of your self-respect.'}
-              </p>
-            </div>
-          </div>
-
-          <div className="text-center border-t border-[#E8E1D5] pt-2">
-            <p className="text-[9.5pt] font-serif italic text-[#1F1914]">
-              &ldquo;Your greatest power lies in aligning your daily actions with your divine worth.&rdquo;
-            </p>
-          </div>
-        </div>
-      ),
-    });
-  } else {
-    // Synthesis Part I (Detailed / Premium)
-    pages.push({
-      key: 'synthesis-p1',
-      headerTitle: 'SYNTHESIS · PART I',
-      render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Holistic Oracle Weaving · Part I
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              Synthesis & Cross-Analysis
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif italic text-[#4A3F35]">
-              Connecting the 3 Cards with your sovereign journey
-            </p>
-          </div>
-
-          <div className="space-y-[20px] my-auto max-w-2xl mx-auto">
-            {synthesisPart1.map((p, idx) => (
-              <div key={idx} className="space-y-1.5">
-                <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                  {idx === 0 ? '✦ 1. Core Synthesis & Life Weaving' : '✦ 2. Transforming the Central Resistance'}
-                </h2>
-                <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
-                  {p}
+        <UniversalPageContainer
+          eyebrow={`Holistic Oracle Synthesis${!isSingle ? ` · Part ${pIdx + 1}` : ''}`}
+          title={pageTitle}
+          subtitle={pageSubtitle}
+          footerText="✦ Your greatest power lies in aligning daily action with divine truth ✦"
+        >
+          <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto">
+            {chunkPars.map((par, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <div className="text-[#A89884] text-center text-sm my-1">✦  ·  ✦  ·  ✦</div>}
+                <p className="text-[18px] leading-[1.75] text-[#1F1914] font-serif text-center">
+                  {par}
                 </p>
-              </div>
+              </React.Fragment>
             ))}
           </div>
-
-          <div className="text-center border-t border-[#E8E1D5] pt-2">
-            <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-              ✦ Synthesis continues on the next page ✦
-            </p>
-          </div>
-        </div>
-      ),
-    });
-
-    // Synthesis Part II (Detailed / Premium)
-    pages.push({
-      key: 'synthesis-p2',
-      headerTitle: 'SYNTHESIS · PART II',
-      render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Holistic Oracle Weaving · Part II
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              Deep Core Message & Breakthrough
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif italic text-[#4A3F35]">
-              Anchoring spiritual authority and triumphant alignment into physical form
-            </p>
-          </div>
-
-          <div className="space-y-[20px] my-auto max-w-2xl mx-auto">
-            {synthesisPart2.map((p, idx) => (
-              <div key={idx} className="space-y-1.5">
-                <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                  {idx === 0 ? '✦ 1. Dissolving Outdated Narratives' : '✦ 2. Stepping into Triumphant Grace'}
-                </h2>
-                <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
-                  {p}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center border-t border-[#E8E1D5] pt-2">
-            <p className="text-[9.5pt] font-serif italic text-[#1F1914]">
-              &ldquo;Your greatest power lies in aligning your daily actions with your divine worth.&rdquo;
-            </p>
-          </div>
-        </div>
+        </UniversalPageContainer>
       ),
     });
   }
 
-  // =========================================================================
-  // MODULE C: INTERACTIVE Q&A / SPECIALIZED BREAKDOWNS
-  // =========================================================================
-  if (is12MonthTopic) {
-    // 12-Month Annual Forecast: ALWAYS render 12 individual dedicated pages (1 page per month)
-    twelveMonthItems.forEach((monthItem, mIdx) => {
-      pages.push({
-        key: `month-${mIdx + 1}`,
-        headerTitle: `12-MONTH FORECAST • ${monthItem.monthName.toUpperCase()}`,
-        render: () => (
-          <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-            <div className="text-center space-y-1.5 pt-2">
-              <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-                Astrological Alignment: {monthItem.astrologicalSign} · Element: {monthItem.element}
-              </span>
-              <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-                {monthItem.monthName}: {monthItem.title}
-              </h1>
-              <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            </div>
+  // 2. Q&A Sacred Insights (Dynamic 2-item chunks)
+  const qaItems = parsed.qaInsights && parsed.qaInsights.length > 0 ? parsed.qaInsights : [
+    { question: 'What is the hidden lesson within my current situation?', answer: 'Your present crossroads is training your nervous system to trust your internal compass rather than external approval.' },
+    { question: 'What elevated energy am I invited to embody?', answer: 'Embody grounded self-trust and calm sovereignty, knowing you no longer need to over-explain your boundaries.' },
+    { question: 'What subconscious block is ready to be permanently released?', answer: 'Release the fear that making peaceful decisions for yourself will disappoint others or disrupt harmony.' },
+    { question: 'How can I recognize when I am on the highest path?', answer: 'The true path does not demand frantic urgency; it is marked by steady somatic peace, clear intuition, and gentle synchronicities.' },
+    { question: 'What is the ultimate breakthrough awaiting my embodiment?', answer: 'A reality rooted in joyful abundance, mutual respect, and total creative freedom.' },
+  ];
 
-            <div className="space-y-[20px] my-auto max-w-2xl mx-auto">
-              <div className="space-y-1.5">
-                <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                  ✦ Channeled Monthly Energy & Focus
-                </h2>
-                <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
-                  {monthItem.forecast}
-                </p>
-              </div>
-
-              <div className="space-y-1.5 pt-2 border-t border-[#E8E1D5]">
-                <h2 className="font-sans font-bold text-[8.5pt] uppercase tracking-wider text-[#6B5E51]">
-                  Practical Aligned Action
-                </h2>
-                <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] font-serif text-justify">
-                  {monthItem.practicalAdvice}
-                </p>
-              </div>
-            </div>
-
-            <div className="text-center border-t border-[#E8E1D5] pt-2">
-              <p className="text-[9.5pt] font-serif italic text-[#1F1914]">
-                &ldquo;{monthItem.affirmation.replace(/&ldquo;|&rdquo;/g, '"').replace(/^"/, '').replace(/"$/, '')}&rdquo;
-              </p>
-            </div>
-          </div>
-        ),
-      });
-    });
-  } else if (blueprint.moduleCMode === 'one_page_per_month') {
-    // 1 Dedicated Page per Question / Prediction for single-page mode
-    const questionsToRender = deepDiveItems.slice(0, blueprint.questionCount);
-
-    questionsToRender.forEach((item) => {
-      pages.push({
-        key: `deep-dive-${item.questionNumber}-single`,
-        headerTitle: `SACRED INQUIRY ${item.questionNumber} · ORACLE TRANSMISSION`,
-        render: () => (
-          <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-            <div className="text-center space-y-1.5 pt-2">
-              <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-                {item.subTitle}
-              </span>
-              <h1 className="text-[19pt] font-serif font-bold leading-snug text-[#1F1914]">
-                {item.question}
-              </h1>
-              <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            </div>
-
-            <div className="space-y-[16px] my-auto max-w-2xl mx-auto w-full">
-              <div className="space-y-1">
-                <span className="text-[7.5pt] uppercase tracking-[0.25em] font-sans font-bold text-[#6B5E51] block">
-                  ✦ Primary Oracle Insight:
-                </span>
-                <p className="text-[9.5pt] leading-[1.55] text-[#1F1914] text-justify font-serif">
-                  {item.oracleTransmission.split('\n\n')[0] || item.oracleTransmission}
-                </p>
-              </div>
-
-              <div className="space-y-1 pt-2 border-t border-[#E8E1D5]">
-                <span className="text-[7.5pt] uppercase tracking-[0.25em] font-sans font-bold text-[#6B5E51] block">
-                  ✦ Sovereign Realignment & Action:
-                </span>
-                <p className="text-[9.5pt] leading-[1.55] text-[#1F1914] text-justify font-serif">
-                  {item.sovereignRealignment}
-                </p>
-              </div>
-            </div>
-
-            <div className="text-center border-t border-[#E8E1D5] pt-2">
-              <p className="text-[9pt] italic text-[#4A3F35] font-serif">
-                {item.somaticKey}
-              </p>
-            </div>
-          </div>
-        ),
-      });
-    });
-  } else {
-    // Detailed (3-5 questions × 2 pages) or Premium (5-10 questions × 2 pages)
-    const questionsToRender = deepDiveItems.slice(0, blueprint.questionCount);
-
-    questionsToRender.forEach((item) => {
-      // Part 1: Channeled Oracle Transmission
-      pages.push({
-        key: `deep-dive-${item.questionNumber}-part1`,
-        headerTitle: `SACRED INQUIRY ${item.questionNumber} · ORACLE TRANSMISSION`,
-        render: () => (
-          <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between items-center z-10 text-center font-serif">
-            <div className="space-y-1.5 max-w-xl pt-2">
-              <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-                {item.subTitle}
-              </span>
-              <h1 className="text-[20pt] font-serif font-bold leading-snug text-[#1F1914]">
-                {item.question}
-              </h1>
-              <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            </div>
-
-            <div className="w-full my-auto space-y-2 max-w-2xl mx-auto">
-              <span className="text-[8pt] uppercase tracking-[0.28em] font-sans font-bold text-[#6B5E51] block text-left">
-                ✦ Primary Oracle Transmission:
-              </span>
-              <div className="text-[10pt] leading-[1.6] text-[#1F1914] text-justify font-serif space-y-2">
-                {item.oracleTransmission.split('\n\n').map((pStr, pIdx) => (
-                  <p key={pIdx}>{pStr}</p>
-                ))}
-              </div>
-            </div>
-
-            <div className="w-full border-t border-[#E8E1D5] pt-2 text-center">
-              <p className="text-[9.5pt] italic text-[#4A3F35] font-serif">
-                {item.somaticKey}
-              </p>
-            </div>
-          </div>
-        ),
-      });
-
-      // Part 2: Subconscious Architecture & Realignment
-      pages.push({
-        key: `deep-dive-${item.questionNumber}-part2`,
-        headerTitle: `SACRED INQUIRY ${item.questionNumber} · REALIZATION & ACTION`,
-        render: () => (
-          <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-            <div className="text-center space-y-1.5 pt-2">
-              <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-                Subconscious Architecture & Aligned Action
-              </span>
-              <h1 className="text-[20pt] font-serif font-bold text-[#1F1914]">
-                Inquiry {item.questionNumber}: Realization & Action
-              </h1>
-              <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            </div>
-
-            <div className="space-y-[18px] my-auto max-w-2xl mx-auto">
-              <div className="space-y-1.5">
-                <h2 className="font-serif font-bold text-[12.5pt] text-[#1F1914]">
-                  ✦ Subconscious Energetic Undercurrents & Defense Mechanism
-                </h2>
-                <p className="text-[10pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
-                  {item.subconsciousArchitecture}
-                </p>
-              </div>
-
-              <div className="space-y-1.5 pt-2 border-t border-[#E8E1D5]">
-                <h2 className="font-serif font-bold text-[12.5pt] text-[#1F1914]">
-                  ✦ Sovereign Alignment & Concrete Aligned Action
-                </h2>
-                <p className="text-[10pt] leading-[1.6] text-[#1F1914] text-justify font-serif">
-                  {item.sovereignRealignment}
-                </p>
-              </div>
-            </div>
-
-            <div className="w-full border-t border-[#E8E1D5] pt-2 text-center">
-              <span className="text-[8pt] font-sans uppercase tracking-[0.25em] text-[#6B5E51] block font-semibold mb-0.5">
-                {item.tag}
-              </span>
-              <p className="text-[9.5pt] italic text-[#1F1914]">
-                &ldquo;{item.anchor}&rdquo;
-              </p>
-            </div>
-          </div>
-        ),
-      });
-    });
-  }
-
-  // =========================================================================
-  // MODULE D: ROADMAPS & ACTION PROTOCOL
-  // =========================================================================
-  if (activeTier === 'standard') {
-    // 1 Page Strategic Action Plan & Guidance
+  const qaChunkSize = 2;
+  const qaPagesCount = Math.ceil(qaItems.length / qaChunkSize);
+  for (let qIdx = 0; qIdx < qaPagesCount; qIdx++) {
+    const chunkQA = qaItems.slice(qIdx * qaChunkSize, (qIdx + 1) * qaChunkSize);
     pages.push({
-      key: 'standard-action-plan',
-      headerTitle: 'STRATEGIC ACTION PLAN & GUIDANCE',
+      key: `qa-insights-page-${qIdx + 1}`,
+      headerTitle: `Q&A INSIGHTS · PART ${qIdx + 1}`,
       render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Practical Realization & Manifestation
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              {blueprint.actionTitle || 'Strategic Action Blueprint'}
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif italic text-[#4A3F35]">
-              Structured steps to anchor clarity into your daily reality
-            </p>
-          </div>
-
-          <div className="space-y-3.5 my-auto max-w-2xl mx-auto w-full">
-            {[step1Parsed, step2Parsed, step3Parsed, step4Parsed].map((st, sIdx) => (
-              <div key={sIdx} className="space-y-1 border-b border-[#E8E1D5] pb-2.5 last:border-b-0">
-                <span className="text-[8pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block">
-                  {st.phase} · {st.title}
-                </span>
-                <p className="text-[9.5pt] leading-[1.5] text-[#1F1914] text-justify font-serif">
-                  {st.body}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center border-t border-[#E8E1D5] pt-2">
-            <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-              ✦ Daily consistency turns divine insight into unshakeable peace ✦
-            </p>
-          </div>
-        </div>
-      ),
-    });
-  } else {
-    // Detailed / Premium Roadmap & 4-Phase Protocol
-    pages.push({
-      key: 'roadmap-p1',
-      headerTitle: '30-DAY INTEGRATION · WEEKS 1 & 2',
-      render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Practical Realization · Part I (Days 1–14)
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              {blueprint.roadmapTitle}
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif italic text-[#4A3F35]">
-              A structured passage of conscious realignment, shadow dissolution, and empowered manifestation
-            </p>
-          </div>
-
-          <div className="space-y-[20px] my-auto">
-            <div className="space-y-1.5 border-b border-[#E8E1D5] pb-3.5">
-              <span className="text-[8pt] font-sans font-bold uppercase tracking-[0.25em] text-[#6B5E51] block">
-                Week 1: Days 1–7 · Current Energy Alignment
-              </span>
-              <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                Attuning to {card1.name} & Establishing Sanctuary
-              </h2>
-              <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify">
-                Spend your first seven days conducting a compassionate energetic audit. Notice where authentic reciprocity flows effortlessly and where you feel drained by obligation or ambiguity. Anchor yourself by establishing non-negotiable boundaries around your sleep, mental space, and emotional output.
-              </p>
-              <p className="text-[9.5pt] text-[#4A3F35] italic pt-0.5">
-                <strong className="font-sans font-semibold not-italic text-[#6B5E51]">✦ Somatic Practice: </strong>
-                Begin each morning with 5 minutes of mindful breathwork, placing hands over your heart and declaring: <em>&ldquo;I choose my own peace first.&rdquo;</em>
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <span className="text-[8pt] font-sans font-bold uppercase tracking-[0.25em] text-[#6B5E51] block">
-                Week 2: Days 8–14 · Shadow Transmutation
-              </span>
-              <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                Dissolving the Tension of {card2.name}
-              </h2>
-              <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify">
-                Identify the primary limiting belief or self-imposed restriction that keeps you caught in mental loops. Write down your deepest doubts on paper, consciously recognize them as outdated defense mechanisms, and release their authority over your future decisions.
-              </p>
-              <p className="text-[9.5pt] text-[#4A3F35] italic pt-0.5">
-                <strong className="font-sans font-semibold not-italic text-[#6B5E51]">✦ Somatic Practice: </strong>
-                Perform a gentle body scan before bed. Exhale lingering tension and visualize fresh golden light restoring your energy field.
-              </p>
-            </div>
-          </div>
-
-          <div className="text-center border-t border-[#E8E1D5] pt-2">
-            <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-              ✦ Weeks 3 & 4 Roadmap Continues on the Next Page ✦
-            </p>
-          </div>
-        </div>
-      ),
-    });
-
-    if (activeTier === 'premium') {
-      pages.push({
-        key: 'roadmap-p2',
-        headerTitle: '30-DAY INTEGRATION · WEEKS 3 & 4',
-        render: () => (
-          <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-            <div className="text-center space-y-1.5 pt-2">
-              <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-                Practical Realization · Part II (Days 15–30)
-              </span>
-              <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-                Breakthrough & Elevation Roadmap
-              </h1>
-              <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-              <p className="text-[10pt] font-serif italic text-[#4A3F35]">
-                Anchoring sustained momentum, sovereign action, and triumphant long-term outcomes
-              </p>
-            </div>
-
-            <div className="space-y-[20px] my-auto">
-              <div className="space-y-1.5 border-b border-[#E8E1D5] pb-3.5">
-                <span className="text-[8pt] font-sans font-bold uppercase tracking-[0.25em] text-[#6B5E51] block">
-                  Week 3: Days 15–21 · Sovereign Action
-                </span>
-                <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                  Taking Solution-Focused Steps
-                </h2>
-                <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify">
-                  Step decisively into purposeful action. Refuse to negotiate with ambiguity. Make one brave, authentic decision that reflects your elevated self-worth, whether establishing a clear boundary or launching a creative initiative.
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                <span className="text-[8pt] font-sans font-bold uppercase tracking-[0.25em] text-[#6B5E51] block">
-                  Week 4: Days 22–30 · Manifestation & Celebration
-                </span>
-                <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                  Embodying the Radiant Medicine of {card3.name}
-                </h2>
-                <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify">
-                  Anchor your newly reclaimed sovereignty. Celebrate how far you have journeyed, express heartfelt gratitude for the lessons learned, and welcome the abundant opportunities rushing to meet your elevated frequency.
-                </p>
-              </div>
-            </div>
-
-            <div className="text-center border-t border-[#E8E1D5] pt-2">
-              <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-                ✦ You are the sovereign master of your unfolding reality ✦
-              </p>
-            </div>
-          </div>
-        ),
-      });
-    }
-
-    // 4-Phase Action Protocol Page
-    pages.push({
-      key: 'action-steps',
-      headerTitle: '4-PHASE ACTION PROTOCOL',
-      render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Action Steps & Aligned Implementation
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              {blueprint.actionTitle}
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif italic text-[#4A3F35]">
-              Structured action protocol to ground spiritual insights into tangible physical results
-            </p>
-          </div>
-
-          <div className="space-y-3 my-auto">
-            {[step1Parsed, step2Parsed, step3Parsed, step4Parsed].map((step, idx) => (
-              <div key={idx} className="space-y-0.5 border-b border-[#E8E1D5] pb-2 last:border-b-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-[8pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51]">
-                    {step.phase}
-                  </span>
-                  <span className="text-[8pt] font-mono text-[#A89884]">Step 0{idx + 1}</span>
+        <UniversalPageContainer
+          eyebrow={`Channeled Oracle Inquiries · Part ${qIdx + 1}`}
+          title={`Q&A Sacred Insights · Part ${qIdx + 1}`}
+          subtitle="Direct intuitive answers addressing your subconscious lessons and highest path"
+          footerText="✦ The answers you seek are already echoing within your heart ✦"
+        >
+          <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto">
+            {chunkQA.map((item, idx) => (
+              <React.Fragment key={idx}>
+                {idx > 0 && <div className="text-[#A89884] text-center text-sm my-1">✦  ·  ✦  ·  ✦</div>}
+                <div className="space-y-2 text-center w-full">
+                  <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                    ✦ {item.question} ✦
+                  </h3>
+                  <p className="text-[18px] leading-[1.7] text-[#1F1914] font-serif text-center">
+                    {item.answer}
+                  </p>
                 </div>
-                <h2 className="font-serif font-bold text-[12pt] text-[#1F1914]">
-                  {step.title}
-                </h2>
-                <p className="text-[9.5pt] leading-[1.5] text-[#1F1914] text-justify font-serif">
-                  {step.body}
-                </p>
-              </div>
+              </React.Fragment>
             ))}
           </div>
-
-          <div className="text-center border-t border-[#E8E1D5] pt-2">
-            <p className="text-[8.5pt] font-sans text-[#6B5E51] uppercase tracking-wider">
-              ✦ Execute with devotion; each small step anchors major quantum shifts ✦
-            </p>
-          </div>
-        </div>
+        </UniversalPageContainer>
       ),
     });
   }
 
-  // =========================================================================
-  // MODULE E: MANTRAS, JOURNALING, PRESCRIPTION & CLOSING
-  // =========================================================================
+  // 3. Action Steps & Aligned Reflection (Part I: Weeks 1 & 2, Part II: Weeks 3 & 4)
+  pages.push({
+    key: 'action-steps-p1',
+    headerTitle: 'ACTION STEPS: WEEKS 1 & 2',
+    render: () => (
+      <UniversalPageContainer
+        eyebrow="Strategic Integration · Part I"
+        title="Action Steps: Weeks 1 & 2"
+        subtitle="Establishing sovereign clarity, nervous system regulation, and self-trust"
+        footerText="✦ Small aligned steps taken in self-trust create quantum breakthroughs ✦"
+      >
+        <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto">
+          <div className="space-y-1.5 text-center w-full">
+            <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+              ✦ Week 1: {step1Parsed.title} ✦
+            </h3>
+            <p className="text-[18px] leading-[1.7] text-[#1F1914] font-serif text-center">
+              {step1Parsed.body}
+            </p>
+          </div>
+
+          <div className="text-[#A89884] text-center text-sm my-1">✦  ·  ✦  ·  ✦</div>
+
+          <div className="space-y-1.5 text-center w-full">
+            <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+              ✦ Week 2: {step2Parsed.title} ✦
+            </h3>
+            <p className="text-[18px] leading-[1.7] text-[#1F1914] font-serif text-center">
+              {step2Parsed.body}
+            </p>
+          </div>
+        </div>
+      </UniversalPageContainer>
+    ),
+  });
+
+  pages.push({
+    key: 'action-steps-p2',
+    headerTitle: 'ACTION STEPS: WEEKS 3 & 4',
+    render: () => (
+      <UniversalPageContainer
+        eyebrow="Strategic Integration · Part II"
+        title="Action Steps: Weeks 3 & 4"
+        subtitle="Executing courageous shifts and anchoring long-term triumph"
+        footerText="✦ You are fully capable of holding the blessing you have prayed for ✦"
+      >
+        <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto">
+          <div className="space-y-1.5 text-center w-full">
+            <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+              ✦ Week 3: {step3Parsed.title} ✦
+            </h3>
+            <p className="text-[18px] leading-[1.7] text-[#1F1914] font-serif text-center">
+              {step3Parsed.body}
+            </p>
+          </div>
+
+          <div className="text-[#A89884] text-center text-sm my-1">✦  ·  ✦  ·  ✦</div>
+
+          <div className="space-y-1.5 text-center w-full">
+            <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+              ✦ Week 4: {step4Parsed.title} ✦
+            </h3>
+            <p className="text-[18px] leading-[1.7] text-[#1F1914] font-serif text-center">
+              {step4Parsed.body}
+            </p>
+          </div>
+        </div>
+      </UniversalPageContainer>
+    ),
+  });
+
+  // 4. Your Energetic Mantras (Universal Page Design)
+  pages.push({
+    key: 'mantras',
+    headerTitle: 'YOUR ENERGETIC MANTRAS',
+    render: () => (
+      <UniversalPageContainer
+        eyebrow="Daily Vibrational Tuning"
+        title="Your Energetic Mantras"
+        subtitle="Speak these sacred affirmations aloud daily to anchor your elevated frequency"
+        footerText="✦ Repeat each mantra three times every morning with hand on heart ✦"
+      >
+        <div className="flex flex-col items-center justify-center text-center space-y-4 max-w-xl mx-auto">
+          {mantrasList.map((mantra, i) => (
+            <p
+              key={i}
+              className="text-[19px] font-serif italic font-medium text-[#1F1914] text-center leading-relaxed"
+            >
+              ✦ &ldquo;{mantra}&rdquo; ✦
+            </p>
+          ))}
+        </div>
+      </UniversalPageContainer>
+    ),
+  });
+
+  // 5. Soul Inquiries & Journaling Prompts
   if (activeTier === 'standard') {
-    // Combined Mantras & Journaling Prompts Page for Standard Tier
     pages.push({
-      key: 'standard-mantras-inquiries',
-      headerTitle: 'DAILY MANTRAS & SOUL REFLECTIONS',
+      key: 'soul-inquiries-standard',
+      headerTitle: 'SOUL INQUIRIES & REFLECTION',
       render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Daily Anchor & Introspective Inquiries
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              Mantras & Soul Reflections
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif italic text-[#4A3F35]">
-              Daily sacred affirmations and questions to expand conscious awareness
-            </p>
-          </div>
-
-          <div className="space-y-4 my-auto max-w-2xl mx-auto w-full">
-            <div className="space-y-2 border-b border-[#E8E1D5] pb-3">
-              <span className="text-[8pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block text-center">
-                ✦ Daily Energetic Mantras ✦
-              </span>
-              {mantrasList.slice(0, 3).map((m, mIdx) => (
-                <div key={mIdx} className="text-center italic font-serif text-[11pt] text-[#1F1914] py-1 bg-[#FAF7EE] border border-[#E0D7CC] rounded-xs">
-                  &ldquo;{m.replace(/^["']|["']$/g, '')}&rdquo;
+        <UniversalPageContainer
+          eyebrow="Introspective Self-Inquiry"
+          title="Soul Inquiries & Reflection"
+          subtitle="Still your mind and allow your honest sovereign truth to surface"
+          footerText="✦ Truth does not shout; it waits patiently in the stillness of your heart ✦"
+        >
+          <div className="flex flex-col items-center justify-center text-center space-y-4 max-w-xl mx-auto">
+            {inquiriesList.slice(0, 3).map((inquiry, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <div className="text-[#A89884] text-center text-sm my-0.5">✦  ·  ✦  ·  ✦</div>}
+                <div className="space-y-1 text-center w-full">
+                  <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                    Inquiry {i + 1}
+                  </h3>
+                  <p className="text-[18px] font-serif italic text-[#1F1914] text-center leading-[1.7]">
+                    &ldquo;{inquiry}&rdquo;
+                  </p>
                 </div>
-              ))}
-            </div>
-
-            <div className="space-y-2.5">
-              <span className="text-[8pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block text-center">
-                ✦ Soul Journaling Inquiries ✦
-              </span>
-              {inquiriesList.slice(0, 2).map((inq, iIdx) => (
-                <div key={iIdx} className="space-y-1.5">
-                  <p className="font-serif font-bold text-[10.5pt] text-[#1F1914]">{iIdx + 1}. {inq}</p>
-                  <div className="space-y-2 pt-0.5">
-                    <div className="border-b border-[#E8E1D5]"></div>
-                    <div className="border-b border-[#E8E1D5]"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
+              </React.Fragment>
+            ))}
           </div>
-
-          <div className="text-center border-t border-[#E8E1D5] pt-2">
-            <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-              ✦ Grounded in Love, Guided by Wisdom, Anchored in Sovereignty ✦
-            </p>
-          </div>
-        </div>
-      ),
-    });
-
-    // Single Comprehensive Spiritual Prescription Page for Standard Tier
-    pages.push({
-      key: 'standard-prescription',
-      headerTitle: 'SPIRITUAL PRESCRIPTION & REMEDIES',
-      render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Holistic Remedies & Grounding
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              Your Spiritual Prescription
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif italic text-[#4A3F35]">
-              Crystals, botanicals, and guided mindfulness practice for your energetic alignment
-            </p>
-          </div>
-
-          <div className="space-y-3.5 my-auto max-w-2xl mx-auto w-full">
-            <div className="space-y-1 border-b border-[#E8E1D5] pb-2.5">
-              <span className="text-[8pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block">
-                • Earth Element · Crystal Allies
-              </span>
-              <h3 className="font-serif font-bold text-[12pt] text-[#1F1914]">
-                {parsed.spiritualPrescription.crystals.map((c) => c.name).join(' & ') || 'Rose Quartz & Clear Quartz'}
-              </h3>
-              <p className="text-[9.5pt] leading-[1.5] text-[#1F1914] text-justify font-serif">
-                {parsed.spiritualPrescription.crystals[0]?.description || 'Keep nearby to cleanse stagnant frequencies, open the heart safely, and anchor crystal-clear discernment.'}
-              </p>
-            </div>
-
-            <div className="space-y-1 border-b border-[#E8E1D5] pb-2.5">
-              <span className="text-[8pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block">
-                • Flora Element · Botanical Allies
-              </span>
-              <h3 className="font-serif font-bold text-[12pt] text-[#1F1914]">
-                {parsed.spiritualPrescription.botanicals.map((b) => b.name).join(' & ') || 'Lavender & Chamomile'}
-              </h3>
-              <p className="text-[9.5pt] leading-[1.5] text-[#1F1914] text-justify font-serif">
-                {parsed.spiritualPrescription.botanicals[0]?.description || 'Incorporate herbal teas or essential oil mists into your evening routine to soothe an analytical nervous system.'}
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[8pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block">
-                • Spirit Element · Guided Somatic Breathwork
-              </span>
-              <h3 className="font-serif font-bold text-[12pt] text-[#1F1914]">
-                {parsed.spiritualPrescription.mindfulness[0]?.name || 'Heart-Space Golden Light Anchoring'}
-              </h3>
-              <p className="text-[9.5pt] leading-[1.5] text-[#1F1914] text-justify font-serif">
-                Whenever overstimulated, place hands on your chest and take three 4-count deep diaphragmatic breaths, visualizing unshakeable peace restoring every cell of your being.
-              </p>
-            </div>
-          </div>
-
-          <div className="text-center border-t border-[#E8E1D5] pt-2">
-            <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-              ✦ Nature's Sacred Frequencies Supporting Your Elevation ✦
-            </p>
-          </div>
-        </div>
+        </UniversalPageContainer>
       ),
     });
   } else {
-    // Detailed / Premium Module E (Dedicated Mantras, Inquiries P1 & P2, Prescription P1 & P2)
-    // Daily Affirmations & Mantras
-    pages.push({
-      key: 'mantras',
-      headerTitle: 'DAILY AFFIRMATIONS & MANTRAS',
-      render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Daily Affirmation & Focus
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              Your Energetic Mantras
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif text-[#4A3F35]">
-              Speak these aloud daily to anchor the higher vibration of your reading
-            </p>
-          </div>
-
-          <div className="space-y-3.5 max-w-xl mx-auto w-full my-auto">
-            {mantrasList.map((m, idx) => (
-              <div
-                key={idx}
-                className="py-2.5 border-y border-[#E8E1D5] text-center flex items-center justify-center gap-3 px-3"
-              >
-                <span className="text-[#A89884] text-xs font-serif">✦</span>
-                <p className="font-serif italic font-medium text-[12.5pt] text-[#1F1914] leading-snug">
-                  &ldquo;{m.replace(/^["']|["']$/g, '')}&rdquo;
-                </p>
-                <span className="text-[#A89884] text-xs font-serif">✦</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center max-w-xl mx-auto w-full border-t border-[#E8E1D5] pt-2">
-            <p className="text-[8.5pt] font-sans text-[#6B5E51] uppercase tracking-wider">
-              Repeat each mantra 3 times every morning while placing your hand on your heart.
-            </p>
-          </div>
-        </div>
-      ),
-    });
-
-    // Soul Inquiries Part I
+    // 2 Dedicated Soul Inquiries Pages for Detailed / Premium
     pages.push({
       key: 'soul-inquiries-p1',
       headerTitle: 'SOUL INQUIRIES · PART I',
       render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Introspective Journaling · Part I
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              Soul Inquiries
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif text-[#4A3F35]">
-              Take a quiet moment of stillness to reflect. Write your most honest truth below.
-            </p>
-          </div>
+        <UniversalPageContainer
+          eyebrow="Introspective Self-Inquiry · Part I"
+          title="Soul Inquiries: Core Clarity"
+          subtitle="Illuminating the subconscious patterns ready for conscious release"
+          footerText="✦ Healing begins the moment you give yourself permission to be honest ✦"
+        >
+          <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto">
+            <div className="space-y-2 text-center w-full">
+              <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                ✦ Sacred Inquiry 1 ✦
+              </h3>
+              <p className="text-[19px] font-serif italic font-medium text-[#1F1914] text-center leading-[1.7]">
+                &ldquo;{inquiriesList[0]}&rdquo;
+              </p>
+              <p className="text-[18px] text-[#6B5E51] font-serif text-center leading-[1.7] pt-1">
+                Reflective cue: Where in your past did you learn to compromise your inner knowing, and how does your sovereign future self invite you to act differently today?
+              </p>
+            </div>
 
-          <div className="space-y-6 my-auto">
-            {inquiriesList.slice(0, 2).map((inq, idx) => (
-              <div key={idx} className="space-y-2.5">
-                <div className="flex items-start gap-2">
-                  <span className="font-serif font-bold text-[12pt] text-[#6B5E51]">{idx + 1}.</span>
-                  <p className="font-serif font-bold text-[11.5pt] text-[#1F1914] leading-snug">{inq}</p>
-                </div>
-                <p className="text-[9pt] font-serif italic text-[#6B5E51] pl-5 leading-relaxed">
-                  {idx === 0
-                    ? '✦ Guiding Reflection Cue: Close your eyes, place a hand over your heart center, and notice what subtle emotion or somatic tension arises.'
-                    : '✦ Guiding Reflection Cue: Observe where fear of conflict, judgment, or self-doubt has caused you to compromise your peace.'}
-                </p>
-                <div className="space-y-3.5 pt-1 pl-5">
-                  <div className="border-b border-[#E8E1D5]"></div>
-                  <div className="border-b border-[#E8E1D5]"></div>
-                  <div className="border-b border-[#E8E1D5]"></div>
-                </div>
-              </div>
-            ))}
-          </div>
+            <div className="text-[#A89884] text-center text-sm my-1">✦  ·  ✦  ·  ✦</div>
 
-          <div className="text-center border-t border-[#E8E1D5] pt-2">
-            <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-              ✦ Honoring the Sacred Truth of Your Inner Voice ✦
-            </p>
+            <div className="space-y-2 text-center w-full">
+              <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                ✦ Sacred Inquiry 2 ✦
+              </h3>
+              <p className="text-[19px] font-serif italic font-medium text-[#1F1914] text-center leading-[1.7]">
+                &ldquo;{inquiriesList[1] || inquiriesList[0]}&rdquo;
+              </p>
+              <p className="text-[18px] text-[#6B5E51] font-serif text-center leading-[1.7] pt-1">
+                Reflective cue: What fears of conflict or judgment arise when you imagine speaking your unfiltered truth, and how can you hold yourself with compassionate safety?
+              </p>
+            </div>
           </div>
-        </div>
+        </UniversalPageContainer>
       ),
     });
 
-    // Soul Inquiries Part II
     pages.push({
       key: 'soul-inquiries-p2',
       headerTitle: 'SOUL INQUIRIES · PART II',
       render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Introspective Journaling · Part II
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              Soul Realization & Guided Reflection
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif text-[#4A3F35]">
-              Structured integration framework to anchor your core breakthrough into daily life
-            </p>
-          </div>
-
-          <div className="space-y-4 my-auto">
-            <div className="space-y-2 pb-2 border-b border-[#E8E1D5]">
-              <div className="flex items-start gap-2">
-                <span className="font-serif font-bold text-[12pt] text-[#6B5E51]">3.</span>
-                <p className="font-serif font-bold text-[11.5pt] text-[#1F1914] leading-snug">
-                  {inquiriesList[2] || 'What does my most peaceful, abundant, and joyful timeline look like in physical reality?'}
-                </p>
-              </div>
-              <div className="space-y-3 pt-0.5 pl-5">
-                <div className="border-b border-[#E8E1D5]"></div>
-                <div className="border-b border-[#E8E1D5]"></div>
-              </div>
+        <UniversalPageContainer
+          eyebrow="Introspective Self-Inquiry · Part II"
+          title="Soul Inquiries: Radiant Embodiment"
+          subtitle="Anchoring unshakeable trust and calling in your highest sovereign reality"
+          footerText="✦ Write freely without self-censorship; let your soul speak ✦"
+        >
+          <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto">
+            <div className="space-y-2 text-center w-full">
+              <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                ✦ Sacred Inquiry 3 ✦
+              </h3>
+              <p className="text-[19px] font-serif italic font-medium text-[#1F1914] text-center leading-[1.7]">
+                &ldquo;{inquiriesList[2] || inquiriesList[0]}&rdquo;
+              </p>
+              <p className="text-[18px] text-[#6B5E51] font-serif text-center leading-[1.7] pt-1">
+                Reflective cue: Describe how your daily life feels when you wake up completely anchored in your own self-worth, surrounded by reciprocal clarity and authentic peace.
+              </p>
             </div>
 
-            <div className="space-y-3 pt-1">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[8.5pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51]">
-                    ✦ 1. Core Breakthrough & Sovereign Epiphany
-                  </span>
-                  <span className="text-[7.5pt] font-serif italic text-[#8C7E70]">What truth has clicked into place?</span>
-                </div>
-                <div className="space-y-3 pt-1">
-                  <div className="border-b border-[#E8E1D5]"></div>
-                  <div className="border-b border-[#E8E1D5]"></div>
-                </div>
-              </div>
+            <div className="text-[#A89884] text-center text-sm my-1">✦  ·  ✦  ·  ✦</div>
 
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[8.5pt] font-sans font-bold uppercase tracking-wider text-[#6B5E51]">
-                    ✦ 2. Aligned Action & Next Sacred Steps
-                  </span>
-                  <span className="text-[7.5pt] font-serif italic text-[#8C7E70]">What step will you take in the next 48h?</span>
-                </div>
-                <div className="space-y-3 pt-1">
-                  <div className="border-b border-[#E8E1D5]"></div>
-                  <div className="border-b border-[#E8E1D5]"></div>
-                </div>
-              </div>
+            <div className="space-y-1.5 text-center w-full">
+              <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                ✦ Integration Mantra ✦
+              </h3>
+              <p className="text-[19px] font-serif italic text-[#4A3F35] text-center leading-[1.75]">
+                &ldquo;I release the need to prove my worth. I trust my choices, honor my boundaries, and step gracefully into my sovereignty.&rdquo;
+              </p>
             </div>
           </div>
-
-          <div className="text-center border-t border-[#E8E1D5] pt-2">
-            <p className="text-[8.5pt] font-sans text-[#6B5E51] uppercase tracking-wider">
-              ✦ Trust your hand and heart; allow your soul to write its new chapter ✦
-            </p>
-          </div>
-        </div>
+        </UniversalPageContainer>
       ),
     });
+  }
 
-    // Spiritual Prescription Part I (Crystals & Botanicals)
+  // 6. Spiritual Prescription
+  if (activeTier === 'standard') {
     pages.push({
-      key: 'spiritual-prescription-p1',
+      key: 'prescription-standard',
+      headerTitle: 'YOUR SPIRITUAL PRESCRIPTION',
+      render: () => (
+        <UniversalPageContainer
+          eyebrow="Holistic Allies & Earth Remedies"
+          title="Your Spiritual Prescription"
+          subtitle="Sacred frequencies tailored to your cards to ground, clear, and harmonize your field"
+          footerText="✦ Nature's frequencies supporting your sovereign elevation ✦"
+        >
+          <div className="flex flex-col items-center justify-center text-center space-y-4 max-w-xl mx-auto">
+            <div className="space-y-1 text-center w-full">
+              <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                ✦ Crystal Allies: {parsed.spiritualPrescription.crystals.map((c) => c.name).join(' & ') || 'Rose Quartz & Clear Quartz'} ✦
+              </h3>
+              <p className="text-[18px] leading-[1.7] text-[#1F1914] font-serif text-center">
+                {parsed.spiritualPrescription.crystals[0]?.description ||
+                  'Rose Quartz invites deep compassionate self-love, while Clear Quartz cleanses stagnant energy and sharpens intuitive perception.'}
+              </p>
+            </div>
+
+            <div className="text-[#A89884] text-center text-sm my-0.5">✦  ·  ✦  ·  ✦</div>
+
+            <div className="space-y-1 text-center w-full">
+              <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                ✦ Botanical Allies: {parsed.spiritualPrescription.botanicals.map((b) => b.name).join(' & ') || 'Lavender & Rose Petals'} ✦
+              </h3>
+              <p className="text-[18px] leading-[1.7] text-[#1F1914] font-serif text-center">
+                {parsed.spiritualPrescription.botanicals[0]?.description ||
+                  'Incorporate lavender to settle an overactive mind and rose petals to safely soften your heart for receptive abundance.'}
+              </p>
+            </div>
+
+            <div className="text-[#A89884] text-center text-sm my-0.5">✦  ·  ✦  ·  ✦</div>
+
+            <div className="space-y-1 text-center w-full">
+              <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                ✦ Guided Somatic Practice: {parsed.spiritualPrescription.mindfulness[0]?.name || 'Heart-Space Golden Light Anchoring'} ✦
+              </h3>
+              <p className="text-[18px] leading-[1.7] text-[#1F1914] font-serif text-center">
+                {parsed.spiritualPrescription.mindfulness[0]?.description ||
+                  'Whenever overstimulated, place hands over your heart, inhale golden light for 4 counts, and exhale releasing tension for 6 counts.'}
+              </p>
+            </div>
+          </div>
+        </UniversalPageContainer>
+      ),
+    });
+  } else {
+    // 2 Dedicated Prescription Pages for Detailed / Premium Tier
+    pages.push({
+      key: 'prescription-p1',
       headerTitle: 'SPIRITUAL PRESCRIPTION · PART I',
       render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Holistic Remedies · Part I
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              Sacred Earth & Botanical Allies
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif text-[#4A3F35]">
-              Sacred mineral and botanical tools to ground, harmonize, and support your energetic transition
-            </p>
-          </div>
-
-          <div className="space-y-5 my-auto">
-            <div className="space-y-1.5 border-b border-[#E8E1D5] pb-4">
-              <span className="text-[8pt] font-sans font-bold uppercase tracking-[0.25em] text-[#6B5E51] block">
-                • Earth Element · Crystal Allies
-              </span>
-              <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                {parsed.spiritualPrescription.crystals.map((c) => c.name).join(' & ') || 'Rose Quartz & Clear Quartz'}
-              </h2>
-              <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify">
+        <UniversalPageContainer
+          eyebrow="Holistic Remedies · Part I"
+          title="Earth & Botanical Allies"
+          subtitle="Sacred mineral and botanical tools to ground, harmonize, and support your transition"
+          footerText="✦ Nature's Sacred Frequencies Supporting Your Elevation ✦"
+        >
+          <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto">
+            <div className="space-y-2 text-center w-full">
+              <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                ✦ Crystal Allies: {parsed.spiritualPrescription.crystals.map((c) => c.name).join(' & ') || 'Rose Quartz & Clear Quartz'} ✦
+              </h3>
+              <p className="text-[18px] leading-[1.75] text-[#1F1914] font-serif text-center">
                 {parsed.spiritualPrescription.crystals[0]?.description ||
-                  `Keep Rose Quartz nearby to invite in reciprocal, heart-centered love. Pair with Clear Quartz to cut through mental fog, cleanse stagnant frequencies, and illuminate your highest soul path.`}
+                  'Keep Rose Quartz nearby to invite in reciprocal, heart-centered love. Pair with Clear Quartz to cut through mental fog, cleanse stagnant frequencies, and illuminate your highest soul path.'}
               </p>
-              <div className="mt-1.5 pt-1 text-[8pt] font-sans text-[#6B5E51] flex items-center justify-between">
-                <span>Placement: Bedside or Heart Chakra</span>
-                <span>Vibration: Cleansing & Unconditional Love</span>
-              </div>
+              <p className="text-[18px] italic text-[#6B5E51] font-serif text-center pt-1">
+                Suggested Placement: Bedside table or Heart Chakra during evening meditation
+              </p>
             </div>
 
-            <div className="space-y-1.5">
-              <span className="text-[8pt] font-sans font-bold uppercase tracking-[0.25em] text-[#6B5E51] block">
-                • Flora Element · Botanical Allies
-              </span>
-              <h2 className="font-serif font-bold text-[13pt] text-[#1F1914]">
-                {parsed.spiritualPrescription.botanicals.map((b) => b.name).join(' & ') || 'Lavender & Rose Petals'}
-              </h2>
-              <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify">
+            <div className="text-[#A89884] text-center text-sm my-1">✦  ·  ✦  ·  ✦</div>
+
+            <div className="space-y-2 text-center w-full">
+              <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                ✦ Botanical Allies: {parsed.spiritualPrescription.botanicals.map((b) => b.name).join(' & ') || 'Lavender & Rose Petals'} ✦
+              </h3>
+              <p className="text-[18px] leading-[1.75] text-[#1F1914] font-serif text-center">
                 {parsed.spiritualPrescription.botanicals[0]?.description ||
-                  `Incorporate lavender into your evening routine to soothe an analytical nervous system. Rose petals act as a gentle heart-opener, helping you soften boundaries safely and receive divine abundance.`}
+                  'Incorporate lavender into your evening routine to soothe an analytical nervous system. Rose petals act as a gentle heart-opener, helping you soften boundaries safely and receive divine abundance.'}
               </p>
-              <div className="mt-1.5 pt-1 text-[8pt] font-sans text-[#6B5E51] flex items-center justify-between">
-                <span>Usage: Herbal Infusion or Bath Soak</span>
-                <span>Essence: Peace, Softening & Receptivity</span>
-              </div>
+              <p className="text-[18px] italic text-[#6B5E51] font-serif text-center pt-1">
+                Suggested Ritual: Evening herbal infusion or warm bath soak with sea salt
+              </p>
             </div>
           </div>
-
-          <div className="text-center border-t border-[#E8E1D5] pt-2">
-            <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-              ✦ Nature's Sacred Frequencies Supporting Your Elevation ✦
-            </p>
-          </div>
-        </div>
+        </UniversalPageContainer>
       ),
     });
 
-    // Spiritual Prescription Part II (Guided Somatic Practice)
     pages.push({
-      key: 'spiritual-prescription-p2',
+      key: 'prescription-p2',
       headerTitle: 'SPIRITUAL PRESCRIPTION · PART II',
       render: () => (
-        <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
-          <div className="text-center space-y-1.5 pt-2">
-            <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-              Holistic Remedies · Part II
-            </span>
-            <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-              Sacred Mindfulness Practice
-            </h1>
-            <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-            <p className="text-[10pt] font-serif text-[#4A3F35]">
-              Somatic breathwork and grounding ritual tailored for your energetic realignment
-            </p>
-          </div>
-
-          <div className="space-y-[18px] my-auto">
-            <div>
-              <span className="text-[8pt] font-sans font-bold uppercase tracking-[0.25em] text-[#6B5E51] block mb-1">
-                • Spirit Element · Guided Somatic Practice
-              </span>
-              <h2 className="font-serif font-bold text-[13pt] text-[#1F1914] mb-1.5">
-                {parsed.spiritualPrescription.mindfulness[0]?.name || 'Heart-Space Breathwork & Golden Light Anchoring'}
-              </h2>
-              <p className="text-[10.5pt] leading-[1.6] text-[#1F1914] text-justify">
+        <UniversalPageContainer
+          eyebrow="Holistic Remedies · Part II"
+          title="Guided Somatic Mindfulness"
+          subtitle="Somatic breathwork and grounding ritual tailored for your energetic realignment"
+          footerText="✦ Peace is not the absence of movement; it is stillness within your core ✦"
+        >
+          <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto">
+            <div className="space-y-2 text-center w-full">
+              <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                ✦ {parsed.spiritualPrescription.mindfulness[0]?.name || 'Heart-Space Breathwork & Golden Light Anchoring'} ✦
+              </h3>
+              <p className="text-[18px] leading-[1.75] text-[#1F1914] font-serif text-center">
                 {parsed.spiritualPrescription.mindfulness[0]?.description ||
-                  `Whenever you feel overstimulated or caught in mental loops, pause. Place both hands over your chest, take three slow deep diaphragmatic breaths, and visualize warm golden light restoring unshakeable peace through every cell of your being.`}
+                  'Whenever you feel overstimulated or caught in mental loops, pause. Place both hands over your chest, take three slow deep diaphragmatic breaths, and visualize warm golden light restoring unshakeable peace through every cell of your being.'}
               </p>
             </div>
 
-            <div className="border-t border-[#E8E1D5] pt-3 space-y-2">
-              <h3 className="font-serif font-bold text-[12pt] text-[#1F1914]">
-                Step-by-Step Grounding Ritual:
+            <div className="text-[#A89884] text-center text-sm my-1">✦  ·  ✦  ·  ✦</div>
+
+            <div className="space-y-2 text-center w-full">
+              <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                ✦ Daily Somatic Breath Pattern ✦
               </h3>
-              <div className="space-y-1.5 text-[10pt] leading-[1.5] text-[#1F1914]">
-                <p><strong>1. Posture:</strong> Sit upright with feet flat on the ground and spine relaxed.</p>
-                <p><strong>2. Inhale (4 counts):</strong> Breathe in quiet confidence, filling your lungs with renewal.</p>
-                <p><strong>3. Hold (4 counts):</strong> Rest in the stillness between breaths where clarity resides.</p>
-                <p><strong>4. Exhale (6 counts):</strong> Release all performance anxiety, doubt, and tension.</p>
-              </div>
+              <p className="text-[18px] leading-[1.7] text-[#1F1914] font-serif text-center">
+                <strong>Inhale (4 Counts):</strong> Breathe in quiet confidence, filling your lungs with renewal.<br />
+                <strong>Hold (4 Counts):</strong> Rest in the calm stillness between breaths where truth lives.<br />
+                <strong>Exhale (6 Counts):</strong> Release all performance anxiety, doubt, and physical tension.
+              </p>
             </div>
           </div>
-
-          <div className="text-center border-t border-[#E8E1D5] pt-2">
-            <p className="text-[9.5pt] font-serif italic text-[#1F1914]">
-              &ldquo;Peace is not the absence of movement; it is the presence of stillness within your core.&rdquo;
-            </p>
-          </div>
-        </div>
+        </UniversalPageContainer>
       ),
     });
   }
 
-  // Master Section: Chakra Energetic Matrix (Premium Tier)
-  if (activeTier === 'premium') {
-    pages.push({
-      key: 'chakra-matrix-alignment',
-      headerTitle: 'CHAKRA ENERGETIC MATRIX & HARMONIZATION',
-      render: () => (
-        <MasterChakraAlignmentPage
-          inputs={inputs}
-          categorySpec={categorySpec}
-          effectiveShopName={effectiveShopName}
-          card1={card1}
-          card2={card2}
-          card3={card3}
-          calculatedLpNumber={calculatedLpNumber}
-        />
-      ),
+  // 7. Monthly Forecasts (Universal Page for each generated month)
+  if (parsed.monthlyForecasts && parsed.monthlyForecasts.length > 0) {
+    parsed.monthlyForecasts.forEach((m) => {
+      pages.push({
+        key: `monthly-forecast-${m.monthNumber}`,
+        headerTitle: `MONTH ${m.monthNumber}: ${m.title.toUpperCase()}`,
+        render: () => (
+          <UniversalPageContainer
+            eyebrow={`12-Month Cosmic Oracle · Month ${m.monthNumber} of 12`}
+            title={`Month ${m.monthNumber}: ${m.title}`}
+            subtitle={`Astrological Sign: ${m.astrologicalSign} · Governing Element: ${m.element}`}
+            footerText={`✦ Walking the sacred spiral of Month ${m.monthNumber} with confidence ✦`}
+          >
+            <div className="flex flex-col items-center justify-center text-center space-y-4 max-w-xl mx-auto">
+              <div className="space-y-1 text-center w-full">
+                <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                  ✦ Channeled Monthly Energy ✦
+                </h3>
+                <p className="text-[18px] leading-[1.75] text-[#1F1914] font-serif text-center">
+                  {m.forecast}
+                </p>
+              </div>
+
+              <div className="text-[#A89884] text-center text-sm my-0.5">✦  ·  ✦  ·  ✦</div>
+
+              <div className="space-y-1 text-center w-full">
+                <h3 className="font-serif font-bold text-[20px] text-[#1F1914] text-center">
+                  ✦ Aligned Practical Action ✦
+                </h3>
+                <p className="text-[18px] leading-[1.7] text-[#1F1914] font-serif text-center">
+                  {m.practicalAdvice}
+                </p>
+              </div>
+
+              <div className="pt-2 text-center w-full">
+                <span className="text-[18px] font-sans font-bold uppercase tracking-wider text-[#6B5E51] block text-center mb-1">
+                  ✦ Monthly Affirmation ✦
+                </span>
+                <p className="text-[19px] font-serif italic font-medium text-[#1F1914] text-center">
+                  &ldquo;{m.affirmation}&rdquo;
+                </p>
+              </div>
+            </div>
+          </UniversalPageContainer>
+        ),
+      });
     });
   }
 
-  // Master Section: Vedic & Esoteric Planetary Remedies (Premium Tier)
-  if (activeTier === 'premium') {
-    pages.push({
-      key: 'vedic-esoteric-remedies',
-      headerTitle: 'VEDIC UPAYAS & SACRED REMEDIES',
-      render: () => (
-        <MasterVedicRemediesPage
-          inputs={inputs}
-          categorySpec={categorySpec}
-          effectiveShopName={effectiveShopName}
-          card1={card1}
-          card2={card2}
-          card3={card3}
-          calculatedLpNumber={calculatedLpNumber}
-        />
-      ),
+  // 8. Custom Markdown Sections (Unlimited dynamic pages if AI returned extra sections)
+  if (parsed.customSections && parsed.customSections.length > 0) {
+    parsed.customSections.forEach((sec, sIdx) => {
+      const secChunkSize = 2;
+      const totalSecPages = Math.ceil(sec.paragraphs.length / secChunkSize);
+      for (let spIdx = 0; spIdx < totalSecPages; spIdx++) {
+        const pSlice = sec.paragraphs.slice(spIdx * secChunkSize, (spIdx + 1) * secChunkSize);
+        pages.push({
+          key: `custom-sec-${sIdx + 1}-p${spIdx + 1}`,
+          headerTitle: `${sec.title} · PART ${spIdx + 1}`,
+          render: () => (
+            <UniversalPageContainer
+              eyebrow="Deep Channeled Exploration"
+              title={totalSecPages > 1 ? `${sec.title} (${spIdx + 1}/${totalSecPages})` : sec.title}
+              subtitle="Intuitive guidance and sacred alignment for your path"
+              footerText="✦ Channeled with reverence for your sovereign journey ✦"
+            >
+              <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto">
+                {pSlice.map((pText, pSubIdx) => (
+                  <React.Fragment key={pSubIdx}>
+                    {pSubIdx > 0 && <div className="text-[#A89884] text-center text-sm my-1">✦  ·  ✦  ·  ✦</div>}
+                    <p className="text-[18px] leading-[1.75] text-[#1F1914] font-serif text-center">
+                      {pText}
+                    </p>
+                  </React.Fragment>
+                ))}
+              </div>
+            </UniversalPageContainer>
+          ),
+        });
+      }
     });
   }
 
-  // Master Specialized Category Focus Pages & Plug-and-Play Universal Dynamic Blueprint
-  const topicLower = (inputs.topic || '').toLowerCase();
-  const problemLower = (inputs.problem || '').toLowerCase();
-  const questionLower = (inputs.question || '').toLowerCase();
-  const combinedText = `${topicLower} ${problemLower} ${questionLower}`;
-
-  const isCareerFinance =
-    categorySpec.categoryType === 'career_job' ||
-    categorySpec.categoryType === 'money_flow' ||
-    combinedText.includes('career') ||
-    combinedText.includes('money') ||
-    combinedText.includes('wealth') ||
-    combinedText.includes('business') ||
-    combinedText.includes('job') ||
-    combinedText.includes('finance');
-
-  const isLoveRelationships =
-    categorySpec.categoryType === 'love_blocks' ||
-    categorySpec.categoryType === 'relationship_partner' ||
-    categorySpec.categoryType === 'cord_cutting' ||
-    combinedText.includes('love') ||
-    combinedText.includes('relationship') ||
-    combinedText.includes('feelings') ||
-    combinedText.includes('ex ') ||
-    combinedText.includes('soulmate') ||
-    combinedText.includes('twin');
-
-  if (activeTier === 'premium') {
-    if (isCareerFinance) {
-      pages.push({
-        key: 'career-wealth-master-blueprint',
-        headerTitle: 'CAREER & WEALTH SOUL BLUEPRINT',
-        render: () => (
-          <MasterCareerWealthPage
-            inputs={inputs}
-            categorySpec={categorySpec}
-            effectiveShopName={effectiveShopName}
-            card1={card1}
-            card2={card2}
-            card3={card3}
-            calculatedLpNumber={calculatedLpNumber}
-          />
-        ),
-      });
-    } else if (isLoveRelationships) {
-      pages.push({
-        key: 'love-dynamics-master-blueprint',
-        headerTitle: 'LOVE & SACRED RELATIONAL DYNAMICS',
-        render: () => (
-          <MasterLoveDynamicsPage
-            inputs={inputs}
-            categorySpec={categorySpec}
-            effectiveShopName={effectiveShopName}
-            card1={card1}
-            card2={card2}
-            card3={card3}
-            calculatedLpNumber={calculatedLpNumber}
-          />
-        ),
-      });
-    } else {
-      // Plug-and-Play Universal Dynamic Blueprint (3 Pages for Custom / Unknown Topics in Premium)
-      pages.push({
-        key: 'universal-dynamic-page-1',
-        headerTitle: 'DOMAIN RESONANCE & ELEMENTAL ALCHEMY',
-        render: () => (
-          <UniversalDynamicPage1
-            inputs={inputs}
-            categorySpec={categorySpec}
-            effectiveShopName={effectiveShopName}
-            card1={card1}
-            card2={card2}
-            card3={card3}
-            calculatedLpNumber={calculatedLpNumber}
-          />
-        ),
-      });
-      pages.push({
-        key: 'universal-dynamic-page-2',
-        headerTitle: 'UNSEEN OBSTACLES & KARMIC CHOICE POINTS',
-        render: () => (
-          <UniversalDynamicPage2
-            inputs={inputs}
-            categorySpec={categorySpec}
-            effectiveShopName={effectiveShopName}
-            card1={card1}
-            card2={card2}
-            card3={card3}
-            calculatedLpNumber={calculatedLpNumber}
-          />
-        ),
-      });
-      pages.push({
-        key: 'universal-dynamic-page-3',
-        headerTitle: '30-DAY DECISION & INTEGRATION PROTOCOL',
-        render: () => (
-          <UniversalDynamicPage3
-            inputs={inputs}
-            categorySpec={categorySpec}
-            effectiveShopName={effectiveShopName}
-            card1={card1}
-            card2={card2}
-            card3={card3}
-            calculatedLpNumber={calculatedLpNumber}
-          />
-        ),
-      });
-    }
-  } else if (activeTier === 'detailed') {
-    // For Detailed tier on custom/unknown topics, inject the 3-Page Universal Dynamic Blueprint
-    if (!isCareerFinance && !isLoveRelationships) {
-      pages.push({
-        key: 'universal-dynamic-page-1',
-        headerTitle: 'DOMAIN RESONANCE & ELEMENTAL ALCHEMY',
-        render: () => (
-          <UniversalDynamicPage1
-            inputs={inputs}
-            categorySpec={categorySpec}
-            effectiveShopName={effectiveShopName}
-            card1={card1}
-            card2={card2}
-            card3={card3}
-            calculatedLpNumber={calculatedLpNumber}
-          />
-        ),
-      });
-      pages.push({
-        key: 'universal-dynamic-page-2',
-        headerTitle: 'UNSEEN OBSTACLES & KARMIC CHOICE POINTS',
-        render: () => (
-          <UniversalDynamicPage2
-            inputs={inputs}
-            categorySpec={categorySpec}
-            effectiveShopName={effectiveShopName}
-            card1={card1}
-            card2={card2}
-            card3={card3}
-            calculatedLpNumber={calculatedLpNumber}
-          />
-        ),
-      });
-      pages.push({
-        key: 'universal-dynamic-page-3',
-        headerTitle: '30-DAY DECISION & INTEGRATION PROTOCOL',
-        render: () => (
-          <UniversalDynamicPage3
-            inputs={inputs}
-            categorySpec={categorySpec}
-            effectiveShopName={effectiveShopName}
-            card1={card1}
-            card2={card2}
-            card3={card3}
-            calculatedLpNumber={calculatedLpNumber}
-          />
-        ),
-      });
-    }
-  } else if (activeTier === 'standard') {
-    // For Standard tier on custom/unknown topics, inject 1-Page Dynamic Synthesis Card
-    if (!isCareerFinance && !isLoveRelationships) {
-      pages.push({
-        key: 'universal-dynamic-page-1',
-        headerTitle: 'DOMAIN RESONANCE MATRIX',
-        render: () => (
-          <UniversalDynamicPage1
-            inputs={inputs}
-            categorySpec={categorySpec}
-            effectiveShopName={effectiveShopName}
-            card1={card1}
-            card2={card2}
-            card3={card3}
-            calculatedLpNumber={calculatedLpNumber}
-          />
-        ),
-      });
-    }
-  }
-
-  // Final Page: Outro, Thank You & Legal Disclaimer
+  // 9. Sacred Closing, Gratitude & Legal Disclaimer (Universal Page Design)
   pages.push({
     key: 'closing-blessing',
     headerTitle: 'SACRED CLOSING & BLESSING',
     render: () => (
-      <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between items-center text-center font-serif z-10">
-        <div className="space-y-1.5 pt-2">
-          <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-            With Gratitude & Light
-          </span>
-          <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-            Thank You for Trusting {effectiveShopName}
-          </h1>
-          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
-          <p className="text-[10pt] font-serif text-[#4A3F35]">
-            It has been an honor channeling these intuitive insights for your sacred journey
+      <UniversalPageContainer
+        eyebrow="With Gratitude & Divine Light"
+        title={`Thank You for Trusting ${effectiveShopName}`}
+        subtitle="It has been an honor channeling these intuitive insights for your sacred journey"
+        footerText={`© ${new Date().getFullYear()} ${effectiveShopName} · All Rights Reserved`}
+      >
+        <div className="flex flex-col items-center justify-center text-center space-y-4 max-w-xl mx-auto">
+          <p className="text-[18px] leading-[1.75] text-[#1F1914] font-serif text-center">
+            May this reading illuminate your inner truth, dissolve lingering uncertainty, and remind you of the immense sovereign power you possess. You are the sacred author of your destiny, and the universe is forever conspiring to bring you into resonance with your highest good.
           </p>
-        </div>
 
-        <div className="max-w-xl text-justify space-y-3.5 my-auto">
-          <p className="text-[10.5pt] leading-[1.6] text-[#1F1914]">
-            May this reading illuminate your inner truth, dissolve lingering uncertainty, and remind you of the immense power you possess. You are the author of your destiny, and the universe is forever conspiring to bring you into resonance with your highest good.
-          </p>
           <div className="pt-2 text-center">
-            <p className="font-serif italic font-bold text-[13pt] text-[#1F1914]">
+            <p className="font-serif italic font-bold text-[20px] text-[#1F1914] text-center">
               With Infinite Love & Blessings,
             </p>
-            <p className="text-[10.5pt] font-serif text-[#6B5E51]">
+            <p className="text-[19px] font-serif text-[#6B5E51] text-center mt-0.5">
               {effectiveShopName}
             </p>
           </div>
-        </div>
 
-        <div className="max-w-xl mx-auto space-y-1 text-[8pt] leading-[1.5] text-[#6B5E51] border-t border-[#E8E1D5] pt-2">
-          <p className="font-bold uppercase tracking-wider text-[#1F1914]">Disclaimer:</p>
-          <p>
-            Tarot and numerology readings are offered solely for personal insight, self-reflection, spiritual exploration, and entertainment purposes. The guidance and interpretations provided are designed to inspire introspection, but do not constitute and should never substitute for licensed medical, psychological, legal, or financial advice.
-          </p>
-          <p className="text-[7.5pt] text-[#8C7D6D] font-sans">
-            © {new Date().getFullYear()} {effectiveShopName} · All Rights Reserved
-          </p>
+          <div className="space-y-1 text-center border-t border-[#E8E1D5] pt-3 max-w-lg mx-auto">
+            <p className="text-[14px] font-bold uppercase tracking-wider text-[#1F1914] text-center">
+              ✦ Sacred Divination Disclaimer ✦
+            </p>
+            <p className="text-[14px] leading-relaxed text-[#6B5E51] font-serif text-center">
+              Tarot and numerology readings are offered solely for personal insight, self-reflection, spiritual exploration, and entertainment purposes. The guidance provided is designed to inspire introspection, but does not constitute and should never substitute for licensed medical, psychological, legal, or financial advice.
+            </p>
+          </div>
         </div>
-      </div>
+      </UniversalPageContainer>
     ),
   });
+  }
 
-  // Filter out any explicitly excluded sections from user structurizer
-  const filteredPages = pages.filter((pageDef) => {
-    if (inputs.excludedSections && inputs.excludedSections.length > 0) {
-      if (inputs.excludedSections.includes(pageDef.key)) {
-        return false;
-      }
-      if (inputs.excludedSections.includes('numerology-core') && pageDef.key === 'numerology-core') return false;
-      if (inputs.excludedSections.includes('personal-year') && pageDef.key === 'personal-year') return false;
-      if (inputs.excludedSections.includes('elemental-balance') && pageDef.key === 'elemental-balance') return false;
-      if (inputs.excludedSections.includes('chakra-matrix') && pageDef.key === 'chakra-matrix-alignment') return false;
-      if (inputs.excludedSections.includes('vedic-upayas') && pageDef.key === 'vedic-esoteric-remedies') return false;
-      if (inputs.excludedSections.includes('defense-breakdown') && pageDef.key === 'extended-shadow-work') return false;
-      if (inputs.excludedSections.includes('specialized-mask-whisper') && pageDef.key === 'specialized-blueprint') return false;
-      if (inputs.excludedSections.includes('career-wealth-matrix') && pageDef.key === 'career-wealth-master-blueprint') return false;
-      if (inputs.excludedSections.includes('lunar-timing') && pageDef.key === 'lunar-romance') return false;
-      if (inputs.excludedSections.includes('deep-dive-1') && pageDef.key.startsWith('deep-dive-1')) return false;
-      if (inputs.excludedSections.includes('deep-dive-2') && pageDef.key.startsWith('deep-dive-2')) return false;
-      if (inputs.excludedSections.includes('deep-dive-3') && pageDef.key.startsWith('deep-dive-3')) return false;
-    }
-    return true;
-  });
-
-  const dynamicTotalPages = filteredPages.length;
+  const dynamicTotalPages = pages.length;
 
   useEffect(() => {
     if (onTotalPagesCalculated) {
@@ -2470,14 +2037,14 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
 
   return (
     <div className="pdf-renderer flex flex-col items-center gap-10 select-none">
-      {filteredPages.map((pageDef, index) => {
+      {pages.map((pageDef, index) => {
         const pageNum = index + 1;
         return (
           <div
             key={pageDef.key || `pdf-page-${pageNum}`}
             id={`pdf-page-${pageNum}`}
             className="pdf-page w-[794px] h-[1123px] relative bg-[#FAF7EE] text-[#1F1914] overflow-hidden shadow-2xl select-none"
-            style={{ fontFamily: "'Cinzel', 'Playfair Display', Georgia, serif" }}
+            style={{ fontFamily: "'Times New Roman', Times, serif" }}
           >
             <UniversalPageDecorations
               pageNumber={pageNum}

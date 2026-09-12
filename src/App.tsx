@@ -6,7 +6,6 @@ import { ReadingResultView } from './components/ReadingResultView';
 import { ReadingHistoryModal } from './components/ReadingHistoryModal';
 import { FormattingGuideModal } from './components/FormattingGuideModal';
 import { ApiKeyModal } from './components/ApiKeyModal';
-import { CategoryManagerPage } from './components/CategoryManagerPage';
 import { ReadingInputs, StoredReading, CategoryCustomData } from './types';
 import { TAROT_DECK } from './data/tarotCards';
 import { PRESET_READINGS } from './data/presets';
@@ -20,22 +19,67 @@ import { Sparkles, AlertCircle, Wand2, Key } from 'lucide-react';
 const STORAGE_KEY = 'tarot_numerology_readings_history_v1';
 const API_KEY_STORAGE = 'gemini_user_api_key_v1';
 
+const DEFAULT_TITLE =
+  'Ancestral Psychic Reading | Spirit Guide Message, Tarot Insights (PDF)';
+const DEFAULT_CLIENT_DETAILS =
+  'Calida anderson birthday may 21, 1982. I want to know what my ancestors want me to know like mom Georgette anderson and others';
+
 const EMPTY_INPUTS: ReadingInputs = {
-  name: '',
-  age: '',
-  dob: '',
-  problem: '',
-  question: '',
-  topic: '',
+  name: 'Calida Anderson',
+  age: '42',
+  dob: '05/21/1982',
+  problem:
+    'I want to know what my ancestors want me to know like mom Georgette anderson and others',
+  question:
+    'What do my ancestors want me to know, especially Mom Georgette Anderson and others?',
+  topic: DEFAULT_TITLE,
+  clientDetails: DEFAULT_CLIENT_DETAILS,
+  tier: 'detailed',
+  agenda: '',
   shopName: '',
-  cards: [null, null, null],
+  cards: [
+    {
+      id: 'high-priestess',
+      name: 'The High Priestess',
+      arcana: 'major',
+      number: 2,
+      keywords: ['Intuition', 'Ancestral Veil', 'Sacred Wisdom', 'Spiritual Lineage'],
+      element: 'Water',
+      archetype: 'The Divine Channel',
+      affirmation: 'I honor the sacred whispers of my bloodline and trust my inner knowing.',
+      symbol: 'Pillars of Mystery',
+      color: '#4A5568',
+    },
+    {
+      id: 'four-pentacles',
+      name: 'Four of Pentacles',
+      arcana: 'minor',
+      suit: 'pentacles',
+      number: 4,
+      keywords: ['Generational Guarding', 'Control', 'Fear of Release', 'Protection'],
+      element: 'Earth',
+      archetype: 'The Ancestral Guardian',
+      affirmation: 'I release ancestral burdens and open my heart to divine abundance.',
+      symbol: 'Firm Clasp',
+      color: '#744210',
+    },
+    {
+      id: 'the-star',
+      name: 'The Star',
+      arcana: 'major',
+      number: 17,
+      keywords: ['Hope', 'Lineage Healing', 'Renewed Peace', 'Ancestral Blessing'],
+      element: 'Air',
+      archetype: 'The Cosmic Healer',
+      affirmation: 'I am the radiant continuation of my ancestors highest dreams.',
+      symbol: 'Guiding Light',
+      color: '#2B6CB0',
+    },
+  ],
 };
 
 export default function App() {
-  // Navigation view
-  const [activeView, setActiveView] = useState<'oracle' | 'categories'>('oracle');
-
-  // Start with clean empty fields (no pre-filled dummy data)
+  // Start with clean default workflow fields
   const [inputs, setInputs] = useState<ReadingInputs>(EMPTY_INPUTS);
   const [markdownResult, setMarkdownResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +95,7 @@ export default function App() {
   const [history, setHistory] = useState<StoredReading[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
-  const [generationSource, setGenerationSource] = useState<'gemini-ai' | 'algorithmic'>('gemini-ai');
+  const [generationSource, setGenerationSource] = useState<'luna-ai' | 'gemini-ai' | 'algorithmic'>('luna-ai');
   const [generationModel, setGenerationModel] = useState<string>('gemini-3.7-flash');
 
   // Load API Key and history from localStorage, and check server .env API key status
@@ -142,14 +186,23 @@ export default function App() {
     try {
       const metaEnv = (import.meta as any).env || {};
       const viteKey = ((metaEnv.VITE_GEMINI_API_KEY || metaEnv.VITE_API_KEY) as string || '').trim();
+      const savedLunaKey = localStorage.getItem('luna_api_key_v1') || '';
+      const savedLunaUrl = localStorage.getItem('luna_base_url_v1') || '';
+      const savedLunaModel = localStorage.getItem('luna_model_name_v1') || '';
 
       const result = await executeReading({
         name: inputs.name,
         age: inputs.age,
         dob: inputs.dob,
-        problem: inputs.problem,
-        question: inputs.question,
-        topic: inputs.topic,
+        clientDetails: inputs.clientDetails || inputs.problem,
+        agenda: inputs.agenda || inputs.question,
+        tier: inputs.tier || 'detailed',
+        problem: inputs.problem || inputs.clientDetails,
+        question: inputs.question || inputs.agenda,
+        topic: inputs.topic || inputs.agenda || 'Strategic Consultation',
+        lunaApiKey: savedLunaKey || undefined,
+        lunaBaseUrl: savedLunaUrl || undefined,
+        lunaModelName: savedLunaModel || undefined,
         cards: inputs.cards.map((c) => ({
           name: c?.name || 'The Star',
           arcana: c?.arcana,
@@ -158,12 +211,12 @@ export default function App() {
           keywords: c?.keywords,
         })),
         categoryData: inputs.categoryData,
-        userApiKey: customApiKey || viteKey || undefined,
+        userApiKey: customApiKey || viteKey || savedLunaKey || undefined,
       });
 
       if (result.markdown) {
         setMarkdownResult(result.markdown);
-        setGenerationSource(result.source === 'gemini-ai' ? 'gemini-ai' : 'algorithmic');
+        setGenerationSource((result.source as any) || 'gemini-ai');
         if (result.model) {
           setGenerationModel(result.model);
         }
@@ -173,7 +226,7 @@ export default function App() {
     } catch (err: any) {
       console.warn('API error encountered:', err);
       if (customApiKey) {
-        setErrorMessage(`Gemini API Notice: ${err.message}. Please check your API key in the top bar.`);
+        setErrorMessage(`API Notice: ${err.message}. Please check your API key in the top bar.`);
       }
       
       // Generate customized fallback reading
@@ -234,7 +287,7 @@ export default function App() {
       cards: [c1, c2, c3],
     });
     setMarkdownResult(item.markdownContent);
-    setGenerationSource(item.source || 'gemini-ai');
+    setGenerationSource(item.source || 'luna-ai');
     setIsSaved(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -276,7 +329,6 @@ export default function App() {
     }));
 
     setMarkdownResult(null);
-    setActiveView('oracle');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -288,11 +340,9 @@ export default function App() {
         onOpenHistory={() => setIsHistoryOpen(true)}
         onOpenGuide={() => setIsGuideOpen(true)}
         onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
-        onOpenCategories={() => setActiveView(activeView === 'categories' ? 'oracle' : 'categories')}
         hasCustomApiKey={Boolean(customApiKey)}
         hasServerKey={serverHasKey}
         historyCount={history.length}
-        activeView={activeView}
       />
 
       {/* Main Container */}
@@ -305,67 +355,64 @@ export default function App() {
           </div>
         )}
 
-        {activeView === 'categories' ? (
-          <CategoryManagerPage
-            onBackToOracle={() => setActiveView('oracle')}
-            onSelectCategoryForReading={handleSelectCategoryForReading}
-          />
-        ) : (
-          <AnimatePresence mode="wait">
-            {markdownResult ? (
-              <motion.div
-                key="result"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ReadingResultView
-                  markdown={markdownResult}
-                  inputs={inputs}
-                  onEditInputs={() => setMarkdownResult(null)}
-                  onSaveReading={handleSaveReading}
-                  isSaved={isSaved}
-                  source={generationSource}
-                  model={generationModel}
-                />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="form"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
-              >
-                {/* Hero Banner Header */}
-                <div className="text-center space-y-2.5 max-w-2xl mx-auto py-2">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F2EDE8] border border-[#E0D7CC] text-[#4A3F35] text-[11px] font-bold uppercase tracking-widest">
-                    <Sparkles className="w-3 h-3 text-[#BC6C25]" />
-                    Sacred Synthesis Engine
-                  </div>
-                  <h1 className="text-3xl md:text-5xl font-serif italic text-[#4A3F35] tracking-tight">
-                    Life Path & 3-Card Oracle
-                  </h1>
-                  <p className="text-sm text-[#8C7B6A] leading-relaxed max-w-xl mx-auto">
-                    Enter querent details, problem context, and tarot spread to generate a complete, expert empathetic reading structured precisely for PDF templates.
-                  </p>
+        <AnimatePresence mode="wait">
+          {markdownResult ? (
+            <motion.div
+              key="result"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ReadingResultView
+                markdown={markdownResult}
+                inputs={inputs}
+                onEditInputs={() => setMarkdownResult(null)}
+                onSaveReading={handleSaveReading}
+                isSaved={isSaved}
+                source={generationSource}
+                model={generationModel}
+                onUpdateMarkdown={(newMd) => {
+                  setMarkdownResult(newMd);
+                  setIsSaved(false);
+                }}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="form"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
+            >
+              {/* Hero Banner Header */}
+              <div className="text-center space-y-2.5 max-w-2xl mx-auto py-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F2EDE8] border border-[#E0D7CC] text-[#4A3F35] text-[11px] font-bold uppercase tracking-widest">
+                  <Sparkles className="w-3 h-3 text-[#BC6C25]" />
+                  Daisy&apos;s Intuitive Reading Sanctuary
                 </div>
+                <h1 className="text-3xl md:text-5xl font-serif italic text-[#4A3F35] tracking-tight">
+                  Psychic & Ancestral Readings
+                </h1>
+                <p className="text-sm text-[#8C7B6A] leading-relaxed max-w-xl mx-auto">
+                  Enter your listing title, client details, reading tier, agenda, and 3-card spread to generate complete, page-by-page spiritual transmissions.
+                </p>
+              </div>
 
-                {/* Intake Form */}
-                <QuerentIntakeForm
-                  inputs={inputs}
-                  onUpdateInputs={handleUpdateInputs}
-                  onGenerateReading={handleGenerateReading}
-                  onClearForm={handleClearForm}
-                  onOpenCategories={() => setActiveView('categories')}
-                  isLoading={isLoading}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
+              {/* Intake Form */}
+              <QuerentIntakeForm
+                inputs={inputs}
+                onUpdateInputs={handleUpdateInputs}
+                onGenerateReading={handleGenerateReading}
+                onClearForm={handleClearForm}
+                onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
+                isLoading={isLoading}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Footer */}
