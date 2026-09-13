@@ -153,10 +153,11 @@ export async function generateLunaReading(payload: LunaReadingRequestPayload) {
     { name: "The Sun", keywords: ["Joy", "Vitality", "Radiance", "Clarity"] },
   ];
 
-  const systemInstruction = buildDaisySystemInstruction(clientName, cards);
+  const systemInstruction = buildDaisySystemInstruction(clientName, cards, payload.shopName);
   const userPrompt = buildDaisyUserPrompt({
     listingTitle: topic,
     clientName,
+    shopName: payload.shopName,
     age: payload.age,
     dob: payload.dob,
     problem: payload.problem || clientDetails,

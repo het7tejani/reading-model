@@ -91,6 +91,50 @@ export const cleanMarkdownText = (text: string | undefined, defaultVal = ''): st
   return cleaned || defaultVal;
 };
 
+export interface TextWithAlignment {
+  text: string;
+  align: 'left' | 'center' | 'right' | 'justify';
+}
+
+/**
+ * Extracts alignment (left, center, right, justify) from wrapped HTML tags (<div align="center">...</div>)
+ * or returns default 'center' for sacred reading presentation.
+ */
+export function parseTextAlignment(rawText: string | undefined): TextWithAlignment {
+  if (!rawText) return { text: '', align: 'center' };
+  const trimmed = rawText.trim();
+
+  // Match: <div align="left|center|right|justify">...</div> or <p align="...">...</p>
+  const match =
+    trimmed.match(/^<(?:div|p)[^>]*align=["'](left|center|right|justify)["'][^>]*>([\s\S]*?)<\/(?:div|p)>$/i) ||
+    trimmed.match(/^<(?:div|p)[^>]*style=["'][^"']*text-align:\s*(left|center|right|justify)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|p)>$/i);
+
+  if (match) {
+    const rawAlign = match[1].toLowerCase() as 'left' | 'center' | 'right' | 'justify';
+    const inner = match[2].replace(/<\/?(?:div|p)[^>]*>/gi, '').trim();
+    return {
+      text: inner,
+      align: rawAlign,
+    };
+  }
+
+  // Also check if text has embedded alignment tags
+  const embeddedMatch = trimmed.match(/<(?:div|p)[^>]*align=["'](left|center|right|justify)["'][^>]*>/i);
+  if (embeddedMatch) {
+    const rawAlign = embeddedMatch[1].toLowerCase() as 'left' | 'center' | 'right' | 'justify';
+    const stripped = trimmed.replace(/<\/?(?:div|p)[^>]*>/gi, '').trim();
+    return {
+      text: stripped,
+      align: rawAlign,
+    };
+  }
+
+  return {
+    text: trimmed,
+    align: 'center',
+  };
+}
+
 export function parsePageByPageOutput(rawMarkdown: string): PageByPageItem[] {
   const pages: PageByPageItem[] = [];
   if (!rawMarkdown) return pages;

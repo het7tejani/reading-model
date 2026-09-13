@@ -19,9 +19,14 @@ import {
   Layers,
   BookOpen,
   ArrowRight,
-  Pencil
+  Pencil,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import { cleanHeadingText, cleanMarkdownText, parsePageByPageOutput } from '../utils/readingParser';
 
 export interface EditableSection {
@@ -114,6 +119,66 @@ export function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
+/**
+ * Wraps or updates alignment tags (<div align="...">...</div>) on selected text
+ * or the active paragraph/sentence in a textarea.
+ */
+export function applyTextAlignmentToTextarea(
+  textarea: HTMLTextAreaElement,
+  currentText: string,
+  alignment: 'left' | 'center' | 'right' | 'justify',
+  onTextUpdate: (newText: string) => void
+) {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+
+  let selStart = start;
+  let selEnd = end;
+
+  // If no text is actively selected, auto-select surrounding paragraph or sentence
+  if (selStart === selEnd) {
+    let pStart = currentText.lastIndexOf('\n', selStart - 1);
+    pStart = pStart === -1 ? 0 : pStart + 1;
+    let pEnd = currentText.indexOf('\n', selEnd);
+    pEnd = pEnd === -1 ? currentText.length : pEnd;
+
+    selStart = pStart;
+    selEnd = pEnd;
+  }
+
+  const selectedSubstring = currentText.substring(selStart, selEnd);
+  if (!selectedSubstring.trim()) return;
+
+  // Check if selection is already wrapped with <div align="..."> or <p align="...">
+  const match = selectedSubstring.trim().match(/^<(div|p)\s+align=["'](left|center|right|justify)["']\s*>([\s\S]*?)<\/\1>$/i);
+
+  let replacement = '';
+  if (match) {
+    const currentAlign = match[2].toLowerCase();
+    const innerText = match[3];
+    if (currentAlign === alignment) {
+      // Toggle off: remove alignment wrapper back to clean text
+      replacement = innerText;
+    } else {
+      // Update alignment attribute
+      replacement = `<div align="${alignment}">${innerText}</div>`;
+    }
+  } else {
+    // Wrap selection in <div align="...">
+    replacement = `<div align="${alignment}">${selectedSubstring}</div>`;
+  }
+
+  const updated =
+    currentText.substring(0, selStart) + replacement + currentText.substring(selEnd);
+
+  onTextUpdate(updated);
+
+  setTimeout(() => {
+    textarea.focus();
+    textarea.setSelectionRange(selStart, selStart + replacement.length);
+  }, 20);
+}
+
 interface ReadingContentEditorProps {
   initialMarkdown: string;
   originalAiMarkdown?: string;
@@ -194,6 +259,40 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
         start + tokenPrefix.length + (selectedText.length || 4)
       );
     }, 10);
+  };
+
+  // Align text for a specific page/section (Page-by-Page mode)
+  const handleAlignSectionText = (
+    sectionId: string,
+    alignment: 'left' | 'center' | 'right' | 'justify'
+  ) => {
+    const textarea = document.getElementById(`section-textarea-${sectionId}`) as HTMLTextAreaElement | null;
+    const sec = sections.find((s) => s.id === sectionId);
+    if (!textarea || !sec) return;
+    applyTextAlignmentToTextarea(textarea, sec.content, alignment, (newContent) => {
+      handleSectionContentChange(sectionId, newContent);
+    });
+  };
+
+  // Align text in full or split markdown textarea
+  const handleAlignFullMarkdown = (alignment: 'left' | 'center' | 'right' | 'justify') => {
+    const textarea = document.getElementById('full-markdown-textarea') as HTMLTextAreaElement | null;
+    if (!textarea) return;
+    applyTextAlignmentToTextarea(textarea, fullMarkdown, alignment, (newVal) => {
+      handleFullMarkdownChange(newVal);
+    });
+  };
+
+  // Universal top toolbar alignment handler (works in Page-by-Page, Full Markdown, and Split modes)
+  const handleTopToolbarAlign = (alignment: 'left' | 'center' | 'right' | 'justify') => {
+    if (editorTab === 'pages') {
+      const targetId = activeSectionId || (sections[0] ? sections[0].id : null);
+      if (targetId) {
+        handleAlignSectionText(targetId, alignment);
+      }
+    } else {
+      handleAlignFullMarkdown(alignment);
+    }
   };
 
   // Save handler
@@ -330,7 +429,7 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
         </div>
       </div>
 
-      {/* Word Count & Formatting Helper Bar */}
+      {/* Word Count & Formatting / Alignment Helper Bar */}
       <div className="px-4 py-2 bg-[#FAF8F3] border-b border-[#E0D7CC] flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-3 text-[#8C7B6A]">
           <span className="font-mono text-[11px]">
@@ -338,56 +437,97 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
           </span>
           <span className="text-[#D8CEBE]">|</span>
           <span className="text-[11px] italic">
-            Tip: Keep standard pages between 60–130 words (Card Art pages: 30–50 words) for optimal 20px typography.
+            Tip: Keep standard pages between 60–130 words (Card Art pages: 30–50 words). Select text or a paragraph to align.
           </span>
         </div>
 
-        {(editorTab === 'full' || editorTab === 'split') && (
-          <div className="flex items-center gap-1 bg-white p-0.5 rounded border border-[#E0D7CC]">
+        <div className="flex items-center gap-2">
+          {/* Text Alignment Group (Active across all tabs) */}
+          <div className="flex items-center gap-0.5 bg-white p-0.5 rounded border border-[#E0D7CC]" title="Text Alignment: select text or sentence to align">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7B6A] px-1.5 hidden sm:inline">
+              Align
+            </span>
             <button
-              onClick={() => handleInsertToken('**', '**')}
-              title="Bold"
-              className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+              type="button"
+              onClick={() => handleTopToolbarAlign('left')}
+              title="Align Left (select text or paragraph)"
+              className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35] cursor-pointer"
             >
-              <Bold className="w-3.5 h-3.5" />
+              <AlignLeft className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => handleInsertToken('*', '*')}
-              title="Italic"
-              className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+              type="button"
+              onClick={() => handleTopToolbarAlign('center')}
+              title="Align Center (Sacred Default)"
+              className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35] cursor-pointer"
             >
-              <Italic className="w-3.5 h-3.5" />
+              <AlignCenter className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => handleInsertToken('## ')}
-              title="Heading 2"
-              className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+              type="button"
+              onClick={() => handleTopToolbarAlign('right')}
+              title="Align Right (select text or paragraph)"
+              className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35] cursor-pointer"
             >
-              <Heading2 className="w-3.5 h-3.5" />
+              <AlignRight className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => handleInsertToken('### ')}
-              title="Heading 3"
-              className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+              type="button"
+              onClick={() => handleTopToolbarAlign('justify')}
+              title="Adjustment / Justify Text (select text or paragraph)"
+              className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35] cursor-pointer"
             >
-              <Heading3 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => handleInsertToken('> ')}
-              title="Blockquote"
-              className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
-            >
-              <Quote className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => handleInsertToken('• ')}
-              title="Bullet"
-              className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
-            >
-              <List className="w-3.5 h-3.5" />
+              <AlignJustify className="w-3.5 h-3.5" />
             </button>
           </div>
-        )}
+
+          {(editorTab === 'full' || editorTab === 'split') && (
+            <div className="flex items-center gap-1 bg-white p-0.5 rounded border border-[#E0D7CC]">
+              <button
+                onClick={() => handleInsertToken('**', '**')}
+                title="Bold"
+                className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+              >
+                <Bold className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => handleInsertToken('*', '*')}
+                title="Italic"
+                className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+              >
+                <Italic className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => handleInsertToken('## ')}
+                title="Heading 2"
+                className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+              >
+                <Heading2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => handleInsertToken('### ')}
+                title="Heading 3"
+                className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+              >
+                <Heading3 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => handleInsertToken('> ')}
+                title="Blockquote"
+                className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+              >
+                <Quote className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => handleInsertToken('• ')}
+                title="Bullet"
+                className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Editor Body Area */}
@@ -433,6 +573,54 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {/* Mini Alignment Toolbar for this specific Page */}
+                      <div className="flex items-center gap-0.5 bg-[#FAF7F2] p-0.5 rounded border border-[#E0D7CC]" title="Align selected text or paragraph on this page">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAlignSectionText(sec.id, 'left');
+                          }}
+                          title="Align Left (select text or click within paragraph)"
+                          className="p-1 hover:bg-white rounded-xs text-[#6B5E51] hover:text-[#1F1914] transition-colors cursor-pointer"
+                        >
+                          <AlignLeft className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAlignSectionText(sec.id, 'center');
+                          }}
+                          title="Align Center (Sacred Default)"
+                          className="p-1 hover:bg-white rounded-xs text-[#6B5E51] hover:text-[#1F1914] transition-colors cursor-pointer"
+                        >
+                          <AlignCenter className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAlignSectionText(sec.id, 'right');
+                          }}
+                          title="Align Right (select text or click within paragraph)"
+                          className="p-1 hover:bg-white rounded-xs text-[#6B5E51] hover:text-[#1F1914] transition-colors cursor-pointer"
+                        >
+                          <AlignRight className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAlignSectionText(sec.id, 'justify');
+                          }}
+                          title="Adjustment / Justify Text (select text or click within paragraph)"
+                          className="p-1 hover:bg-white rounded-xs text-[#6B5E51] hover:text-[#1F1914] transition-colors cursor-pointer"
+                        >
+                          <AlignJustify className="w-3 h-3" />
+                        </button>
+                      </div>
+
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold ${
                           isWordLimitOk
@@ -459,6 +647,7 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
                   {/* Card Content Textarea */}
                   <div className="space-y-1">
                     <textarea
+                      id={`section-textarea-${sec.id}`}
                       value={sec.content}
                       onChange={(e) => handleSectionContentChange(sec.id, e.target.value)}
                       rows={Math.max(4, Math.min(10, Math.ceil(sec.content.length / 80)))}
@@ -513,7 +702,39 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
                 Live Rendered Preview
               </span>
               <div className="flex-1 p-4 bg-white border border-[#E0D7CC] rounded-xs overflow-y-auto reading-content text-sm shadow-inner">
-                <ReactMarkdown>{fullMarkdown}</ReactMarkdown>
+                <ReactMarkdown
+                  rehypePlugins={[rehypeRaw]}
+                  components={{
+                    div: ({ node, className, align, ...props }: any) => {
+                      const alignClass =
+                        align === 'left'
+                          ? 'text-left'
+                          : align === 'right'
+                          ? 'text-right'
+                          : align === 'justify'
+                          ? 'text-justify'
+                          : align === 'center'
+                          ? 'text-center'
+                          : '';
+                      return <div className={`${className || ''} ${alignClass}`} {...props} />;
+                    },
+                    p: ({ node, className, align, ...props }: any) => {
+                      const alignClass =
+                        align === 'left'
+                          ? 'text-left'
+                          : align === 'right'
+                          ? 'text-right'
+                          : align === 'justify'
+                          ? 'text-justify'
+                          : align === 'center'
+                          ? 'text-center'
+                          : '';
+                      return <p className={`${className || ''} ${alignClass}`} {...props} />;
+                    },
+                  }}
+                >
+                  {fullMarkdown}
+                </ReactMarkdown>
               </div>
             </div>
           </div>

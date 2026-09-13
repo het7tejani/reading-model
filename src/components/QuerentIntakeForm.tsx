@@ -8,6 +8,7 @@ import {
   User,
   Layers,
   Compass,
+  Store,
 } from 'lucide-react';
 import { ReadingInputs, ReadingTier, TarotCard } from '../types';
 import { calculateLifePath } from '../utils/numerology';
@@ -38,6 +39,11 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
   onOpenApiKeyModal,
   isLoading,
 }) => {
+  // Shop / Studio Name
+  const [shopNameText, setShopNameText] = useState<string>(() => {
+    return inputs.shopName || '';
+  });
+
   // Title / Listing Title
   const [titleText, setTitleText] = useState<string>(() => {
     return inputs.topic || DEFAULT_TITLE;
@@ -71,6 +77,14 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
     return hasDob ? calculateLifePath(inputs.dob) : null;
   }, [inputs.dob, hasDob]);
 
+  // Synchronize Shop Name change
+  const handleShopNameChange = (text: string) => {
+    setShopNameText(text);
+    onUpdateInputs({
+      shopName: text,
+    });
+  };
+
   // Synchronize Title change
   const handleTitleChange = (text: string) => {
     setTitleText(text);
@@ -91,6 +105,10 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
 
     if (parsed.name) updatePayload.name = parsed.name;
     if (parsed.age) updatePayload.age = parsed.age;
+    if (parsed.shopName && !shopNameText) {
+      setShopNameText(parsed.shopName);
+      updatePayload.shopName = parsed.shopName;
+    }
     if (parsed.dob) {
       updatePayload.dob = parsed.dob;
       const detectedZodiac = getZodiacFromDob(parsed.dob);
@@ -181,7 +199,7 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
           </div>
           <div>
             <h2 className="text-xs font-bold uppercase tracking-wider text-[#4A3F35]">
-              Daisy&apos;s Master Psychic & Spiritual Reading Engine
+              {shopNameText ? `${shopNameText} Reading Engine` : 'Master Psychic & Spiritual Reading Engine'}
             </h2>
             <p className="text-[11px] text-[#8C7B6A]">
               Page-by-page structured spiritual reading (40–90 words per page)
@@ -205,6 +223,7 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
             <button
               type="button"
               onClick={() => {
+                setShopNameText('');
                 setTitleText('');
                 setClientDetailsText('');
                 setAgendaText('');
@@ -219,11 +238,44 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
         </div>
       </div>
 
-      {/* 1. Title */}
+      {/* 1. Shop / Studio Name */}
+      <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-[#E0D7CC]">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
+              01
+            </span>
+            <div>
+              <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
+                Shop Name / Studio Branding
+              </label>
+              <p className="text-[11px] text-[#8C7B6A]">
+                Your shop or studio brand (embossed on PDF covers, headers, and certificates)
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-[#8C7B6A]">
+            <Store className="w-3.5 h-3.5 text-[#BC6C25]" />
+            <span className="hidden sm:inline font-mono text-[10px] uppercase">
+              {shopNameText ? 'Custom Brand' : 'Optional (Default: Sacred Intuitive Studio)'}
+            </span>
+          </div>
+        </div>
+
+        <input
+          type="text"
+          value={shopNameText}
+          onChange={(e) => handleShopNameChange(e.target.value)}
+          placeholder="e.g. Luna & Light Tarot, Sacred Intuitive Studio, Mystic Willow Oracle..."
+          className="w-full p-3.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm font-serif text-[#1F1914] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 font-medium"
+        />
+      </div>
+
+      {/* 2. Title */}
       <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-3">
         <div className="flex items-center gap-2 pb-2 border-b border-[#E0D7CC]">
           <span className="w-6 h-6 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
-            01
+            02
           </span>
           <div>
             <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
@@ -244,12 +296,12 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
         />
       </div>
 
-      {/* 2. Client Details */}
+      {/* 3. Client Details */}
       <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-3">
         <div className="flex items-center justify-between pb-2 border-b border-[#E0D7CC]">
           <div className="flex items-center gap-2">
             <span className="w-6 h-6 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
-              02
+              03
             </span>
             <div>
               <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
@@ -277,18 +329,18 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
         />
       </div>
 
-      {/* 3. Reading Level / Type */}
+      {/* 4. Reading Level / Type */}
       <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-3">
         <div className="flex items-center gap-2 pb-2 border-b border-[#E0D7CC]">
           <span className="w-6 h-6 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
-            03
+            04
           </span>
           <div>
             <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
               Type / Reading Level *
             </label>
             <p className="text-[11px] text-[#8C7B6A]">
-              Choose the depth and page volume for Daisy&apos;s channeled transmission
+              Choose the depth and page volume for your channeled transmission
             </p>
           </div>
         </div>
@@ -349,11 +401,11 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
         </div>
       </div>
 
-      {/* 4. Agenda */}
+      {/* 5. Agenda */}
       <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-3">
         <div className="flex items-center gap-2 pb-2 border-b border-[#E0D7CC]">
           <span className="w-6 h-6 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
-            04
+            05
           </span>
           <div>
             <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
@@ -374,12 +426,12 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
         />
       </div>
 
-      {/* 5. Three Cards (Tree Card) */}
+      {/* 6. Three Cards (Tree Card) */}
       <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-4">
         <div className="flex items-center justify-between pb-2 border-b border-[#E0D7CC]">
           <div className="flex items-center gap-2">
             <span className="w-6 h-6 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
-              05
+              06
             </span>
             <div>
               <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
@@ -471,13 +523,13 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
           {isLoading ? (
             <>
               <Wand2 className="w-5 h-5 animate-spin text-[#D4A373]" />
-              <span>Channeling Reading as Daisy & Formatting Pages...</span>
+              <span>Channeling Reading & Formatting Pages...</span>
             </>
           ) : (
             <>
               <Sparkles className="w-5 h-5 text-[#D4A373]" />
               <span>
-                Generate Complete Reading as Daisy ({activeTier.toUpperCase()})
+                Generate Complete Reading ({activeTier.toUpperCase()})
               </span>
               <ArrowRight className="w-4 h-4 text-[#D4A373]" />
             </>

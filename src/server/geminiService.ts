@@ -65,6 +65,7 @@ export async function testGeminiApiKey(userExplicitKey?: string) {
 
 export interface ReadingRequestPayload {
   name: string;
+  shopName?: string;
   age?: number | string;
   dob?: string;
   problem?: string;
@@ -235,10 +236,11 @@ export async function generateReading(payload: ReadingRequestPayload) {
       });
 
       const requestedTier = ((payload.tier || "detailed").toUpperCase()) as "STANDARD" | "DETAILED" | "PREMIUM";
-      const systemInstruction = buildDaisySystemInstruction(name, [card1, card2, card3]);
+      const systemInstruction = buildDaisySystemInstruction(name, [card1, card2, card3], payload.shopName);
       const prompt = buildDaisyUserPrompt({
         listingTitle: mainHeadline,
         clientName: name,
+        shopName: payload.shopName,
         age: effectiveAge,
         dob: hasDob ? dob : undefined,
         problem: effectiveProblem,

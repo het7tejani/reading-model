@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { ReadingInputs, ReadingTier, TarotCard } from '../types';
 import { calculateLifePath, reduceToSingleDigit, LIFE_PATH_ARCHETYPES } from '../utils/numerology';
-import { parseReadingMarkdown, cleanHeadingText, cleanMarkdownText } from '../utils/readingParser';
+import { parseReadingMarkdown, cleanHeadingText, cleanMarkdownText, parseTextAlignment } from '../utils/readingParser';
 import { getTarotCardImageUrl } from '../utils/tarotImageMapper';
 import { cleanTopicTitle } from '../data/readingTopics';
 import { getCategorySpecByTopic } from '../data/categoryConfig';
@@ -453,15 +453,26 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         </div>
 
         <div className="max-w-xl text-center space-y-2.5 pb-2">
-          {displayParagraphs.map((par, pIdx) => (
-            <p
-              key={pIdx}
-              className="text-[16px] text-[#1F1914] leading-[1.6] italic text-center"
-              style={{ fontFamily: "'Times New Roman', Times, serif" }}
-            >
-              {par}
-            </p>
-          ))}
+          {displayParagraphs.map((par, pIdx) => {
+            const { text: cleanParText, align: parAlign } = parseTextAlignment(par);
+            const alignClass =
+              parAlign === 'left'
+                ? 'text-left w-full'
+                : parAlign === 'right'
+                ? 'text-right w-full'
+                : parAlign === 'justify'
+                ? 'text-justify w-full'
+                : 'text-center';
+            return (
+              <p
+                key={pIdx}
+                className={`text-[16px] text-[#1F1914] leading-[1.6] italic ${alignClass}`}
+                style={{ fontFamily: "'Times New Roman', Times, serif" }}
+              >
+                {cleanParText}
+              </p>
+            );
+          })}
         </div>
 
         <div className="w-full border-t border-[#E8E1D5] pt-2 text-center">
@@ -580,21 +591,32 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         footerText="✦ Deep Energetic Meaning & Channeled Guidance ✦"
       >
         <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto w-full">
-          {displayParagraphs.map((par, pIdx) => (
-            <React.Fragment key={pIdx}>
-              {pIdx > 0 && (
-                <div className="text-[#A89884] text-center text-xs my-0.5 select-none">
-                  ✦  ·  ✦  ·  ✦
-                </div>
-              )}
-              <p
-                className="text-[20px] leading-[1.8] text-[#1F1914] text-center"
-                style={{ fontFamily: "'Times New Roman', Times, serif" }}
-              >
-                {par}
-              </p>
-            </React.Fragment>
-          ))}
+          {displayParagraphs.map((par, pIdx) => {
+            const { text: cleanParText, align: parAlign } = parseTextAlignment(par);
+            const alignClass =
+              parAlign === 'left'
+                ? 'text-left w-full'
+                : parAlign === 'right'
+                ? 'text-right w-full'
+                : parAlign === 'justify'
+                ? 'text-justify w-full'
+                : 'text-center';
+            return (
+              <React.Fragment key={pIdx}>
+                {pIdx > 0 && (
+                  <div className="text-[#A89884] text-center text-xs my-0.5 select-none">
+                    ✦  ·  ✦  ·  ✦
+                  </div>
+                )}
+                <p
+                  className={`text-[20px] leading-[1.8] text-[#1F1914] ${alignClass}`}
+                  style={{ fontFamily: "'Times New Roman', Times, serif" }}
+                >
+                  {cleanParText}
+                </p>
+              </React.Fragment>
+            );
+          })}
         </div>
       </UniversalPageContainer>
     );
@@ -604,6 +626,24 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
   const renderNumerology = (paragraphs?: string[]) => {
     const p1 = (paragraphs && paragraphs[0]) || numCoreText;
     const p2 = (paragraphs && paragraphs[1]) || numAppText;
+    const parsedP1 = parseTextAlignment(p1);
+    const parsedP2 = parseTextAlignment(p2);
+    const alignClassP1 =
+      parsedP1.align === 'left'
+        ? 'text-left w-full'
+        : parsedP1.align === 'right'
+        ? 'text-right w-full'
+        : parsedP1.align === 'justify'
+        ? 'text-justify w-full'
+        : 'text-center';
+    const alignClassP2 =
+      parsedP2.align === 'left'
+        ? 'text-left w-full'
+        : parsedP2.align === 'right'
+        ? 'text-right w-full'
+        : parsedP2.align === 'justify'
+        ? 'text-justify w-full'
+        : 'text-center';
 
     return (
       <UniversalPageContainer
@@ -611,8 +651,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         subtitle={`Derived from Date of Birth: ${inputs.dob || 'Client DOB'} (${steps.finalReduction})`}
         footerText="✦ Numbers Are the Sacred Geometry of Cosmic Consciousness ✦"
       >
-        <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto">
-          <div className="space-y-2 text-center">
+        <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto w-full">
+          <div className="space-y-2 text-center w-full">
             <h2
               className="font-bold text-[20px] text-[#1F1914] text-center uppercase"
               style={{ fontFamily: "'Montserrat', sans-serif" }}
@@ -620,16 +660,16 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
               ✦ Core Vibrational Essence ✦
             </h2>
             <p
-              className="text-[20px] leading-[1.8] text-[#1F1914] text-center"
+              className={`text-[20px] leading-[1.8] text-[#1F1914] ${alignClassP1}`}
               style={{ fontFamily: "'Times New Roman', Times, serif" }}
             >
-              {p1}
+              {parsedP1.text}
             </p>
           </div>
 
           <div className="text-[#A89884] text-center text-xs my-0.5 select-none">✦  ·  ✦  ·  ✦</div>
 
-          <div className="space-y-2 text-center">
+          <div className="space-y-2 text-center w-full">
             <h2
               className="font-bold text-[20px] text-[#1F1914] text-center uppercase"
               style={{ fontFamily: "'Montserrat', sans-serif" }}
@@ -637,10 +677,10 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
               ✦ Application to Your Situation ✦
             </h2>
             <p
-              className="text-[20px] leading-[1.8] text-[#1F1914] text-center"
+              className={`text-[20px] leading-[1.8] text-[#1F1914] ${alignClassP2}`}
               style={{ fontFamily: "'Times New Roman', Times, serif" }}
             >
-              {p2}
+              {parsedP2.text}
             </p>
           </div>
 
@@ -692,11 +732,20 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
       >
         <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto w-full">
           {displayParagraphs.map((par, pIdx) => {
+            const { text: cleanParText, align: parAlign } = parseTextAlignment(par);
+            const alignClass =
+              parAlign === 'left'
+                ? 'text-left w-full'
+                : parAlign === 'right'
+                ? 'text-right w-full'
+                : parAlign === 'justify'
+                ? 'text-justify w-full'
+                : 'text-center';
             const isMantra =
-              par.startsWith('✦') ||
-              par.startsWith('"') ||
-              par.startsWith('“') ||
-              par.startsWith('I AM');
+              cleanParText.startsWith('✦') ||
+              cleanParText.startsWith('"') ||
+              cleanParText.startsWith('“') ||
+              cleanParText.startsWith('I AM');
             return (
               <React.Fragment key={pIdx}>
                 {pIdx > 0 && (
@@ -705,12 +754,12 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                   </div>
                 )}
                 <p
-                  className={`text-[20px] leading-[1.8] text-[#1F1914] text-center ${
+                  className={`text-[20px] leading-[1.8] text-[#1F1914] ${alignClass} ${
                     isMantra ? 'italic font-medium' : ''
                   }`}
                   style={{ fontFamily: "'Times New Roman', Times, serif" }}
                 >
-                  {par}
+                  {cleanParText}
                 </p>
               </React.Fragment>
             );
@@ -1971,15 +2020,26 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
               subtitle="Intuitive guidance and sacred alignment for your path"
               footerText="✦ Channeled with reverence for your sovereign journey ✦"
             >
-              <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto">
-                {pSlice.map((pText, pSubIdx) => (
-                  <React.Fragment key={pSubIdx}>
-                    {pSubIdx > 0 && <div className="text-[#A89884] text-center text-sm my-1">✦  ·  ✦  ·  ✦</div>}
-                    <p className="text-[18px] leading-[1.75] text-[#1F1914] font-serif text-center">
-                      {pText}
-                    </p>
-                  </React.Fragment>
-                ))}
+              <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto w-full">
+                {pSlice.map((pText, pSubIdx) => {
+                  const { text: cleanParText, align: parAlign } = parseTextAlignment(pText);
+                  const alignClass =
+                    parAlign === 'left'
+                      ? 'text-left w-full'
+                      : parAlign === 'right'
+                      ? 'text-right w-full'
+                      : parAlign === 'justify'
+                      ? 'text-justify w-full'
+                      : 'text-center';
+                  return (
+                    <React.Fragment key={pSubIdx}>
+                      {pSubIdx > 0 && <div className="text-[#A89884] text-center text-sm my-1">✦  ·  ✦  ·  ✦</div>}
+                      <p className={`text-[18px] leading-[1.75] text-[#1F1914] font-serif ${alignClass}`}>
+                        {cleanParText}
+                      </p>
+                    </React.Fragment>
+                  );
+                })}
               </div>
             </UniversalPageContainer>
           ),

@@ -197,6 +197,7 @@ export default function App() {
         clientDetails: inputs.clientDetails || inputs.problem,
         agenda: inputs.agenda || inputs.question,
         tier: inputs.tier || 'detailed',
+        shopName: inputs.shopName,
         problem: inputs.problem || inputs.clientDetails,
         question: inputs.question || inputs.agenda,
         topic: inputs.topic || inputs.agenda || 'Strategic Consultation',
@@ -343,6 +344,7 @@ export default function App() {
         hasCustomApiKey={Boolean(customApiKey)}
         hasServerKey={serverHasKey}
         historyCount={history.length}
+        shopName={inputs.shopName}
       />
 
       {/* Main Container */}
@@ -391,7 +393,7 @@ export default function App() {
               <div className="text-center space-y-2.5 max-w-2xl mx-auto py-2">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F2EDE8] border border-[#E0D7CC] text-[#4A3F35] text-[11px] font-bold uppercase tracking-widest">
                   <Sparkles className="w-3 h-3 text-[#BC6C25]" />
-                  Daisy&apos;s Intuitive Reading Sanctuary
+                  {inputs.shopName ? `${inputs.shopName} Sanctuary` : 'Sacred Intuitive Reading Sanctuary'}
                 </div>
                 <h1 className="text-3xl md:text-5xl font-serif italic text-[#4A3F35] tracking-tight">
                   Psychic & Ancestral Readings

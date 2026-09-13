@@ -13,6 +13,7 @@ interface NavbarProps {
   hasServerKey?: boolean;
   historyCount: number;
   activeView?: 'oracle' | 'categories';
+  shopName?: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -23,6 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   hasCustomApiKey,
   hasServerKey = false,
   historyCount,
+  shopName,
 }) => {
   const [showPresetsMenu, setShowPresetsMenu] = useState(false);
   const isAiActive = hasCustomApiKey || hasServerKey;
@@ -40,7 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               Psychic & Tarot Readings
             </div>
             <h1 className="text-lg md:text-xl font-serif italic text-[#4A3F35] leading-tight">
-              Daisy&apos;s Sacred Oracle
+              {shopName || 'Sacred Tarot & Oracle Studio'}
             </h1>
           </div>
         </div>

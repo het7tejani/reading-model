@@ -550,7 +550,7 @@ export const AstrologicalWheelSvg: React.FC<{ className?: string }> = ({ classNa
   </svg>
 );
 
-export const DaisyFlowerSvg: React.FC<{ className?: string }> = ({ className = 'w-16 h-16 text-[#6B5E51]' }) => (
+export const BotanicalFlowerSvg: React.FC<{ className?: string }> = ({ className = 'w-16 h-16 text-[#6B5E51]' }) => (
   <svg viewBox="0 0 100 100" className={className} fill="none" stroke="currentColor" strokeWidth="1.2">
     <circle cx="50" cy="50" r="8" fill="#FAF7F2" strokeWidth="1.2" />
     <circle cx="50" cy="50" r="4" strokeWidth="0.8" opacity="0.6" />
@@ -564,8 +564,9 @@ export const DaisyFlowerSvg: React.FC<{ className?: string }> = ({ className = '
     })}
   </svg>
 );
+export const DaisyFlowerSvg = BotanicalFlowerSvg;
 
-export const DaisyStemSvg: React.FC<{ className?: string }> = ({ className = 'w-24 h-44 text-[#6B5E51]' }) => (
+export const BotanicalStemSvg: React.FC<{ className?: string }> = ({ className = 'w-24 h-44 text-[#6B5E51]' }) => (
   <svg viewBox="0 0 100 160" className={className} fill="none" stroke="currentColor" strokeWidth="1.2">
     <g transform="translate(0, -10)">
       <circle cx="50" cy="50" r="8" fill="#FAF7F2" />
@@ -586,6 +587,7 @@ export const DaisyStemSvg: React.FC<{ className?: string }> = ({ className = 'w-
     <path d="M 80,70 L 80,78 M 76,74 L 84,74" strokeWidth="0.8" opacity="0.6" />
   </svg>
 );
+export const DaisyStemSvg = BotanicalStemSvg;
 
 export const TripleArchOverCardsSvg: React.FC<{ className?: string }> = ({ className = 'w-full h-full text-[#6B5E51]' }) => (
   <svg viewBox="0 0 700 900" className={className} fill="none" stroke="currentColor">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import confetti from 'canvas-confetti';
 import {
   Copy,
@@ -337,7 +338,39 @@ export const ReadingResultView: React.FC<ReadingResultViewProps> = ({
               transition={{ duration: 0.2 }}
               className="p-6 md:p-12 rounded-b-sm bg-white border border-[#E0D7CC] shadow-xs reading-content max-w-none"
             >
-              <ReactMarkdown>{markdown}</ReactMarkdown>
+              <ReactMarkdown
+                rehypePlugins={[rehypeRaw]}
+                components={{
+                  div: ({ node, className, align, ...props }: any) => {
+                    const alignClass =
+                      align === 'left'
+                        ? 'text-left'
+                        : align === 'right'
+                        ? 'text-right'
+                        : align === 'justify'
+                        ? 'text-justify'
+                        : align === 'center'
+                        ? 'text-center'
+                        : '';
+                    return <div className={`${className || ''} ${alignClass}`} {...props} />;
+                  },
+                  p: ({ node, className, align, ...props }: any) => {
+                    const alignClass =
+                      align === 'left'
+                        ? 'text-left'
+                        : align === 'right'
+                        ? 'text-right'
+                        : align === 'justify'
+                        ? 'text-justify'
+                        : align === 'center'
+                        ? 'text-center'
+                        : '';
+                    return <p className={`${className || ''} ${alignClass}`} {...props} />;
+                  },
+                }}
+              >
+                {markdown}
+              </ReactMarkdown>
             </motion.div>
           </div>
         )
