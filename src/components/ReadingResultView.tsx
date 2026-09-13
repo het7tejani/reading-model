@@ -365,7 +365,7 @@ export const ReadingResultView: React.FC<ReadingResultViewProps> = ({
                         : align === 'center'
                         ? 'text-center'
                         : '';
-                    return <p className={`${className || ''} ${alignClass}`} {...props} />;
+                    return <p className={`${className || ''} ${alignClass} whitespace-pre-line`} {...props} />;
                   },
                 }}
               >

@@ -24,6 +24,8 @@ import {
   AlignCenter,
   AlignRight,
   AlignJustify,
+  CornerDownLeft,
+  Pilcrow,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -34,11 +36,42 @@ export interface EditableSection {
   pageNumber?: number;
   title: string;
   content: string;
+  alignment?: 'left' | 'center' | 'right' | 'justify';
   rawHeaderPrefix?: string;
 }
 
 /**
+ * Strips all HTML tags (<div align="...">, <p>, <span>, etc.) and comments,
+ * leaving 100% clean, non-technical plain text for non-tech users.
+ */
+export function stripAllHtmlTags(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<\/?(?:div|p|span|font|section|article)[^>]*>/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
+ * Extracts alignment directive from text if present (from markdown comments or legacy HTML tags)
+ */
+export function extractAlignmentFromText(text: string): 'left' | 'center' | 'right' | 'justify' | undefined {
+  if (!text) return undefined;
+  const commentMatch = text.match(/<!--\s*align:\s*(left|center|right|justify)\s*-->/i);
+  if (commentMatch) {
+    return commentMatch[1].toLowerCase() as any;
+  }
+  const tagMatch = text.match(/<(?:div|p)[^>]*align=["'](left|center|right|justify)["']/i);
+  if (tagMatch) {
+    return tagMatch[1].toLowerCase() as any;
+  }
+  return undefined;
+}
+
+/**
  * Parses markdown into structured editable sections (either Page-by-Page or ## sections)
+ * Guaranteed to strip all confusing HTML tags from content!
  */
 export function parseMarkdownToEditableSections(rawMarkdown: string): EditableSection[] {
   if (!rawMarkdown) return [];
@@ -46,13 +79,20 @@ export function parseMarkdownToEditableSections(rawMarkdown: string): EditableSe
   // Check for PAGE X format
   const pageItems = parsePageByPageOutput(rawMarkdown);
   if (pageItems.length > 0) {
-    return pageItems.map((item, idx) => ({
-      id: `page-${item.pageNumber || idx + 1}`,
-      pageNumber: item.pageNumber || idx + 1,
-      title: item.title,
-      content: item.paragraphs.join('\n\n') || item.content || '',
-      rawHeaderPrefix: `### PAGE ${item.pageNumber || idx + 1}:`
-    }));
+    return pageItems.map((item, idx) => {
+      const rawContent = item.paragraphs.join('\n\n') || item.content || '';
+      const detectedAlign = item.alignment || extractAlignmentFromText(rawContent) || 'center';
+      const cleanContent = stripAllHtmlTags(rawContent);
+
+      return {
+        id: `page-${item.pageNumber || idx + 1}`,
+        pageNumber: item.pageNumber || idx + 1,
+        title: item.title,
+        content: cleanContent,
+        alignment: detectedAlign,
+        rawHeaderPrefix: `### PAGE ${item.pageNumber || idx + 1}:`,
+      };
+    });
   }
 
   // Fallback: Parse by headings (## or ###)
@@ -68,11 +108,14 @@ export function parseMarkdownToEditableSections(rawMarkdown: string): EditableSe
     const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
     if (headingMatch) {
       if (currentBuffer.length > 0 || sections.length > 0) {
+        const rawContent = currentBuffer.join('\n');
+        const detectedAlign = extractAlignmentFromText(rawContent) || 'center';
         sections.push({
           id: `section-${secIdx++}`,
           title: currentTitle,
-          content: currentBuffer.join('\n').trim(),
-          rawHeaderPrefix: currentPrefix
+          content: stripAllHtmlTags(rawContent),
+          alignment: detectedAlign,
+          rawHeaderPrefix: currentPrefix,
         });
       }
       currentPrefix = headingMatch[1];
@@ -84,11 +127,14 @@ export function parseMarkdownToEditableSections(rawMarkdown: string): EditableSe
   }
 
   if (currentBuffer.length > 0 || currentTitle) {
+    const rawContent = currentBuffer.join('\n');
+    const detectedAlign = extractAlignmentFromText(rawContent) || 'center';
     sections.push({
       id: `section-${secIdx}`,
       title: currentTitle,
-      content: currentBuffer.join('\n').trim(),
-      rawHeaderPrefix: currentPrefix
+      content: stripAllHtmlTags(rawContent),
+      alignment: detectedAlign,
+      rawHeaderPrefix: currentPrefix,
     });
   }
 
@@ -96,17 +142,25 @@ export function parseMarkdownToEditableSections(rawMarkdown: string): EditableSe
 }
 
 /**
- * Serializes editable sections back to clean markdown
+ * Serializes editable sections back to clean markdown with zero raw HTML tags
  */
 export function serializeSectionsToMarkdown(sections: EditableSection[]): string {
   return sections
-    .map(sec => {
+    .map((sec) => {
       const cleanTitle = cleanHeadingText(sec.title, 'Section');
+      const cleanContent = stripAllHtmlTags(sec.content);
+
+      // Save alignment as a non-intrusive markdown comment (never exposing ugly <div> tags)
+      const alignDirective =
+        sec.alignment && sec.alignment !== 'center'
+          ? `<!-- align: ${sec.alignment} -->\n\n`
+          : '';
+
       if (sec.pageNumber) {
-        return `### PAGE ${sec.pageNumber} — ${cleanTitle}\n\n${sec.content.trim()}`;
+        return `### PAGE ${sec.pageNumber} — ${cleanTitle}\n\n${alignDirective}${cleanContent}`;
       }
       const prefix = sec.rawHeaderPrefix || '##';
-      return `${prefix} ${cleanTitle}\n\n${sec.content.trim()}`;
+      return `${prefix} ${cleanTitle}\n\n${alignDirective}${cleanContent}`;
     })
     .join('\n\n---\n\n');
 }
@@ -120,8 +174,8 @@ export function countWords(text: string): number {
 }
 
 /**
- * Wraps or updates alignment tags (<div align="...">...</div>) on selected text
- * or the active paragraph/sentence in a textarea.
+ * Sets alignment without injecting HTML tags into the text!
+ * In full markdown mode, it inserts a clean <!-- align: ... --> comment.
  */
 export function applyTextAlignmentToTextarea(
   textarea: HTMLTextAreaElement,
@@ -149,24 +203,11 @@ export function applyTextAlignmentToTextarea(
   const selectedSubstring = currentText.substring(selStart, selEnd);
   if (!selectedSubstring.trim()) return;
 
-  // Check if selection is already wrapped with <div align="..."> or <p align="...">
-  const match = selectedSubstring.trim().match(/^<(div|p)\s+align=["'](left|center|right|justify)["']\s*>([\s\S]*?)<\/\1>$/i);
+  // Strip any old HTML tags completely
+  const cleanSelected = stripAllHtmlTags(selectedSubstring);
 
-  let replacement = '';
-  if (match) {
-    const currentAlign = match[2].toLowerCase();
-    const innerText = match[3];
-    if (currentAlign === alignment) {
-      // Toggle off: remove alignment wrapper back to clean text
-      replacement = innerText;
-    } else {
-      // Update alignment attribute
-      replacement = `<div align="${alignment}">${innerText}</div>`;
-    }
-  } else {
-    // Wrap selection in <div align="...">
-    replacement = `<div align="${alignment}">${selectedSubstring}</div>`;
-  }
+  // Use clean markdown comment directive instead of <div align="...">
+  const replacement = `<!-- align: ${alignment} -->\n${cleanSelected}`;
 
   const updated =
     currentText.substring(0, selStart) + replacement + currentText.substring(selEnd);
@@ -177,6 +218,30 @@ export function applyTextAlignmentToTextarea(
     textarea.focus();
     textarea.setSelectionRange(selStart, selStart + replacement.length);
   }, 20);
+}
+
+/**
+ * Inserts text (such as \n newline, \n\n paragraph break, or <br />) at current cursor position
+ */
+export function insertTextAtCursor(
+  textarea: HTMLTextAreaElement,
+  currentText: string,
+  textToInsert: string,
+  onTextUpdate: (newText: string) => void
+) {
+  const start = textarea.selectionStart ?? currentText.length;
+  const end = textarea.selectionEnd ?? currentText.length;
+
+  const updated =
+    currentText.substring(0, start) + textToInsert + currentText.substring(end);
+
+  onTextUpdate(updated);
+
+  setTimeout(() => {
+    textarea.focus();
+    const newPos = start + textToInsert.length;
+    textarea.setSelectionRange(newPos, newPos);
+  }, 15);
 }
 
 interface ReadingContentEditorProps {
@@ -207,17 +272,48 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
     initialFocusedSectionId || (sections[0] ? sections[0].id : null)
   );
 
-  // Sync when sections change in pages mode
-  const handleSectionContentChange = (id: string, newContent: string) => {
-    setSections(prev =>
-      prev.map(sec => (sec.id === id ? { ...sec, content: newContent } : sec))
+  // Sync when sections change in pages mode (auto-cleaning any pasted HTML tags)
+  const handleSectionContentChange = (id: string, rawInput: string) => {
+    let newContent = rawInput;
+    let detectedAlign: 'left' | 'center' | 'right' | 'justify' | undefined;
+
+    // Automatically strip any HTML tags pasted by non-tech users
+    if (
+      /<(?:div|p)[^>]*align=["'](left|center|right|justify)["']/i.test(newContent) ||
+      /<\/?(?:div|p|span)[^>]*>/i.test(newContent)
+    ) {
+      detectedAlign = extractAlignmentFromText(newContent);
+      newContent = stripAllHtmlTags(newContent);
+    }
+
+    setSections((prev) =>
+      prev.map((sec) =>
+        sec.id === id
+          ? {
+              ...sec,
+              content: newContent,
+              ...(detectedAlign ? { alignment: detectedAlign } : {}),
+            }
+          : sec
+      )
     );
     setHasUnsavedChanges(true);
   };
 
   const handleSectionTitleChange = (id: string, newTitle: string) => {
-    setSections(prev =>
-      prev.map(sec => (sec.id === id ? { ...sec, title: newTitle } : sec))
+    setSections((prev) =>
+      prev.map((sec) => (sec.id === id ? { ...sec, title: newTitle } : sec))
+    );
+    setHasUnsavedChanges(true);
+  };
+
+  // Directly set alignment for a section visually without any HTML tags
+  const handleSetSectionAlignment = (
+    sectionId: string,
+    alignment: 'left' | 'center' | 'right' | 'justify'
+  ) => {
+    setSections((prev) =>
+      prev.map((sec) => (sec.id === sectionId ? { ...sec, alignment } : sec))
     );
     setHasUnsavedChanges(true);
   };
@@ -236,6 +332,26 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
     setFullMarkdown(val);
     setHasUnsavedChanges(true);
   };
+
+  // Clean all HTML tags across the entire reading in 1 click
+  const handleCleanAllHtmlTags = () => {
+    setFullMarkdown((prev) => stripAllHtmlTags(prev));
+    setSections((prev) =>
+      prev.map((s) => {
+        const detectedAlign = extractAlignmentFromText(s.content) || s.alignment;
+        return {
+          ...s,
+          content: stripAllHtmlTags(s.content),
+          alignment: detectedAlign || 'center',
+        };
+      })
+    );
+    setHasUnsavedChanges(true);
+  };
+
+  const hasRawHtmlTags =
+    /<\/?(?:div|p|span)[^>]*>/i.test(fullMarkdown) ||
+    sections.some((s) => /<\/?(?:div|p|span)[^>]*>/i.test(s.content));
 
   // Insert markdown helper tokens
   const handleInsertToken = (tokenPrefix: string, tokenSuffix = '') => {
@@ -261,19 +377,6 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
     }, 10);
   };
 
-  // Align text for a specific page/section (Page-by-Page mode)
-  const handleAlignSectionText = (
-    sectionId: string,
-    alignment: 'left' | 'center' | 'right' | 'justify'
-  ) => {
-    const textarea = document.getElementById(`section-textarea-${sectionId}`) as HTMLTextAreaElement | null;
-    const sec = sections.find((s) => s.id === sectionId);
-    if (!textarea || !sec) return;
-    applyTextAlignmentToTextarea(textarea, sec.content, alignment, (newContent) => {
-      handleSectionContentChange(sectionId, newContent);
-    });
-  };
-
   // Align text in full or split markdown textarea
   const handleAlignFullMarkdown = (alignment: 'left' | 'center' | 'right' | 'justify') => {
     const textarea = document.getElementById('full-markdown-textarea') as HTMLTextAreaElement | null;
@@ -283,15 +386,59 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
     });
   };
 
-  // Universal top toolbar alignment handler (works in Page-by-Page, Full Markdown, and Split modes)
+  // Universal top toolbar alignment handler
   const handleTopToolbarAlign = (alignment: 'left' | 'center' | 'right' | 'justify') => {
     if (editorTab === 'pages') {
       const targetId = activeSectionId || (sections[0] ? sections[0].id : null);
       if (targetId) {
-        handleAlignSectionText(targetId, alignment);
+        handleSetSectionAlignment(targetId, alignment);
       }
     } else {
       handleAlignFullMarkdown(alignment);
+    }
+  };
+
+  // Insert New Line / Line Break / Paragraph Break handler
+  const handleInsertNewLine = (
+    breakType: 'newline' | 'paragraph' | 'br' = 'newline',
+    targetSectionId?: string
+  ) => {
+    const breakString =
+      breakType === 'paragraph'
+        ? '\n\n'
+        : breakType === 'br'
+        ? '<br />\n'
+        : '\n';
+
+    if (editorTab === 'pages') {
+      const sectionId =
+        targetSectionId || activeSectionId || (sections[0] ? sections[0].id : null);
+      if (!sectionId) return;
+
+      const textarea = document.getElementById(
+        `section-textarea-${sectionId}`
+      ) as HTMLTextAreaElement | null;
+      const sec = sections.find((s) => s.id === sectionId);
+      if (!sec) return;
+
+      if (textarea) {
+        insertTextAtCursor(textarea, sec.content, breakString, (newContent) => {
+          handleSectionContentChange(sectionId, newContent);
+        });
+      } else {
+        handleSectionContentChange(sectionId, sec.content + breakString);
+      }
+    } else {
+      const textarea = document.getElementById(
+        'full-markdown-textarea'
+      ) as HTMLTextAreaElement | null;
+      if (textarea) {
+        insertTextAtCursor(textarea, fullMarkdown, breakString, (newContent) => {
+          handleFullMarkdownChange(newContent);
+        });
+      } else {
+        handleFullMarkdownChange(fullMarkdown + breakString);
+      }
     }
   };
 
@@ -437,47 +584,117 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
           </span>
           <span className="text-[#D8CEBE]">|</span>
           <span className="text-[11px] italic">
-            Tip: Keep standard pages between 60–130 words (Card Art pages: 30–50 words). Select text or a paragraph to align.
+            Click Left, Center, Right, or Justify to align text cleanly without any technical HTML tags.
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Text Alignment Group (Active across all tabs) */}
-          <div className="flex items-center gap-0.5 bg-white p-0.5 rounded border border-[#E0D7CC]" title="Text Alignment: select text or sentence to align">
+          {/* Quick Clean All HTML Tags button (if legacy tags are detected) */}
+          {hasRawHtmlTags && (
+            <button
+              type="button"
+              onClick={handleCleanAllHtmlTags}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 font-semibold text-[11px] cursor-pointer transition-colors shadow-2xs animate-pulse"
+              title="Click to remove all <div align='...'> tags and convert to clean text"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-700" />
+              <span>Clean HTML Tags</span>
+            </button>
+          )}
+
+          {/* Text Alignment Group (Active across all tabs - visual alignment) */}
+          {(() => {
+            const activeSection = sections.find((s) => s.id === activeSectionId) || sections[0];
+            const currentAlignment = activeSection?.alignment || 'center';
+            return (
+              <div
+                className="flex items-center gap-0.5 bg-white p-0.5 rounded border border-[#E0D7CC]"
+                title="Simple Text Alignment: click to align cleanly without any code tags"
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7B6A] px-1.5 hidden sm:inline">
+                  Align
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleTopToolbarAlign('left')}
+                  title="Align Left (No HTML tags needed)"
+                  className={`p-1 rounded cursor-pointer transition-colors ${
+                    currentAlignment === 'left'
+                      ? 'bg-[#BC6C25] text-white'
+                      : 'hover:bg-[#F2EDE8] text-[#4A3F35]'
+                  }`}
+                >
+                  <AlignLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTopToolbarAlign('center')}
+                  title="Align Center (Default)"
+                  className={`p-1 rounded cursor-pointer transition-colors ${
+                    currentAlignment === 'center' || !currentAlignment
+                      ? 'bg-[#BC6C25] text-white'
+                      : 'hover:bg-[#F2EDE8] text-[#4A3F35]'
+                  }`}
+                >
+                  <AlignCenter className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTopToolbarAlign('right')}
+                  title="Align Right (No HTML tags needed)"
+                  className={`p-1 rounded cursor-pointer transition-colors ${
+                    currentAlignment === 'right'
+                      ? 'bg-[#BC6C25] text-white'
+                      : 'hover:bg-[#F2EDE8] text-[#4A3F35]'
+                  }`}
+                >
+                  <AlignRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTopToolbarAlign('justify')}
+                  title="Justify Text (No HTML tags needed)"
+                  className={`p-1 rounded cursor-pointer transition-colors ${
+                    currentAlignment === 'justify'
+                      ? 'bg-[#BC6C25] text-white'
+                      : 'hover:bg-[#F2EDE8] text-[#4A3F35]'
+                  }`}
+                >
+                  <AlignJustify className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* New Line & Break Group (Active across all editor tabs) */}
+          <div className="flex items-center gap-0.5 bg-white p-0.5 rounded border border-[#E0D7CC]" title="Insert New Line or Break at cursor">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7B6A] px-1.5 hidden sm:inline">
-              Align
+              Break
             </span>
             <button
               type="button"
-              onClick={() => handleTopToolbarAlign('left')}
-              title="Align Left (select text or paragraph)"
-              className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35] cursor-pointer"
+              onClick={() => handleInsertNewLine('newline')}
+              title="Insert New Line (↵ Break at cursor)"
+              className="flex items-center gap-1 px-1.5 py-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35] text-[11px] font-medium cursor-pointer transition-colors"
             >
-              <AlignLeft className="w-3.5 h-3.5" />
+              <CornerDownLeft className="w-3.5 h-3.5 text-[#BC6C25]" />
+              <span className="hidden md:inline">New Line</span>
             </button>
             <button
               type="button"
-              onClick={() => handleTopToolbarAlign('center')}
-              title="Align Center (Sacred Default)"
+              onClick={() => handleInsertNewLine('paragraph')}
+              title="Insert New Paragraph (↵↵ Double line break)"
               className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35] cursor-pointer"
             >
-              <AlignCenter className="w-3.5 h-3.5" />
+              <Pilcrow className="w-3.5 h-3.5 text-[#4A3F35]" />
             </button>
             <button
               type="button"
-              onClick={() => handleTopToolbarAlign('right')}
-              title="Align Right (select text or paragraph)"
-              className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35] cursor-pointer"
+              onClick={() => handleInsertNewLine('br')}
+              title="Insert HTML <br/> Break tag"
+              className="px-1.5 py-0.5 hover:bg-[#F2EDE8] rounded text-[10px] font-mono font-semibold text-[#8C7B6A] hover:text-[#4A3F35] cursor-pointer"
             >
-              <AlignRight className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTopToolbarAlign('justify')}
-              title="Adjustment / Justify Text (select text or paragraph)"
-              className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35] cursor-pointer"
-            >
-              <AlignJustify className="w-3.5 h-3.5" />
+              &lt;br&gt;
             </button>
           </div>
 
@@ -573,16 +790,23 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {/* Mini Alignment Toolbar for this specific Page */}
-                      <div className="flex items-center gap-0.5 bg-[#FAF7F2] p-0.5 rounded border border-[#E0D7CC]" title="Align selected text or paragraph on this page">
+                      {/* Visual Alignment Toolbar for this specific Page (No HTML tags needed) */}
+                      <div
+                        className="flex items-center gap-0.5 bg-[#FAF7F2] p-0.5 rounded border border-[#E0D7CC]"
+                        title="Click to align text visually (No HTML tags required)"
+                      >
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleAlignSectionText(sec.id, 'left');
+                            handleSetSectionAlignment(sec.id, 'left');
                           }}
-                          title="Align Left (select text or click within paragraph)"
-                          className="p-1 hover:bg-white rounded-xs text-[#6B5E51] hover:text-[#1F1914] transition-colors cursor-pointer"
+                          title="Align Left"
+                          className={`p-1 rounded-xs transition-colors cursor-pointer ${
+                            sec.alignment === 'left'
+                              ? 'bg-[#BC6C25] text-white shadow-2xs font-semibold'
+                              : 'hover:bg-white text-[#6B5E51] hover:text-[#1F1914]'
+                          }`}
                         >
                           <AlignLeft className="w-3 h-3" />
                         </button>
@@ -590,10 +814,14 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleAlignSectionText(sec.id, 'center');
+                            handleSetSectionAlignment(sec.id, 'center');
                           }}
-                          title="Align Center (Sacred Default)"
-                          className="p-1 hover:bg-white rounded-xs text-[#6B5E51] hover:text-[#1F1914] transition-colors cursor-pointer"
+                          title="Align Center (Default)"
+                          className={`p-1 rounded-xs transition-colors cursor-pointer ${
+                            sec.alignment === 'center' || !sec.alignment
+                              ? 'bg-[#BC6C25] text-white shadow-2xs font-semibold'
+                              : 'hover:bg-white text-[#6B5E51] hover:text-[#1F1914]'
+                          }`}
                         >
                           <AlignCenter className="w-3 h-3" />
                         </button>
@@ -601,10 +829,14 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleAlignSectionText(sec.id, 'right');
+                            handleSetSectionAlignment(sec.id, 'right');
                           }}
-                          title="Align Right (select text or click within paragraph)"
-                          className="p-1 hover:bg-white rounded-xs text-[#6B5E51] hover:text-[#1F1914] transition-colors cursor-pointer"
+                          title="Align Right"
+                          className={`p-1 rounded-xs transition-colors cursor-pointer ${
+                            sec.alignment === 'right'
+                              ? 'bg-[#BC6C25] text-white shadow-2xs font-semibold'
+                              : 'hover:bg-white text-[#6B5E51] hover:text-[#1F1914]'
+                          }`}
                         >
                           <AlignRight className="w-3 h-3" />
                         </button>
@@ -612,12 +844,30 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleAlignSectionText(sec.id, 'justify');
+                            handleSetSectionAlignment(sec.id, 'justify');
                           }}
-                          title="Adjustment / Justify Text (select text or click within paragraph)"
-                          className="p-1 hover:bg-white rounded-xs text-[#6B5E51] hover:text-[#1F1914] transition-colors cursor-pointer"
+                          title="Justify Text"
+                          className={`p-1 rounded-xs transition-colors cursor-pointer ${
+                            sec.alignment === 'justify'
+                              ? 'bg-[#BC6C25] text-white shadow-2xs font-semibold'
+                              : 'hover:bg-white text-[#6B5E51] hover:text-[#1F1914]'
+                          }`}
                         >
                           <AlignJustify className="w-3 h-3" />
+                        </button>
+
+                        <div className="w-[1px] h-3 bg-[#E0D7CC] my-auto mx-0.5"></div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleInsertNewLine('newline', sec.id);
+                          }}
+                          title="Insert New Line (↵ Break at cursor)"
+                          className="flex items-center gap-1 px-1.5 py-0.5 hover:bg-white rounded-xs text-[#6B5E51] hover:text-[#BC6C25] transition-colors cursor-pointer text-[10px] font-medium"
+                        >
+                          <CornerDownLeft className="w-3 h-3 text-[#BC6C25]" />
+                          <span>New Line</span>
                         </button>
                       </div>
 
@@ -652,10 +902,57 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
                       onChange={(e) => handleSectionContentChange(sec.id, e.target.value)}
                       rows={Math.max(4, Math.min(10, Math.ceil(sec.content.length / 80)))}
                       placeholder="Write or edit the channeled text for this page..."
-                      className="w-full p-3 text-sm leading-relaxed text-[#1F1914] font-serif bg-[#FCFAF7] border border-[#E8E1D5] rounded-xs focus:bg-white focus:outline-none focus:border-[#BC6C25] resize-y transition-colors"
+                      style={{
+                        textAlign: sec.alignment || 'center',
+                      }}
+                      className={`w-full p-3 text-sm leading-relaxed text-[#1F1914] font-serif bg-[#FCFAF7] border border-[#E8E1D5] rounded-xs focus:bg-white focus:outline-none focus:border-[#BC6C25] resize-y transition-colors ${
+                        sec.alignment === 'justify'
+                          ? 'text-justify'
+                          : sec.alignment === 'left'
+                          ? 'text-left'
+                          : sec.alignment === 'right'
+                          ? 'text-right'
+                          : 'text-center'
+                      }`}
                     />
-                    <div className="flex items-center justify-between text-[10px] text-[#8C7B6A] pt-0.5">
-                      <span>Supports standard paragraphs separated by double enter.</span>
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-[#8C7B6A] pt-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[#8C7B6A]">Quick break:</span>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertNewLine('newline', sec.id)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors shadow-2xs font-sans text-[10px] font-medium"
+                          title="Insert single new line break (\n) at cursor"
+                        >
+                          <CornerDownLeft className="w-2.5 h-2.5 text-[#BC6C25]" />
+                          <span>↵ New Line</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertNewLine('paragraph', sec.id)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors shadow-2xs font-sans text-[10px] font-medium"
+                          title="Insert double line break (\n\n) for a new paragraph"
+                        >
+                          <Pilcrow className="w-2.5 h-2.5 text-[#4A3F35]" />
+                          <span>¶ New Paragraph</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertNewLine('br', sec.id)}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors shadow-2xs font-mono text-[9px]"
+                          title="Insert HTML <br /> break tag"
+                        >
+                          <span>&lt;br /&gt;</span>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="capitalize text-[#8C7B6A]">
+                          Alignment: <strong className="text-[#4A3F35]">{sec.alignment || 'center'}</strong>
+                        </span>
+                        <span className="text-emerald-700 font-medium">✓ Clean visual mode</span>
+                      </div>
+
                       {isWordTooLong && (
                         <span className="text-rose-600 flex items-center gap-1 font-semibold">
                           <AlertCircle className="w-3 h-3" /> Exceeds 100 words (may cause PDF page overflow)
@@ -680,6 +977,38 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
               className="w-full p-4 text-xs font-mono text-[#2C2C2C] bg-white border border-[#E0D7CC] rounded-xs focus:outline-none focus:border-[#BC6C25] leading-relaxed whitespace-pre-wrap select-text resize-y shadow-inner"
               placeholder="Full markdown reading content..."
             />
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#8C7B6A] pt-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[#8C7B6A] text-[10px]">Insert Break at Cursor:</span>
+                <button
+                  type="button"
+                  onClick={() => handleInsertNewLine('newline')}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors shadow-2xs text-[11px]"
+                  title="Insert single new line break (\n) at cursor"
+                >
+                  <CornerDownLeft className="w-3 h-3 text-[#BC6C25]" />
+                  <span>↵ New Line</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInsertNewLine('paragraph')}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors shadow-2xs text-[11px]"
+                  title="Insert double line break (\n\n) for a new paragraph"
+                >
+                  <Pilcrow className="w-3 h-3" />
+                  <span>¶ New Paragraph</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInsertNewLine('br')}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors shadow-2xs text-[10px] font-mono"
+                  title="Insert HTML <br /> line break tag"
+                >
+                  <span>&lt;br /&gt;</span>
+                </button>
+              </div>
+              <span className="text-[10px] text-[#8C7B6A]">Enter or Shift+Enter inserts lines directly</span>
+            </div>
           </div>
         )}
 
@@ -687,9 +1016,39 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
         {editorTab === 'split' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full min-h-[500px]">
             <div className="flex flex-col h-full space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7B6A]">
-                Markdown Source
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7B6A]">
+                  Markdown Source
+                </span>
+                <div className="flex items-center gap-1 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => handleInsertNewLine('newline')}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors text-[10px]"
+                    title="Insert single new line break (\n)"
+                  >
+                    <CornerDownLeft className="w-2.5 h-2.5 text-[#BC6C25]" />
+                    <span>↵ New Line</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInsertNewLine('paragraph')}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors text-[10px]"
+                    title="Insert double line break (\n\n)"
+                  >
+                    <Pilcrow className="w-2.5 h-2.5" />
+                    <span>¶ Paragraph</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInsertNewLine('br')}
+                    className="inline-flex items-center px-1.5 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors text-[9px] font-mono"
+                    title="Insert HTML <br /> tag"
+                  >
+                    <span>&lt;br/&gt;</span>
+                  </button>
+                </div>
+              </div>
               <textarea
                 id="full-markdown-textarea"
                 value={fullMarkdown}
@@ -729,7 +1088,7 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
                           : align === 'center'
                           ? 'text-center'
                           : '';
-                      return <p className={`${className || ''} ${alignClass}`} {...props} />;
+                      return <p className={`${className || ''} ${alignClass} whitespace-pre-line`} {...props} />;
                     },
                   }}
                 >

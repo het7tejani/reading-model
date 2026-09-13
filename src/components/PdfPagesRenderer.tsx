@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { ReadingInputs, ReadingTier, TarotCard } from '../types';
 import { calculateLifePath, reduceToSingleDigit, LIFE_PATH_ARCHETYPES } from '../utils/numerology';
-import { parseReadingMarkdown, cleanHeadingText, cleanMarkdownText, parseTextAlignment } from '../utils/readingParser';
+import { parseReadingMarkdown, cleanHeadingText, cleanMarkdownText, parseTextAlignment, renderTextWithLineBreaks } from '../utils/readingParser';
 import { getTarotCardImageUrl } from '../utils/tarotImageMapper';
 import { cleanTopicTitle } from '../data/readingTopics';
 import { getCategorySpecByTopic } from '../data/categoryConfig';
@@ -327,7 +327,11 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
   );
 
   // 2. Tarot Spread Overview
-  const renderTarotSpread = (title = 'The 3-Card Sacred Oracle Spread', paragraphs?: string[]) => {
+  const renderTarotSpread = (
+    title = 'The 3-Card Sacred Oracle Spread',
+    paragraphs?: string[],
+    pageAlignment?: 'left' | 'center' | 'right' | 'justify'
+  ) => {
     const rawParagraphs =
       paragraphs && paragraphs.length > 0
         ? paragraphs
@@ -455,21 +459,22 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         <div className="max-w-xl text-center space-y-2.5 pb-2">
           {displayParagraphs.map((par, pIdx) => {
             const { text: cleanParText, align: parAlign } = parseTextAlignment(par);
+            const effectiveAlign = pageAlignment || (parAlign !== 'center' ? parAlign : undefined) || 'center';
             const alignClass =
-              parAlign === 'left'
+              effectiveAlign === 'left'
                 ? 'text-left w-full'
-                : parAlign === 'right'
+                : effectiveAlign === 'right'
                 ? 'text-right w-full'
-                : parAlign === 'justify'
+                : effectiveAlign === 'justify'
                 ? 'text-justify w-full'
                 : 'text-center';
             return (
               <p
                 key={pIdx}
-                className={`text-[16px] text-[#1F1914] leading-[1.6] italic ${alignClass}`}
+                className={`text-[16px] text-[#1F1914] leading-[1.6] italic whitespace-pre-line ${alignClass}`}
                 style={{ fontFamily: "'Times New Roman', Times, serif" }}
               >
-                {cleanParText}
+                {renderTextWithLineBreaks(cleanParText)}
               </p>
             );
           })}
@@ -560,7 +565,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     roleLabel: string,
     pageTitle: string,
     paragraphs?: string[],
-    pageNumber?: number
+    pageNumber?: number,
+    pageAlignment?: 'left' | 'center' | 'right' | 'justify'
   ) => {
     // Filter disclaimers
     const rawParagraphs =
@@ -593,12 +599,13 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto w-full">
           {displayParagraphs.map((par, pIdx) => {
             const { text: cleanParText, align: parAlign } = parseTextAlignment(par);
+            const effectiveAlign = pageAlignment || (parAlign !== 'center' ? parAlign : undefined) || 'center';
             const alignClass =
-              parAlign === 'left'
+              effectiveAlign === 'left'
                 ? 'text-left w-full'
-                : parAlign === 'right'
+                : effectiveAlign === 'right'
                 ? 'text-right w-full'
-                : parAlign === 'justify'
+                : effectiveAlign === 'justify'
                 ? 'text-justify w-full'
                 : 'text-center';
             return (
@@ -609,10 +616,10 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                   </div>
                 )}
                 <p
-                  className={`text-[20px] leading-[1.8] text-[#1F1914] ${alignClass}`}
+                  className={`text-[20px] leading-[1.8] text-[#1F1914] whitespace-pre-line ${alignClass}`}
                   style={{ fontFamily: "'Times New Roman', Times, serif" }}
                 >
-                  {cleanParText}
+                  {renderTextWithLineBreaks(cleanParText)}
                 </p>
               </React.Fragment>
             );
@@ -660,10 +667,10 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
               ✦ Core Vibrational Essence ✦
             </h2>
             <p
-              className={`text-[20px] leading-[1.8] text-[#1F1914] ${alignClassP1}`}
+              className={`text-[20px] leading-[1.8] text-[#1F1914] whitespace-pre-line ${alignClassP1}`}
               style={{ fontFamily: "'Times New Roman', Times, serif" }}
             >
-              {parsedP1.text}
+              {renderTextWithLineBreaks(parsedP1.text)}
             </p>
           </div>
 
@@ -677,10 +684,10 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
               ✦ Application to Your Situation ✦
             </h2>
             <p
-              className={`text-[20px] leading-[1.8] text-[#1F1914] ${alignClassP2}`}
+              className={`text-[20px] leading-[1.8] text-[#1F1914] whitespace-pre-line ${alignClassP2}`}
               style={{ fontFamily: "'Times New Roman', Times, serif" }}
             >
-              {parsedP2.text}
+              {renderTextWithLineBreaks(parsedP2.text)}
             </p>
           </div>
 
@@ -699,7 +706,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     title: string,
     paragraphs: string[],
     pageNum: number,
-    isClosing?: boolean
+    isClosing?: boolean,
+    pageAlignment?: 'left' | 'center' | 'right' | 'justify'
   ) => {
     // Filter out duplicate disclaimer content from the text paragraphs so only the small footer disclaimer remains
     const rawParagraphs =
@@ -733,12 +741,13 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto w-full">
           {displayParagraphs.map((par, pIdx) => {
             const { text: cleanParText, align: parAlign } = parseTextAlignment(par);
+            const effectiveAlign = pageAlignment || (parAlign !== 'center' ? parAlign : undefined) || 'center';
             const alignClass =
-              parAlign === 'left'
+              effectiveAlign === 'left'
                 ? 'text-left w-full'
-                : parAlign === 'right'
+                : effectiveAlign === 'right'
                 ? 'text-right w-full'
-                : parAlign === 'justify'
+                : effectiveAlign === 'justify'
                 ? 'text-justify w-full'
                 : 'text-center';
             const isMantra =
@@ -754,12 +763,12 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                   </div>
                 )}
                 <p
-                  className={`text-[20px] leading-[1.8] text-[#1F1914] ${alignClass} ${
+                  className={`text-[20px] leading-[1.8] text-[#1F1914] whitespace-pre-line ${alignClass} ${
                     isMantra ? 'italic font-medium' : ''
                   }`}
                   style={{ fontFamily: "'Times New Roman', Times, serif" }}
                 >
-                  {cleanParText}
+                  {renderTextWithLineBreaks(cleanParText)}
                 </p>
               </React.Fragment>
             );
@@ -866,7 +875,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         pages.push({
           key: `page-${pageNumber}-tarot-spread`,
           headerTitle: cleanTitle.toUpperCase() || 'CARD ENERGY OVERVIEW',
-          render: () => renderTarotSpread(cleanTitle, item.paragraphs),
+          render: () => renderTarotSpread(cleanTitle, item.paragraphs, item.alignment),
         });
         return;
       }
@@ -917,7 +926,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
               cardInfo.role,
               cleanTitle,
               item.paragraphs,
-              pageNumber
+              pageNumber,
+              item.alignment
             ),
         });
         return;
@@ -944,7 +954,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
               ? item.paragraphs
               : [item.content || 'Content unfolding in divine timing.'],
             pageNumber,
-            item.isClosingDisclaimer
+            item.isClosingDisclaimer,
+            item.alignment
           ),
       });
     });
@@ -2034,8 +2045,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                   return (
                     <React.Fragment key={pSubIdx}>
                       {pSubIdx > 0 && <div className="text-[#A89884] text-center text-sm my-1">✦  ·  ✦  ·  ✦</div>}
-                      <p className={`text-[18px] leading-[1.75] text-[#1F1914] font-serif ${alignClass}`}>
-                        {cleanParText}
+                      <p className={`text-[18px] leading-[1.75] text-[#1F1914] font-serif whitespace-pre-line ${alignClass}`}>
+                        {renderTextWithLineBreaks(cleanParText)}
                       </p>
                     </React.Fragment>
                   );

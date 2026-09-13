@@ -1,3 +1,5 @@
+import React from 'react';
+
 export interface MonthForecastParsedItem {
   monthNumber: number;
   monthName: string;
@@ -14,6 +16,7 @@ export interface PageByPageItem {
   title: string;
   content: string;
   paragraphs: string[];
+  alignment?: 'left' | 'center' | 'right' | 'justify';
   isCover?: boolean;
   isWelcomeLetter?: boolean;
   isTarotSpread?: boolean;
@@ -83,6 +86,10 @@ export const cleanHeadingText = (text: string | undefined, defaultVal = ''): str
 export const cleanMarkdownText = (text: string | undefined, defaultVal = ''): string => {
   if (!text) return defaultVal;
   const cleaned = text
+    // Strip HTML tags completely so non-tech users never have to see <div>, <p>, etc.
+    .replace(/<\/?(?:div|p|span|section)[^>]*>/gi, '')
+    // Strip markdown alignment comments if present
+    .replace(/<!--\s*align:\s*(?:left|center|right|justify)\s*-->/gi, '')
     .replace(/^[\s*#_~•\-–—:]+/g, '')
     .replace(/[\s*#_~:]+$/g, '')
     .replace(/\*+/g, '')
@@ -97,12 +104,26 @@ export interface TextWithAlignment {
 }
 
 /**
- * Extracts alignment (left, center, right, justify) from wrapped HTML tags (<div align="center">...</div>)
- * or returns default 'center' for sacred reading presentation.
+ * Extracts alignment (left, center, right, justify) from markdown alignment directives
+ * or legacy wrapped HTML tags (<div align="justify">...</div>) while stripping all HTML tags.
  */
 export function parseTextAlignment(rawText: string | undefined): TextWithAlignment {
   if (!rawText) return { text: '', align: 'center' };
   const trimmed = rawText.trim();
+
+  // Match: <!-- align: left|center|right|justify -->
+  const commentMatch = trimmed.match(/<!--\s*align:\s*(left|center|right|justify)\s*-->/i);
+  if (commentMatch) {
+    const rawAlign = commentMatch[1].toLowerCase() as 'left' | 'center' | 'right' | 'justify';
+    const clean = trimmed
+      .replace(/<!--\s*align:\s*(?:left|center|right|justify)\s*-->/gi, '')
+      .replace(/<\/?(?:div|p|span)[^>]*>/gi, '')
+      .trim();
+    return {
+      text: clean,
+      align: rawAlign,
+    };
+  }
 
   // Match: <div align="left|center|right|justify">...</div> or <p align="...">...</p>
   const match =
@@ -111,28 +132,50 @@ export function parseTextAlignment(rawText: string | undefined): TextWithAlignme
 
   if (match) {
     const rawAlign = match[1].toLowerCase() as 'left' | 'center' | 'right' | 'justify';
-    const inner = match[2].replace(/<\/?(?:div|p)[^>]*>/gi, '').trim();
+    const inner = match[2].replace(/<\/?(?:div|p|span)[^>]*>/gi, '').trim();
     return {
       text: inner,
       align: rawAlign,
     };
   }
 
-  // Also check if text has embedded alignment tags
+  // Also check if text has embedded alignment tags anywhere
   const embeddedMatch = trimmed.match(/<(?:div|p)[^>]*align=["'](left|center|right|justify)["'][^>]*>/i);
   if (embeddedMatch) {
     const rawAlign = embeddedMatch[1].toLowerCase() as 'left' | 'center' | 'right' | 'justify';
-    const stripped = trimmed.replace(/<\/?(?:div|p)[^>]*>/gi, '').trim();
+    const stripped = trimmed.replace(/<\/?(?:div|p|span)[^>]*>/gi, '').trim();
     return {
       text: stripped,
       align: rawAlign,
     };
   }
 
+  // Always strip any orphan <div> or </div> tags so non-tech users never see raw HTML
+  const cleanStripped = trimmed.replace(/<\/?(?:div|p|span)[^>]*>/gi, '').trim();
+
   return {
-    text: trimmed,
+    text: cleanStripped,
     align: 'center',
   };
+}
+
+/**
+ * Renders string text with support for embedded \n newlines and <br/> / <br> tags as JSX elements.
+ */
+export function renderTextWithLineBreaks(rawText: string | undefined): React.ReactNode {
+  if (!rawText) return null;
+  const parts = rawText.split(/(?:<br\s*\/?>|\r?\n)/gi);
+  if (parts.length <= 1) {
+    return rawText;
+  }
+  return parts.map((part, index) =>
+    React.createElement(
+      React.Fragment,
+      { key: index },
+      index > 0 ? React.createElement('br') : null,
+      part
+    )
+  );
 }
 
 export function parsePageByPageOutput(rawMarkdown: string): PageByPageItem[] {
@@ -148,8 +191,26 @@ export function parsePageByPageOutput(rawMarkdown: string): PageByPageItem[] {
     const title = cleanHeadingText(rawTitle, `Page ${pageNumber}`);
     const rawContent = match[3]?.trim() || '';
 
+    // Automatically detect alignment from comment <!-- align: justify --> or legacy <div align="...">
+    let pageAlignment: 'left' | 'center' | 'right' | 'justify' = 'center';
+    const commentAlign = rawContent.match(/<!--\s*align:\s*(left|center|right|justify)\s*-->/i);
+    if (commentAlign) {
+      pageAlignment = commentAlign[1].toLowerCase() as 'left' | 'center' | 'right' | 'justify';
+    } else {
+      const tagAlign = rawContent.match(/<(?:div|p)[^>]*align=["'](left|center|right|justify)["']/i);
+      if (tagAlign) {
+        pageAlignment = tagAlign[1].toLowerCase() as 'left' | 'center' | 'right' | 'justify';
+      }
+    }
+
+    // Clean out all tags and directives from rawContent so paragraphs and content are 100% clean plain text
+    const sanitizedContent = rawContent
+      .replace(/<!--\s*align:\s*(?:left|center|right|justify)\s*-->/gi, '')
+      .replace(/<\/?(?:div|p|span)[^>]*>/gi, '')
+      .trim();
+
     // Split into clean paragraphs
-    const paragraphs = rawContent
+    const paragraphs = sanitizedContent
       .split(/\n\s*\n/)
       .map(p => cleanMarkdownText(p.trim()))
       .filter(p => p.length > 0 && !p.toLowerCase().startsWith('page '));
@@ -253,6 +314,7 @@ export function parsePageByPageOutput(rawMarkdown: string): PageByPageItem[] {
       title,
       content,
       paragraphs,
+      alignment: pageAlignment,
       isCover,
       isWelcomeLetter,
       isTarotSpread,
