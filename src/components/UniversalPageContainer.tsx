@@ -1,5 +1,23 @@
 import React from 'react';
 
+export const PageHeadingDivider: React.FC<{ className?: string; symbol?: string }> = ({
+  className = 'my-2.5',
+  symbol = '✦',
+}) => {
+  return (
+    <div
+      className={`flex items-center justify-center gap-2.5 w-full max-w-[180px] mx-auto select-none ${className}`}
+      aria-hidden="true"
+    >
+      <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#C4B6A4] to-[#8C7B6A]" />
+      <span className="text-[#8C7B6A] text-[9px] leading-none select-none tracking-normal">
+        {symbol}
+      </span>
+      <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#C4B6A4] to-[#8C7B6A]" />
+    </div>
+  );
+};
+
 interface UniversalPageContainerProps {
   eyebrow?: string;
   title: string;
@@ -29,7 +47,7 @@ export const UniversalPageContainer: React.FC<UniversalPageContainerProps> = ({
         >
           {title}
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+        <PageHeadingDivider className="my-2.5" />
         {subtitle && (
           <p
             className="text-[14px] italic text-[#4A3F35] leading-relaxed text-center"
@@ -48,15 +66,19 @@ export const UniversalPageContainer: React.FC<UniversalPageContainerProps> = ({
         {children}
       </div>
 
-      {/* Bottom Center Footer / Anchor - NO page number */}
-      <div className="w-full max-w-2xl mx-auto text-center border-t border-[#E8E1D5] pt-2">
-        <p
-          className="text-[12px] italic text-[#6B5E51]"
-          style={{ fontFamily: "'Times New Roman', Times, serif" }}
-        >
-          {footerText || '✦ Grounded in Love, Guided by Wisdom, Anchored in Sovereignty ✦'}
-        </p>
-      </div>
+      {/* Bottom Center Footer / Anchor - only rendered when custom footerText provided, 'grounded in' removed */}
+      {footerText && !footerText.toLowerCase().includes('grounded in') ? (
+        <div className="w-full max-w-2xl mx-auto text-center border-t border-[#E8E1D5] pt-2">
+          <p
+            className="text-[12px] italic text-[#6B5E51]"
+            style={{ fontFamily: "'Times New Roman', Times, serif" }}
+          >
+            {footerText}
+          </p>
+        </div>
+      ) : (
+        <div className="w-full h-3" />
+      )}
     </div>
   );
 };

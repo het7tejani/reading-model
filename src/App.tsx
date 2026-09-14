@@ -14,6 +14,7 @@ import { generateTarotNumerologyReadingMarkdown } from './utils/fallbackGenerato
 import { executeReading } from './utils/geminiClient';
 import { getCategorySpecByTopic } from './data/categoryConfig';
 import { getTopicByTitleOrId } from './data/readingTopics';
+import { extractTarotCardsFromText } from './utils/clientDataParser';
 import { Sparkles, AlertCircle, Wand2, Key } from 'lucide-react';
 
 const STORAGE_KEY = 'tarot_numerology_readings_history_v1';
@@ -37,45 +38,7 @@ const EMPTY_INPUTS: ReadingInputs = {
   tier: 'detailed',
   agenda: '',
   shopName: '',
-  cards: [
-    {
-      id: 'high-priestess',
-      name: 'The High Priestess',
-      arcana: 'major',
-      number: 2,
-      keywords: ['Intuition', 'Ancestral Veil', 'Sacred Wisdom', 'Spiritual Lineage'],
-      element: 'Water',
-      archetype: 'The Divine Channel',
-      affirmation: 'I honor the sacred whispers of my bloodline and trust my inner knowing.',
-      symbol: 'Pillars of Mystery',
-      color: '#4A5568',
-    },
-    {
-      id: 'four-pentacles',
-      name: 'Four of Pentacles',
-      arcana: 'minor',
-      suit: 'pentacles',
-      number: 4,
-      keywords: ['Generational Guarding', 'Control', 'Fear of Release', 'Protection'],
-      element: 'Earth',
-      archetype: 'The Ancestral Guardian',
-      affirmation: 'I release ancestral burdens and open my heart to divine abundance.',
-      symbol: 'Firm Clasp',
-      color: '#744210',
-    },
-    {
-      id: 'the-star',
-      name: 'The Star',
-      arcana: 'major',
-      number: 17,
-      keywords: ['Hope', 'Lineage Healing', 'Renewed Peace', 'Ancestral Blessing'],
-      element: 'Air',
-      archetype: 'The Cosmic Healer',
-      affirmation: 'I am the radiant continuation of my ancestors highest dreams.',
-      symbol: 'Guiding Light',
-      color: '#2B6CB0',
-    },
-  ],
+  cards: [], // No fixed cards - AI will draw them dynamically based on querent energy, or prompt can provide them
 };
 
 export default function App() {
@@ -210,6 +173,7 @@ export default function App() {
           element: c?.element,
           archetype: c?.archetype,
           keywords: c?.keywords,
+          customDetails: c?.customDetails,
         })),
         categoryData: inputs.categoryData,
         userApiKey: customApiKey || viteKey || savedLunaKey || undefined,
@@ -220,6 +184,18 @@ export default function App() {
         setGenerationSource((result.source as any) || 'gemini-ai');
         if (result.model) {
           setGenerationModel(result.model);
+        }
+
+        // Automatically adopt the cards which the AI gave as output
+        const outputCards = (result.cards && result.cards.length >= 3)
+          ? { cards: result.cards }
+          : extractTarotCardsFromText(result.markdown);
+
+        if (outputCards.cards && outputCards.cards.length >= 3) {
+          setInputs((prev) => ({
+            ...prev,
+            cards: outputCards.cards!,
+          }));
         }
       } else {
         throw new Error('No markdown content received from generation engine');
@@ -234,6 +210,13 @@ export default function App() {
       const fallbackMarkdown = generateTarotNumerologyReadingMarkdown(inputs);
       setMarkdownResult(fallbackMarkdown);
       setGenerationSource('algorithmic');
+      const fallbackCards = extractTarotCardsFromText(fallbackMarkdown);
+      if (fallbackCards.cards && fallbackCards.cards.length >= 3) {
+        setInputs((prev) => ({
+          ...prev,
+          cards: fallbackCards.cards!,
+        }));
+      }
     } finally {
       setIsLoading(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });

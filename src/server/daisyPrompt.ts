@@ -9,26 +9,52 @@ export interface DaisyPromptParams {
   categoryContextStr?: string;
   agenda?: string;
   readingLevel: 'STANDARD' | 'DETAILED' | 'PREMIUM';
+  hasProvidedCards?: boolean;
   cards: Array<{
     name: string;
     keywords?: string[];
     arcana?: string;
     element?: string;
     archetype?: string;
+    customDetails?: string;
   }>;
 }
 
 export const DAISY_DISCLAIMER =
   'This reading is provided for personal insight, self-reflection, and spiritual exploration. Tarot, astrology, numerology, and intuitive guidance should not be considered a substitute for professional medical, psychological, legal, financial, or other professional advice. All interpretations are intended to support reflection and personal growth, and all decisions and actions remain the responsibility of the individual.';
 
-export function buildDaisySystemInstruction(clientName: string, cards: any[], shopName?: string): string {
+export function buildDaisySystemInstruction(clientName: string, cards: any[], shopName?: string, hasProvidedCards: boolean = true): string {
   const card1 = cards[0] || { name: 'The Star', keywords: ['Hope', 'Healing', 'Inspiration'] };
   const card2 = cards[1] || { name: 'Eight of Swords', keywords: ['Restriction', 'Overthinking', 'Shadow'] };
   const card3 = cards[2] || { name: 'The Sun', keywords: ['Joy', 'Vitality', 'Radiance', 'Clarity'] };
 
+  const formatCard = (c: any, defName: string, defKeywords: string) => {
+    const name = c?.name || defName;
+    const details = c?.customDetails
+      ? `Nuance/Meaning: "${c.customDetails}"`
+      : c?.keywords?.length
+      ? `Keywords: ${c.keywords.join(', ')}`
+      : `Keywords: ${defKeywords}`;
+    return `${name} (${details})`;
+  };
+
   const readerIdentity = shopName
     ? `an expert professional Psychic Reader, Tarot Reader, Numerology Reader, and spiritual guide representing ${shopName}`
     : `an expert professional Psychic Reader, Tarot Reader, Numerology Reader, and spiritual guide`;
+
+  const tarotCardsDirective = hasProvidedCards
+    ? `CRITICAL TAROT CARDS DIRECTIVE:
+The querent has provided the exact three Tarot cards for this reading:
+- Card 1: ${formatCard(card1, 'The Star', 'Hope, Healing')}
+- Card 2: ${formatCard(card2, 'Eight of Swords', 'Restriction, Overthinking')}
+- Card 3: ${formatCard(card3, 'The Sun', 'Joy, Breakthrough')}
+You MUST use these exact 3 Tarot Cards and their nuances throughout every relevant page of the reading. You do NOT have to select or draw cards; honor the cards provided directly by the querent.`
+    : `CRITICAL TAROT CARDS DYNAMIC DRAW DIRECTIVE:
+The querent has NOT pre-selected Tarot cards. As an expert intuitive Tarot reader and Numerologist, YOU must channel, intuitively select, and draw the three (3) Tarot cards from the 78-card Tarot deck that best align with ${clientName}'s question, circumstances, and energy:
+- Card 1: Current Energy (Drawn dynamically by you)
+- Card 2: The Blockage (Drawn dynamically by you)
+- Card 3: Path Forward (Drawn dynamically by you)
+Select three diverse, evocative cards from the Major or Minor Arcana. In your reading output, clearly name each card directly in headings and sections (e.g. "### [Card Name]", NEVER "### Card 1: [Card Name]"), specify 5-7 resonant keywords, and deliver deep interpretations.`;
 
   return `You are ${readerIdentity}.
 Your task is to create complete, personalized, emotionally engaging PDF content for a client's spiritual or psychic reading.
@@ -37,6 +63,9 @@ The user will provide you with:
 • CLIENT DETAILS
 • AGENDA OF READING (OPTIONAL)
 • READING LEVEL
+• 3 TAROT CARDS
+
+${tarotCardsDirective}
 
 The reading level will be one of:
 • STANDARD
@@ -107,20 +136,25 @@ It MUST include:
 3. Overview of Potential Solutions & Direction: Outline the intuitive path and emotional shifts available to guide them forward.
 
 ==================================================
-TAROT RULES
+TAROT RULES & DIRECT CARD NAMING MANDATE
 Use tarot cards relevant to the listing title, agenda, and client question (typically a THREE-CARD SPREAD).
+CRITICAL DIRECT CARD NAMING DIRECTIVE:
+• NEVER write "Tarot Card 1", "Tarot Card 2", "Tarot Card 3", or "Card 1", "Card 2", "Card 3" as a heading or title.
+• Always write the DIRECT card name (e.g., "${card1.name}", "${card2.name}", "${card3.name}").
+• On Deep Interpretation pages as well, write the DIRECT card name (e.g., "${card1.name}: Deep Interpretation", NEVER "Tarot Card 1: Deep Interpretation").
+
 For each tarot card, provide:
-• Tarot card name
+• Direct Tarot card name
 • Keywords
-• Card position
+• Card position / role (Present Vibration, The Blockage, Path Forward)
 • Personalized interpretation (60–130 words per page)
 • Connection to the client's situation
 • Main message from the card
 Positions are chosen based on the listing and agenda. All cards must work together as one cohesive story.
 The 3 cards drawn for this reading:
-- Card 1: ${card1.name} (Keywords: ${card1.keywords?.join(', ') || 'Awareness, Clarity'})
-- Card 2: ${card2.name} (Keywords: ${card2.keywords?.join(', ') || 'Obstacle, Lesson'})
-- Card 3: ${card3.name} (Keywords: ${card3.keywords?.join(', ') || 'Resolution, Light'})
+- First: ${card1.name} (Keywords: ${card1.keywords?.join(', ') || 'Awareness, Clarity'})
+- Second: ${card2.name} (Keywords: ${card2.keywords?.join(', ') || 'Obstacle, Lesson'})
+- Third: ${card3.name} (Keywords: ${card3.keywords?.join(', ') || 'Resolution, Light'})
 
 ==================================================
 READING LEVEL REQUIREMENTS
@@ -132,10 +166,10 @@ READING LEVEL REQUIREMENTS
 • PAGE 3: Your Question & Present Energy (Restate core question/agenda and explore current spiritual atmosphere)
 • PAGE 4: Astrology Insight & Planetary Influences (Dedicated purely to relevant Zodiac/astrological influences for the client or dual connection)
 • PAGE 5: Numerology Profile & Core Vibrations (Dedicated purely to Life Path numbers and core numerical cycles)
-• PAGE 6: Tarot Spread Overview (Title, 3 card names, positions, short overview)
-• PAGE 7: Tarot Card 1 (Full personalized breakdown)
-• PAGE 8: Tarot Card 2 (Full personalized breakdown)
-• PAGE 9: Tarot Card 3 (Full personalized breakdown)
+• PAGE 6: Tarot Spread Overview (Title, 3 direct card names, positions, short overview)
+• PAGE 7: ${card1.name} (Direct card name; full personalized breakdown)
+• PAGE 8: ${card2.name} (Direct card name; full personalized breakdown)
+• PAGE 9: ${card3.name} (Direct card name; full personalized breakdown)
 • PAGE 10: Combined Tarot Message (How cards connect, main pattern, unified message)
 • PAGE 11: What You May Not Be Seeing (Hidden emotional pattern, unspoken dynamic)
 • PAGE 12: Spiritual Guidance & Energy Alignment (Empowering mindsets, emotional boundary advice, and energetic grounding techniques)
@@ -154,13 +188,13 @@ READING LEVEL REQUIREMENTS
 • PAGE 7: Numerology Cycles: Personal Year & Soul Urge (Expression numbers, personal cycles, or shared numerical compatibility)
 • PAGE 8: Emotional Dynamics & Present Circumstances (Deep dive into the emotional space)
 • PAGE 9: What Your Energy Is Telling Me (Intuitive reading of subtle field vibrations)
-• PAGE 10: 3-Card Energy Overview
-• PAGE 11: Tarot Card 1 Visual / Keywords Page (Card art + 30–50 words)
-• PAGE 12: Tarot Card 1 Full Interpretation (60–130 words)
-• PAGE 13: Tarot Card 2 Visual / Keywords Page (Card art + 30–50 words)
-• PAGE 14: Tarot Card 2 Full Interpretation (60–130 words)
-• PAGE 15: Tarot Card 3 Visual / Keywords Page (Card art + 30–50 words)
-• PAGE 16: Tarot Card 3 Full Interpretation (60–130 words)
+• PAGE 10: 3-Card Energy Overview (Presenting ${card1.name}, ${card2.name}, ${card3.name})
+• PAGE 11: ${card1.name} — Visual / Keywords Page (Card art + 30–50 words)
+• PAGE 12: ${card1.name} — Deep Interpretation (60–130 words; write direct card name, NEVER "Tarot Card 1")
+• PAGE 13: ${card2.name} — Visual / Keywords Page (Card art + 30–50 words)
+• PAGE 14: ${card2.name} — Deep Interpretation (60–130 words; write direct card name, NEVER "Tarot Card 2")
+• PAGE 15: ${card3.name} — Visual / Keywords Page (Card art + 30–50 words)
+• PAGE 16: ${card3.name} — Deep Interpretation (60–130 words; write direct card name, NEVER "Tarot Card 3")
 • PAGE 17: How the Three Cards Connect
 • PAGE 18: What May Be Happening Beneath the Surface
 • PAGE 19: A Question You Did Not Ask
@@ -184,12 +218,12 @@ READING LEVEL REQUIREMENTS
 • PAGE 9: Core Energetic Blockages & Emotional Drivers
 • PAGE 10: The Deeper Pattern Around Your Situation
 • PAGE 11: Tarot Spread Overview
-• PAGE 12: Tarot Card 1 Keywords / Energy
-• PAGE 13: Tarot Card 1 Deep Interpretation
-• PAGE 14: Tarot Card 2 Keywords / Energy
-• PAGE 15: Tarot Card 2 Deep Interpretation
-• PAGE 16: Tarot Card 3 Keywords / Energy
-• PAGE 17: Tarot Card 3 Deep Interpretation
+• PAGE 12: ${card1.name} — Keywords & Vibration
+• PAGE 13: ${card1.name} — Deep Interpretation (write direct card name, NEVER "Tarot Card 1")
+• PAGE 14: ${card2.name} — Keywords & Vibration
+• PAGE 15: ${card2.name} — Deep Interpretation (write direct card name, NEVER "Tarot Card 2")
+• PAGE 16: ${card3.name} — Keywords & Vibration
+• PAGE 17: ${card3.name} — Deep Interpretation (write direct card name, NEVER "Tarot Card 3")
 • PAGE 18: Combined Tarot Message
 • PAGE 19: What Is Happening Beneath the Surface
 • PAGE 20: What You May Not Be Seeing
@@ -244,8 +278,27 @@ export function buildDaisyUserPrompt(params: DaisyPromptParams): string {
     categoryContextStr,
     agenda,
     readingLevel,
+    hasProvidedCards,
     cards,
   } = params;
+
+  const formatCard = (c: any, defName: string, defKeywords: string) => {
+    const name = c?.name || defName;
+    const details = c?.customDetails
+      ? `Nuance/Details: "${c.customDetails}"`
+      : c?.keywords?.length
+      ? `Keywords: ${c.keywords.join(', ')}`
+      : `Keywords: ${defKeywords}`;
+    return `${name} (${details})`;
+  };
+
+  const tarotCardsSection = hasProvidedCards
+    ? `EXACT TAROT CARDS PROVIDED FOR THIS READING (DO NOT SUBSTITUTE OR DRAW DIFFERENT CARDS):
+- Card 1 (Current Energy): ${formatCard(cards[0], 'The Star', 'Clarity, Intuition')}
+- Card 2 (The Blockage): ${formatCard(cards[1], 'Eight of Swords', 'Challenge, Limiting beliefs')}
+- Card 3 (Path Forward): ${formatCard(cards[2], 'The Sun', 'Breakthrough, Resolution')}`
+    : `TAROT CARDS DRAWING DIRECTIVE:
+No cards were pre-selected by the querent. Please intuitively draw 3 cards from the 78-card Tarot deck (Card 1: Current Energy, Card 2: The Blockage, Card 3: Path Forward) tailored specifically to ${clientName}'s energy and inquiry. Present their names, 5-7 keywords, and interpretations in the 3-Card Energy Overview.`;
 
   return `LISTING TITLE:
 ${listingTitle}
@@ -264,10 +317,7 @@ ${agenda || problem || question || 'Core life alignment and intuitive guidance'}
 READING LEVEL:
 ${readingLevel}
 
-TAROT CARDS DRAWN:
-- Card 1: ${cards[0]?.name || 'The Star'} (${cards[0]?.keywords?.join(', ') || 'Clarity'})
-- Card 2: ${cards[1]?.name || 'Eight of Swords'} (${cards[1]?.keywords?.join(', ') || 'Challenge'})
-- Card 3: ${cards[2]?.name || 'The Sun'} (${cards[2]?.keywords?.join(', ') || 'Resolution'})
+${tarotCardsSection}
 
 Now create the complete personalized PDF content page by page. Speak directly ${shopName ? `representing ${shopName}` : 'as an intuitive spiritual guide'} writing uniquely to ${clientName}. Follow the correct page range for ${readingLevel}. Ensure EVERY PAGE CONTENT IS BETWEEN 60 AND 130 WORDS (except Card Art visual introduction pages, which are 30–50 words). Do not mention that you are an AI or explain your process.
 Start directly with: PAGE 1 — [TITLE]`;

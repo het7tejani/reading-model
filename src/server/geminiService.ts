@@ -6,6 +6,7 @@ import { getCategorySpecByTopic } from "../data/categoryConfig.ts";
 import { TarotCard } from "../types.ts";
 import { classifyDynamicTopic, calculateDynamicTemporalAnchor, performCrossSystemTriangulation } from "../utils/dynamicTopicRouter.ts";
 import { buildDaisySystemInstruction, buildDaisyUserPrompt } from "./daisyPrompt.ts";
+import { extractTarotCardsFromText, autoDrawSacredCards } from "../utils/clientDataParser.ts";
 
 /**
  * Resolves the Google Gemini API key from explicit user input or environment variables.
@@ -83,6 +84,7 @@ export interface ReadingRequestPayload {
     element?: string;
     archetype?: string;
     keywords?: string[];
+    customDetails?: string;
   }>;
   categoryData?: any;
   userApiKey?: string;
@@ -96,11 +98,23 @@ export async function generateReading(payload: ReadingRequestPayload) {
     throw new Error("Missing required input: Client Name");
   }
 
-  const rawCards = cards && Array.isArray(cards) && cards.length >= 3 ? cards : [
-    { name: "The Star", arcana: "major", element: "Air", archetype: "Cosmic Healer", keywords: ["Hope", "Healing", "Inspiration", "Renewal"] },
-    { name: "Eight of Swords", arcana: "minor", element: "Air", archetype: "Mindful Guardian", keywords: ["Restriction", "Limitation", "Stuck", "Overthinking"] },
-    { name: "The Sun", arcana: "major", element: "Fire", archetype: "Divine Radiance", keywords: ["Joy", "Vitality", "Radiance", "Clarity"] },
-  ];
+  const effectiveProblem = (problem || "").trim() || `Seeking high-level intuitive clarity, domain insight, and empowered breakthrough regarding ${safeTopicTitle}.`;
+  const effectiveQuestion = (question || "").trim() || `What is the highest truth, hidden blockage, and sovereign path forward for ${safeTopicTitle}?`;
+  const effectiveAge = age || "Adult";
+
+  // 1. Resolve Tarot Cards: Check if querent explicitly specified cards in the prompt text
+  const combinedPromptText = `${payload.clientDetails || ''}\n${payload.agenda || ''}\n${problem || ''}\n${question || ''}`;
+  const extracted = extractTarotCardsFromText(combinedPromptText);
+  const hasProvidedCards = Boolean(extracted.detectedFromPrompt && extracted.cards && extracted.cards.length >= 3);
+  let resolvedCards: any[] = hasProvidedCards
+    ? extracted.cards!
+    : (cards && Array.isArray(cards) && cards.length >= 3 && cards.some((c) => Boolean(c?.customDetails)))
+    ? cards
+    : [];
+
+  const rawCards = resolvedCards.length >= 3
+    ? resolvedCards
+    : autoDrawSacredCards(safeTopicTitle, effectiveProblem);
 
   const card1 = rawCards[0];
   const card2 = rawCards[1];
@@ -110,10 +124,6 @@ export async function generateReading(payload: ReadingRequestPayload) {
   const numerology = hasDob ? calculateLifePath(dob!) : null;
   const lpMath = numerology?.mathBreakdown || "Cosmic Coordinate Alignment";
   const lpNumber = numerology?.lifePathNumber || 7;
-
-  const effectiveProblem = (problem || "").trim() || `Seeking high-level intuitive clarity, domain insight, and empowered breakthrough regarding ${safeTopicTitle}.`;
-  const effectiveQuestion = (question || "").trim() || `What is the highest truth, hidden blockage, and sovereign path forward for ${safeTopicTitle}?`;
-  const effectiveAge = age || "Adult";
 
   // Match topic object and extract exact main headline
   const matchedTopic = getTopicByTitleOrId(topic) || READING_TOPICS.find(
@@ -236,7 +246,7 @@ export async function generateReading(payload: ReadingRequestPayload) {
       });
 
       const requestedTier = ((payload.tier || "detailed").toUpperCase()) as "STANDARD" | "DETAILED" | "PREMIUM";
-      const systemInstruction = buildDaisySystemInstruction(name, [card1, card2, card3], payload.shopName);
+      const systemInstruction = buildDaisySystemInstruction(name, [card1, card2, card3], payload.shopName, hasProvidedCards);
       const prompt = buildDaisyUserPrompt({
         listingTitle: mainHeadline,
         clientName: name,
@@ -248,6 +258,7 @@ export async function generateReading(payload: ReadingRequestPayload) {
         categoryContextStr,
         agenda: payload.agenda,
         readingLevel: requestedTier,
+        hasProvidedCards,
         cards: [card1, card2, card3],
       });
 
@@ -280,12 +291,19 @@ export async function generateReading(payload: ReadingRequestPayload) {
       }
 
       if (text) {
+        // Automatically consider and extract the cards which the AI gave as output
+        const outputCards = extractTarotCardsFromText(text);
+        const finalCards = (outputCards.cards && outputCards.cards.length >= 3)
+          ? outputCards.cards
+          : [card1, card2, card3];
+
         return {
           markdown: text,
           lifePath: String(lpNumber),
           mathBreakdown: lpMath,
           source: "gemini-ai" as const,
           model: modelUsed,
+          cards: finalCards,
         };
       }
     } catch (geminiError: any) {
@@ -323,5 +341,6 @@ export async function generateReading(payload: ReadingRequestPayload) {
     lifePath: String(lpNumber),
     mathBreakdown: lpMath,
     source: "algorithmic" as const,
+    cards: normalizedCards,
   };
 }

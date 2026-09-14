@@ -2,6 +2,7 @@ import React from 'react';
 import { ReadingInputs, TarotCard } from '../types';
 import { getEsotericCalculations } from '../utils/masterSectionsManager';
 import { CategorySpec } from '../data/categoryConfig';
+import { PageHeadingDivider } from './UniversalPageContainer';
 
 interface MasterSectionPageProps {
   inputs: ReadingInputs;
@@ -91,7 +92,7 @@ export const MasterTableOfContentsPage: React.FC<{
         <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
           Table of Contents & Chapter Guide
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[9.5pt] font-serif italic text-[#4A3F35]">
           A structured sequential roadmap through your channeled oracle transmission
         </p>
@@ -152,7 +153,7 @@ export const MasterNavigationGuidePage: React.FC = () => {
         <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
           How to Navigate This Reading
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif text-[#4A3F35]">
           Practices for receiving, digesting, and anchoring your channeled transmission
         </p>
@@ -214,7 +215,7 @@ export const MasterPersonalYearPage: React.FC<MasterSectionPageProps> = ({
         <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
           Personal Year {py} Cycle
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif text-[#4A3F35]">
           Your current 9-year evolutionary phase and vibrational wave
         </p>
@@ -283,7 +284,7 @@ export const MasterElementalBalancePage: React.FC<MasterSectionPageProps> = ({
         <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
           Elemental Energy Balance
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif text-[#4A3F35]">
           Distribution of Fire, Water, Air, and Earth across your active field
         </p>
@@ -367,7 +368,7 @@ export const MasterChakraAlignmentPage: React.FC<MasterSectionPageProps> = ({
         <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
           7-Chakra Alignment Status
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif text-[#4A3F35]">
           Assessment of energy centers reflecting your current question & situation
         </p>
@@ -414,7 +415,7 @@ export const MasterVedicRemediesPage: React.FC<MasterSectionPageProps> = ({
         <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
           Rudraksha, Yantra & Talismans
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif text-[#4A3F35]">
           Ancient geometric and bio-energetic armor aligned to your Life Path
         </p>
@@ -479,7 +480,7 @@ export const MasterCareerWealthPage: React.FC<MasterSectionPageProps> = ({
         <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
           Career & Wealth Blueprint
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif text-[#4A3F35]">
           Monetization vectors, leadership authority, and vocational breakthrough
         </p>
@@ -539,7 +540,7 @@ export const MasterLoveDynamicsPage: React.FC<MasterSectionPageProps> = ({
         <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
           Love & Emotional Reciprocity
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif text-[#4A3F35]">
           Soul connection dynamics, unspoken feelings, and mutual evolution
         </p>
@@ -617,7 +618,7 @@ export const UniversalDynamicPage1: React.FC<MasterSectionPageProps> = ({
         <h1 className="text-[21pt] font-serif font-bold text-[#1F1914] max-w-xl mx-auto leading-tight">
           {data.page1.moduleTitle}
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[9.5pt] font-serif text-[#4A3F35]">
           Domain: {data.classification.detected_attributes.primary_domain} • Tone: {data.classification.detected_attributes.detected_emotional_tone.toUpperCase()}
         </p>
@@ -702,7 +703,7 @@ export const UniversalDynamicPage2: React.FC<MasterSectionPageProps> = ({
         <h1 className="text-[21pt] font-serif font-bold text-[#1F1914]">
           {data.page2.headerTitle}
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[9.5pt] font-serif text-[#4A3F35]">
           Subconscious hesitation, daily friction points, and quick somatic release
         </p>
@@ -783,7 +784,7 @@ export const UniversalDynamicPage3: React.FC<MasterSectionPageProps> = ({
         <h1 className="text-[21pt] font-serif font-bold text-[#1F1914]">
           {data.page3.headerTitle}
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[9.5pt] font-serif text-[#4A3F35]">
           A 30-day gentle step-by-step path with exact energetic timing horizons
         </p>
@@ -894,7 +895,7 @@ export const MasterExtendedShadowWorkPage: React.FC<MasterSectionPageProps> = ()
         <h1 className="text-[21pt] font-serif font-bold text-[#1F1914]">
           Attachment Architecture & The Avoidant-Anxious Loop
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif italic text-[#4A3F35]">
           Deconstructing subconscious defense mechanisms to restore sovereign intimacy
         </p>
@@ -951,7 +952,7 @@ export const MasterRelationalSigilPage: React.FC<MasterSectionPageProps> = ({ in
         <h1 className="text-[21pt] font-serif font-bold text-[#1F1914]">
           Personalized Relational Sigil & Love Magnet
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif italic text-[#4A3F35]">
           Consecrated energetic seal designed to anchor heart-space coherence and mutual devotion
         </p>
@@ -1032,7 +1033,7 @@ export const MasterLunarRomancePage: React.FC<MasterSectionPageProps> = () => {
         <h1 className="text-[21pt] font-serif font-bold text-[#1F1914]">
           Auspicious Lunar Phases for Love & Romance
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif italic text-[#4A3F35]">
           Aligning relationship discussions, commitments, and releases with the moon&apos;s natural cadence
         </p>
@@ -1086,7 +1087,7 @@ export const MasterEsotericGlossaryPage: React.FC<MasterSectionPageProps> = () =
         <h1 className="text-[21pt] font-serif font-bold text-[#1F1914]">
           Esoteric Glossary & Integration Key
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif italic text-[#4A3F35]">
           Key terminology and foundational concepts for your masterclass report
         </p>
@@ -1139,7 +1140,7 @@ export const FiveCardAltarSpreadPage: React.FC<{
         <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
           {title}
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif italic text-[#4A3F35]">
           {subtitle}
         </p>
@@ -1209,7 +1210,7 @@ export const SurfaceMaskVsWhisperPage: React.FC<{
         <h1 className="text-[21pt] font-serif font-bold text-[#1F1914]">
           The Surface Mask vs. Subconscious Whisper
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif italic text-[#4A3F35]">
           Deconstructing the cognitive dissonance between {name}&apos;s projected persona and authentic feelings
         </p>
@@ -1308,7 +1309,7 @@ export const UnspokenConfessionBoxPage: React.FC<{
         <h1 className="text-[21pt] font-serif font-bold text-[#1F1914]">
           The Unspoken Confession Box
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif italic text-[#4A3F35]">
           A direct channeled transcript of what {name} thinks in silence but cannot say aloud
         </p>
@@ -1367,7 +1368,7 @@ export const PsychologicalDefenseBreakdownPage: React.FC<{
         <h1 className="text-[21pt] font-serif font-bold text-[#1F1914]">
           Psychological Defense Breakdown
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif italic text-[#4A3F35]">
           Why {name} withholds their truth, the roots of their fear, and the catalyst that dissolves their armor
         </p>
@@ -1452,7 +1453,7 @@ export const MercuryBudhaUpayaPage: React.FC<{
         <h1 className="text-[21pt] font-serif font-bold text-[#1F1914]">
           Vedic Upayas for Truth & Telepathic Clarity
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif italic text-[#4A3F35]">
           Ancient Jyotish remedies to dissolve miscommunication and awaken authentic emotional speech
         </p>
@@ -1535,7 +1536,7 @@ export const TelepathicSigilPage: React.FC<{
         <h1 className="text-[21pt] font-serif font-bold text-[#1F1914]">
           Telepathic Clarity Sigil & Vector
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif italic text-[#4A3F35]">
           A customized energetic glyph to cut through mental distortion and anchor telepathic truth
         </p>
@@ -1639,7 +1640,7 @@ export const LunarCommunicationTimingPage: React.FC<{
         <h1 className="text-[21pt] font-serif font-bold text-[#1F1914]">
           Lunar Timing for Honest Communication
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-1.5"></div>
+        <PageHeadingDivider className="my-2" />
         <p className="text-[10pt] font-serif italic text-[#4A3F35]">
           Astro-lunar windows predicting when emotional defense walls soften and authentic truth emerges
         </p>

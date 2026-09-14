@@ -2,6 +2,7 @@ import { ReadingInputs, TarotCard } from '../types';
 import { calculateLifePath, LIFE_PATH_ARCHETYPES } from './numerology';
 import { READING_TOPICS, cleanTopicTitle } from '../data/readingTopics';
 import { getCategorySpecByTopic } from '../data/categoryConfig';
+import { autoDrawSacredCards } from './clientDataParser';
 
 // Elemental mappings for dynamic prescription based on the cards drawn
 const ELEMENT_CRYSTALS: Record<string, { primary: string; reason: string }> = {
@@ -23,9 +24,12 @@ const ELEMENT_BOTANICALS: Record<string, { primary: string; reason: string }> = 
 export function generateTarotNumerologyReadingMarkdown(inputs: ReadingInputs): string {
   const { name, age, dob, problem, question, topic, cards, categoryData } = inputs;
   const safeTopicTitle = cleanTopicTitle(topic);
-  const card1 = cards[0] || ({ name: 'The Star', keywords: ['Hope', 'Renewal', 'Serenity', 'Healing'], element: 'Air', archetype: 'The Guiding Light' } as TarotCard);
-  const card2 = cards[1] || ({ name: 'Eight of Swords', keywords: ['Overthinking', 'Mental Cage', 'Hesitation'], element: 'Air', archetype: 'The Bound Seeker' } as TarotCard);
-  const card3 = cards[2] || ({ name: 'The Sun', keywords: ['Joy', 'Vitality', 'Radiance', 'Clarity'], element: 'Fire', archetype: 'The Divine Radiance' } as TarotCard);
+  const resolvedCards: TarotCard[] = (cards && cards.length >= 3)
+    ? cards
+    : autoDrawSacredCards(safeTopicTitle, problem || question || name || '');
+  const card1 = resolvedCards[0];
+  const card2 = resolvedCards[1];
+  const card3 = resolvedCards[2];
 
   const numerology = calculateLifePath(dob) || {
     lifePathNumber: 7,

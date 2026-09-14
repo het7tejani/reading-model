@@ -10,6 +10,7 @@ export interface TarotCard {
   affirmation: string;
   symbol: string;
   color: string;
+  customDetails?: string;
 }
 
 export interface CategoryCustomData {
@@ -65,7 +66,7 @@ export interface ReadingInputs {
   question: string;
   topic: string;
   shopName?: string; // Shop / Studio name for PDF header & branding
-  cards: [TarotCard | null, TarotCard | null, TarotCard | null];
+  cards: TarotCard[];
   categoryData?: CategoryCustomData;
   customSections?: string[]; // IDs of explicitly enabled sections
   excludedSections?: string[]; // IDs of explicitly excluded sections

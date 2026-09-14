@@ -387,7 +387,11 @@ export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): 
 
   const parseCardBlock = (block: string, defaultName: string) => {
     const bLines = block.split('\n').map(l => l.trim()).filter(Boolean);
-    const name = bLines[0]?.replace(/^Card \d+:\s*/i, '').replace(/^[0-9.]+\s*/, '') || defaultName;
+    const rawName = bLines[0] || defaultName;
+    const name = rawName
+      .replace(/^(?:tarot\s*)?card\s*(?:\d+|i{1,3})\s*[:—–\-]?\s*/i, '')
+      .replace(/^[0-9.]+\s*/, '')
+      .trim() || defaultName;
     
     // Find keywords line
     const kwLine = bLines.find(l => l.toLowerCase().includes('keywords:') || l.toLowerCase().includes('**keywords**') || l.includes('•') || l.includes(','));
@@ -416,9 +420,9 @@ export const parseReadingMarkdown = (markdown: string, fallbackTopic?: string): 
     };
   };
 
-  const card1 = parseCardBlock(cardBlocks[0] || '', 'Card 1: Current Energy');
-  const card2 = parseCardBlock(cardBlocks[1] || '', 'Card 2: The Blockage');
-  const card3 = parseCardBlock(cardBlocks[2] || '', 'Card 3: Path Forward');
+  const card1 = parseCardBlock(cardBlocks[0] || '', 'The High Priestess');
+  const card2 = parseCardBlock(cardBlocks[1] || '', 'The Moon');
+  const card3 = parseCardBlock(cardBlocks[2] || '', 'The Sun');
 
   // 3. Synthesis
   const synRaw = findSection('synthesis') || findSection('cosmic') || '';

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -19,6 +19,7 @@ import {
 import { ReadingInputs } from '../types';
 import { calculateLifePath } from '../utils/numerology';
 import { getTarotCardImageUrl } from '../utils/tarotImageMapper';
+import { extractTarotCardsFromText } from '../utils/clientDataParser';
 import { PdfExportModal } from './PdfExportModal';
 import { ReadingContentEditor } from './ReadingContentEditor';
 
@@ -51,6 +52,18 @@ export const ReadingResultView: React.FC<ReadingResultViewProps> = ({
   const [focusedSectionId, setFocusedSectionId] = useState<string | undefined>(undefined);
 
   const numerology = calculateLifePath(inputs.dob);
+
+  // Consider and prioritize cards directly output in markdown by AI
+  const displayedCards = useMemo(() => {
+    if (inputs.cards && inputs.cards.length >= 3 && inputs.cards.every((c) => c?.name)) {
+      return inputs.cards;
+    }
+    const extracted = extractTarotCardsFromText(markdown);
+    if (extracted.cards && extracted.cards.length >= 3) {
+      return extracted.cards;
+    }
+    return inputs.cards || [];
+  }, [inputs.cards, markdown]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(markdown);
@@ -255,7 +268,7 @@ export const ReadingResultView: React.FC<ReadingResultViewProps> = ({
 
         {/* Cards Spread Strip */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-          {inputs.cards.map((card, index) => {
+          {displayedCards.map((card, index) => {
             const titles = ['Position 01: Current', 'Position 02: Blockage', 'Position 03: Path Forward'];
             if (!card) return null;
             const cardImg = getTarotCardImageUrl(card.name);
@@ -278,7 +291,9 @@ export const ReadingResultView: React.FC<ReadingResultViewProps> = ({
                     {titles[index]}
                   </span>
                   <h4 className="font-serif italic font-bold text-sm text-[#4A3F35] truncate">{card.name}</h4>
-                  <p className="text-[10px] text-[#8C7B6A] truncate">{card.keywords.slice(0, 3).join(', ')}</p>
+                  <p className="text-[10px] text-[#8C7B6A] truncate">
+                    {card.customDetails || card.keywords?.slice(0, 3).join(', ') || 'Intuitive Guidance'}
+                  </p>
                 </div>
               </div>
             );

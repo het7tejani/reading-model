@@ -11,7 +11,32 @@ import {
   TripleArchOverCardsSvg,
   UniversalPageDecorations,
 } from './PdfPageBackgrounds';
-import { UniversalPageContainer } from './UniversalPageContainer';
+import { UniversalPageContainer, PageHeadingDivider } from './UniversalPageContainer';
+
+function formatCardInterpretationTitle(rawTitle: string, cardName: string): string {
+  const cleaned = rawTitle
+    .replace(/(?:tarot\s*)?card\s*(?:[123]|i{1,3})\s*[:—–\-]?\s*/gi, '')
+    .trim();
+
+  const lower = cleaned.toLowerCase();
+  if (
+    !cleaned ||
+    lower === 'deep interpretation' ||
+    lower === 'full interpretation' ||
+    lower === 'deep analysis' ||
+    lower === 'interpretation' ||
+    lower === 'channeled meaning' ||
+    lower === 'channeled interpretation'
+  ) {
+    return `${cardName}: Deep Interpretation`;
+  }
+
+  if (!lower.includes(cardName.toLowerCase())) {
+    return `${cardName}: ${cleaned}`;
+  }
+
+  return cleaned;
+}
 
 interface PdfPagesRendererProps {
   inputs: ReadingInputs;
@@ -293,7 +318,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         >
           {effectiveShopName}
         </h1>
-        <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+        <PageHeadingDivider className="my-2.5" />
         <p className="text-[12pt] italic text-[#4A3F35]">
           Intuitive Tarot · Cosmic Alchemy · Soul Blueprint Channeling
         </p>
@@ -367,7 +392,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           >
             {title}
           </h1>
-          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+          <PageHeadingDivider className="my-2.5" />
           <p className="text-[14px] italic text-[#4A3F35]">
             The foundational energetic triad anchoring your reading
           </p>
@@ -394,7 +419,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                 </div>
               </div>
               <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B5E51] font-semibold" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-                Card I · Present
+                Present Vibration
               </span>
               <p
                 className="font-bold text-[14px] text-[#1F1914] leading-tight text-center"
@@ -419,7 +444,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                 </div>
               </div>
               <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B5E51] font-semibold" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-                Card II · Blockage
+                The Blockage
               </span>
               <p
                 className="font-bold text-[14px] text-[#1F1914] leading-tight text-center"
@@ -444,7 +469,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                 </div>
               </div>
               <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B5E51] font-semibold" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-                Card III · Forward
+                Path Forward
               </span>
               <p
                 className="font-bold text-[14px] text-[#1F1914] leading-tight text-center"
@@ -516,9 +541,9 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           >
             {targetCard.name}
           </h1>
-          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+          <PageHeadingDivider className="my-2.5" />
           <p className="text-[14px] italic text-[#4A3F35]">
-            Card {romanNum} · {roleLabel} · Element: {targetCard.element || 'Universal'} · Arcana: {targetCard.arcana || 'Major'}
+            {roleLabel} · Element: {targetCard.element || 'Universal'} · Arcana: {targetCard.arcana || 'Major'}
           </p>
         </div>
 
@@ -592,9 +617,9 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
 
     return (
       <UniversalPageContainer
-        title={pageTitle || `Card ${roman} · ${targetCard.name}`}
+        title={pageTitle || `${targetCard.name}: Deep Interpretation`}
         subtitle={`${roleLabel} · Element: ${targetCard.element || 'Universal'} · Arcana: ${targetCard.arcana || 'Major'}`}
-        footerText="✦ Deep Energetic Meaning & Channeled Guidance ✦"
+        footerText={undefined}
       >
         <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto w-full">
           {displayParagraphs.map((par, pIdx) => {
@@ -735,7 +760,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         footerText={
           isClosing
             ? `© ${new Date().getFullYear()} ${effectiveShopName} · All Rights Reserved`
-            : '✦ Grounded in Love, Guided by Wisdom, Anchored in Sovereignty ✦'
+            : undefined
         }
       >
         <div className="flex flex-col items-center justify-center text-center space-y-5 max-w-xl mx-auto w-full">
@@ -898,8 +923,8 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
       if (isCardIntro) {
         const cardInfo = getCardForPage(item, card1, card2, card3);
         pages.push({
-          key: `page-${pageNumber}-card-${cardInfo.roman}-art`,
-          headerTitle: `CARD ${cardInfo.roman} · ${cardInfo.role.toUpperCase()}`,
+          key: `page-${pageNumber}-card-${cardInfo.card.name.toLowerCase().replace(/\s+/g, '-')}-art`,
+          headerTitle: `${cardInfo.card.name.toUpperCase()} · ${cardInfo.role.toUpperCase()}`,
           render: () =>
             renderCardArt(
               cardInfo.card,
@@ -916,15 +941,16 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
       // 4. Tarot Card Deep Interpretation Page (Text only, NO card image)
       if (item.isTarotInterpretation || item.cardIndex !== undefined) {
         const cardInfo = getCardForPage(item, card1, card2, card3);
+        const cardDisplayTitle = formatCardInterpretationTitle(cleanTitle, cardInfo.card.name);
         pages.push({
-          key: `page-${pageNumber}-card-${cardInfo.roman}-interpretation`,
-          headerTitle: `CARD ${cardInfo.roman} · ${cardInfo.role.toUpperCase()}`,
+          key: `page-${pageNumber}-card-${cardInfo.card.name.toLowerCase().replace(/\s+/g, '-')}-interpretation`,
+          headerTitle: `${cardInfo.card.name.toUpperCase()} · DEEP INTERPRETATION`,
           render: () =>
             renderTarotInterpretationPage(
               cardInfo.card,
               cardInfo.roman,
               cardInfo.role,
-              cleanTitle,
+              cardDisplayTitle,
               item.paragraphs,
               pageNumber,
               item.alignment
@@ -976,7 +1002,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           <h1 className="text-[26pt] font-serif font-bold tracking-tight text-[#1F1914] uppercase leading-tight">
             {effectiveShopName}
           </h1>
-          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+          <PageHeadingDivider className="my-2.5" />
           <p className="text-[10pt] italic text-[#4A3F35]">
             Intuitive Tarot · Cosmic Alchemy · Soul Blueprint Channeling
           </p>
@@ -1116,7 +1142,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           <h1 className="text-[24pt] font-serif font-bold text-[#1F1914]">
             System Overview & Cards Drawn
           </h1>
-          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+          <PageHeadingDivider className="my-2.5" />
           <p className="text-[10pt] font-serif italic text-[#4A3F35]">
             The foundational energetic triad anchoring your reading
           </p>
@@ -1140,7 +1166,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                 </div>
               </div>
               <span className="text-[8pt] font-sans uppercase tracking-[0.2em] text-[#6B5E51] font-semibold">
-                Card I · Current
+                Present Vibration
               </span>
               <p className="font-serif font-bold text-[11pt] text-[#1F1914] leading-tight text-center">
                 {card1.name}
@@ -1161,7 +1187,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                 </div>
               </div>
               <span className="text-[8pt] font-sans uppercase tracking-[0.2em] text-[#6B5E51] font-semibold">
-                Card II · Blockage
+                The Blockage
               </span>
               <p className="font-serif font-bold text-[11pt] text-[#1F1914] leading-tight text-center">
                 {card2.name}
@@ -1182,7 +1208,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                 </div>
               </div>
               <span className="text-[8pt] font-sans uppercase tracking-[0.2em] text-[#6B5E51] font-semibold">
-                Card III · Forward
+                Path Forward
               </span>
               <p className="font-serif font-bold text-[11pt] text-[#1F1914] leading-tight text-center">
                 {card3.name}
@@ -1209,10 +1235,10 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     ),
   });
 
-  // 6. Card 1 Embodiment & Artwork (Kept as is)
+  // 6. Card 1 Embodiment & Artwork
   pages.push({
     key: 'card1-art',
-    headerTitle: 'CARD I · CURRENT ENERGY',
+    headerTitle: `${card1.name.toUpperCase()} · CURRENT ENERGY`,
     render: () => (
       <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between items-center z-10 text-center font-serif">
         <div className="space-y-1.5 pt-2">
@@ -1222,7 +1248,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           <h1 className="text-[24pt] font-serif font-bold text-[#1F1914] leading-tight">
             {card1.name}
           </h1>
-          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+          <PageHeadingDivider className="my-2.5" />
           <p className="text-[10pt] font-serif italic text-[#4A3F35]">
             Element: {card1.element || 'Water'} · Arcana: {card1.arcana || 'Minor'}
           </p>
@@ -1261,20 +1287,20 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     ),
   });
 
-  // 7. Card 1 Channeled Interpretation (Kept as is)
+  // 7. Card 1 Channeled Interpretation
   pages.push({
     key: 'card1-meaning',
-    headerTitle: 'CARD I · CHANNELED MEANING',
+    headerTitle: `${card1.name.toUpperCase()} · DEEP INTERPRETATION`,
     render: () => (
       <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
         <div className="text-center space-y-1.5 pt-2">
           <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-            Card I Channeled Interpretation
+            Channeled Deep Interpretation
           </span>
           <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-            {card1.name}: Deep Analysis
+            {card1.name}: Deep Interpretation
           </h1>
-          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+          <PageHeadingDivider className="my-2.5" />
           <p className="text-[10pt] font-serif italic text-[#4A3F35]">
             Unpacking the present energetic current shaping your reality
           </p>
@@ -1311,17 +1337,17 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
 
         <div className="text-center border-t border-[#E8E1D5] pt-2">
           <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-            ✦ Card 1 establishes your foundational energetic baseline ✦
+            ✦ {card1.name} establishes your foundational energetic baseline ✦
           </p>
         </div>
       </div>
     ),
   });
 
-  // 8. Card 2 Embodiment & Artwork (Kept as is)
+  // 8. Card 2 Embodiment & Artwork
   pages.push({
     key: 'card2-art',
-    headerTitle: 'CARD II · THE BLOCKAGE',
+    headerTitle: `${card2.name.toUpperCase()} · THE BLOCKAGE`,
     render: () => (
       <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between items-center z-10 text-center font-serif">
         <div className="space-y-1.5 pt-2">
@@ -1331,7 +1357,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           <h1 className="text-[24pt] font-serif font-bold text-[#1F1914] leading-tight">
             {card2.name}
           </h1>
-          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+          <PageHeadingDivider className="my-2.5" />
           <p className="text-[10pt] font-serif italic text-[#4A3F35]">
             Element: {card2.element || 'Air'} · Arcana: {card2.arcana || 'Minor'}
           </p>
@@ -1370,20 +1396,20 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     ),
   });
 
-  // 9. Card 2 Channeled Interpretation (Kept as is)
+  // 9. Card 2 Channeled Interpretation
   pages.push({
     key: 'card2-meaning',
-    headerTitle: 'CARD II · CHANNELED MEANING',
+    headerTitle: `${card2.name.toUpperCase()} · DEEP INTERPRETATION`,
     render: () => (
       <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
         <div className="text-center space-y-1.5 pt-2">
           <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-            Card II Channeled Interpretation
+            Channeled Deep Interpretation
           </span>
           <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-            {card2.name}: Deep Analysis
+            {card2.name}: Deep Interpretation
           </h1>
-          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+          <PageHeadingDivider className="my-2.5" />
           <p className="text-[10pt] font-serif italic text-[#4A3F35]">
             Illuminating subconscious resistance and energetic friction
           </p>
@@ -1420,17 +1446,17 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
 
         <div className="text-center border-t border-[#E8E1D5] pt-2">
           <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-            ✦ Card 2 unmasks subconscious resistance for conscious release ✦
+            ✦ {card2.name} unmasks subconscious resistance for conscious release ✦
           </p>
         </div>
       </div>
     ),
   });
 
-  // 10. Card 3 Embodiment & Artwork (Kept as is)
+  // 10. Card 3 Embodiment & Artwork
   pages.push({
     key: 'card3-art',
-    headerTitle: 'CARD III · PATH FORWARD',
+    headerTitle: `${card3.name.toUpperCase()} · PATH FORWARD`,
     render: () => (
       <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between items-center z-10 text-center font-serif">
         <div className="space-y-1.5 pt-2">
@@ -1440,7 +1466,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           <h1 className="text-[24pt] font-serif font-bold text-[#1F1914] leading-tight">
             {card3.name}
           </h1>
-          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+          <PageHeadingDivider className="my-2.5" />
           <p className="text-[10pt] font-serif italic text-[#4A3F35]">
             Element: {card3.element || 'Air'} · Arcana: {card3.arcana || 'Major'}
           </p>
@@ -1479,20 +1505,20 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     ),
   });
 
-  // 11. Card 3 Channeled Interpretation (Kept as is)
+  // 11. Card 3 Channeled Interpretation
   pages.push({
     key: 'card3-meaning',
-    headerTitle: 'CARD III · CHANNELED MEANING',
+    headerTitle: `${card3.name.toUpperCase()} · DEEP INTERPRETATION`,
     render: () => (
       <div className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between z-10 font-serif">
         <div className="text-center space-y-1.5 pt-2">
           <span className="text-[8pt] uppercase tracking-[0.3em] text-[#6B5E51] font-sans font-semibold">
-            Card III Channeled Interpretation
+            Channeled Deep Interpretation
           </span>
           <h1 className="text-[22pt] font-serif font-bold text-[#1F1914]">
-            {card3.name}: Deep Analysis
+            {card3.name}: Deep Interpretation
           </h1>
-          <div className="w-16 h-[1px] bg-[#C4B6A4] mx-auto my-2"></div>
+          <PageHeadingDivider className="my-2.5" />
           <p className="text-[10pt] font-serif italic text-[#4A3F35]">
             Connecting with radiant renewal, hope, and divine alignment
           </p>
@@ -1529,7 +1555,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
 
         <div className="text-center border-t border-[#E8E1D5] pt-2">
           <p className="text-[9pt] font-serif italic text-[#6B5E51]">
-            ✦ Card 3 points directly toward your highest triumphant outcome ✦
+            ✦ {card3.name} points directly toward your highest triumphant outcome ✦
           </p>
         </div>
       </div>
