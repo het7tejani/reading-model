@@ -16,9 +16,11 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
-  Pencil
+  Pencil,
+  Palette,
 } from 'lucide-react';
-import { ReadingInputs, ReadingTier } from '../types';
+import { ReadingInputs, ReadingTier, PdfThemeId } from '../types';
+import { PDF_THEME_LIST, getPdfTheme } from '../data/pdfThemes';
 import { PdfPagesRenderer } from './PdfPagesRenderer';
 import { PdfTemplateUploader } from './PdfTemplateUploader';
 import { ReadingContentEditor } from './ReadingContentEditor';
@@ -47,6 +49,7 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [customTemplatePages, setCustomTemplatePages] = useState<string[] | null>(null);
   const [selectedTier, setSelectedTier] = useState<ReadingTier>(inputs.tier || 'detailed');
+  const [selectedTheme, setSelectedTheme] = useState<PdfThemeId>(inputs.pdfTheme || 'parchment');
   const [showSectionsDirectory, setShowSectionsDirectory] = useState(false);
   const [selectedDomainFilter, setSelectedDomainFilter] = useState<MasterSectionDomain | 'all'>('all');
   const [isEditingContent, setIsEditingContent] = useState(false);
@@ -258,6 +261,42 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
           </div>
         </div>
 
+        {/* Theme Selector Bar */}
+        <div className="px-4 py-2 bg-[#FCFAF7] border-b border-[#E0D7CC] flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#4A3F35] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5 text-[#BC6C25]" />
+              <span>PDF Theme:</span>
+            </span>
+            <div className="flex items-center gap-1 bg-white p-1 rounded border border-[#E0D7CC] overflow-x-auto">
+              {PDF_THEME_LIST.map((theme) => {
+                const isSelected = selectedTheme === theme.id;
+                return (
+                  <button
+                    key={theme.id}
+                    onClick={() => setSelectedTheme(theme.id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                      isSelected
+                        ? 'bg-[#1F1914] text-[#FAF7EE] shadow-xs ring-1 ring-[#BC6C25]'
+                        : 'text-[#6B5E51] hover:bg-[#FAF7F2] hover:text-[#1F1914]'
+                    }`}
+                  >
+                    <div
+                      className="w-2.5 h-2.5 rounded-full border border-black/20"
+                      style={{ backgroundColor: theme.swatch.accent }}
+                    />
+                    <span>{theme.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="text-[11px] text-[#8C7B6A] hidden sm:flex items-center gap-1.5 font-serif italic">
+            <span>{getPdfTheme(selectedTheme).subtitle}</span>
+          </div>
+        </div>
+
         {/* Master Sections Directory Accordion */}
         <AnimatePresence>
           {showSectionsDirectory && (
@@ -391,6 +430,7 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
                   markdown={markdown}
                   customTemplatePages={customTemplatePages}
                   overrideTier={selectedTier}
+                  overrideTheme={selectedTheme}
                   onTotalPagesCalculated={(cnt) => setRenderedTotalPages(cnt)}
                 />
               </div>

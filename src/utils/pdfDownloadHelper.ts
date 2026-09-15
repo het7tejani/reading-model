@@ -40,12 +40,12 @@ export const generateAndDownloadPdf = async (
       });
     }
 
-    // Capture the page element with html2canvas
+    // Capture the page element with html2canvas (null allows theme background)
     const canvas = await html2canvas(pageEl, {
       scale: 2, // High resolution (retina)
       useCORS: true,
       allowTaint: true,
-      backgroundColor: '#FAF7EE',
+      backgroundColor: null,
       logging: false,
     });
 

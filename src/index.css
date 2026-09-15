@@ -199,3 +199,184 @@
     color: #2C2C2C !important;
   }
 }
+
+/* =========================================================================
+   PDF EXPORT THEMES - AUTHENTIC PSYCHIC & ESOTERIC STYLING
+   ========================================================================= */
+
+.pdf-page {
+  background-color: var(--pdf-bg, #FAF7EE) !important;
+  color: var(--pdf-text-main, #2A2118) !important;
+  font-family: var(--pdf-font-body, 'EB Garamond', 'Cormorant Garamond', Georgia, serif) !important;
+  line-height: 1.62;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 1. Theme Parchment (The Hermetic Manuscript) */
+.pdf-theme-parchment {
+  --pdf-bg: #FAF7EE;
+  --pdf-text-main: #2A2118;
+  --pdf-text-heading: #1A130E;
+  --pdf-text-sub: #48392B;
+  --pdf-text-muted: #6B5844;
+  --pdf-accent: #B06822;
+  --pdf-accent-secondary: #C99355;
+  --pdf-border-subtle: #D6C8B4;
+  --pdf-border-strong: #9E8669;
+  --pdf-card-bg: #F5EFE4;
+  --pdf-card-border: #D8CAB4;
+  --pdf-header-border: #E2D5C3;
+  --pdf-header-text: #6B5844;
+  --pdf-font-display: 'Cinzel Decorative', 'Cinzel', serif;
+  --pdf-font-heading: 'Cinzel', 'Cormorant Garamond', serif;
+  --pdf-font-body: 'EB Garamond', 'Cormorant Garamond', Georgia, serif;
+  --pdf-font-accent: 'Cormorant Garamond', italic, serif;
+}
+
+/* 2. Theme Midnight (The Starlight Oracle) */
+.pdf-theme-midnight {
+  --pdf-bg: #0B0F19;
+  --pdf-text-main: #F2ECE1;
+  --pdf-text-heading: #F7E2BA;
+  --pdf-text-sub: #D6C9B4;
+  --pdf-text-muted: #A69882;
+  --pdf-accent: #E5B070;
+  --pdf-accent-secondary: #F7D678;
+  --pdf-border-subtle: #26344E;
+  --pdf-border-strong: #CCA456;
+  --pdf-card-bg: #121A2A;
+  --pdf-card-border: #2E3D5C;
+  --pdf-header-border: #233047;
+  --pdf-header-text: #CCA456;
+  --pdf-font-display: 'Cinzel Decorative', 'Cinzel', serif;
+  --pdf-font-heading: 'Cinzel', 'Marcellus', serif;
+  --pdf-font-body: 'Cormorant Garamond', 'EB Garamond', serif;
+  --pdf-font-accent: 'Marcellus', serif;
+}
+
+/* 3. Theme Botanical (The Herbal Alchemist) */
+.pdf-theme-botanical {
+  --pdf-bg: #F3F5ED;
+  --pdf-text-main: #1A241C;
+  --pdf-text-heading: #233024;
+  --pdf-text-sub: #3D4D3E;
+  --pdf-text-muted: #5C6E5B;
+  --pdf-accent: #556331;
+  --pdf-accent-secondary: #825835;
+  --pdf-border-subtle: #C8D4BF;
+  --pdf-border-strong: #7D8E73;
+  --pdf-card-bg: #E7ECE0;
+  --pdf-card-border: #BFCCB4;
+  --pdf-header-border: #CCD7C4;
+  --pdf-header-text: #556331;
+  --pdf-font-display: 'Cormorant Garamond', 'Cinzel', serif;
+  --pdf-font-heading: 'Cormorant Garamond', 'Cinzel', serif;
+  --pdf-font-body: 'EB Garamond', 'Cormorant Garamond', Georgia, serif;
+  --pdf-font-accent: 'Cormorant Garamond', italic, serif;
+}
+
+/* 4. Theme Amethyst (The Clairvoyant Sanctuary) */
+.pdf-theme-amethyst {
+  --pdf-bg: #FAF4FC;
+  --pdf-text-main: #24142E;
+  --pdf-text-heading: #381652;
+  --pdf-text-sub: #573E6B;
+  --pdf-text-muted: #795E91;
+  --pdf-accent: #7B2CBF;
+  --pdf-accent-secondary: #B565F0;
+  --pdf-border-subtle: #DACBE4;
+  --pdf-border-strong: #9973B5;
+  --pdf-card-bg: #F1E6F7;
+  --pdf-card-border: #D4BFE2;
+  --pdf-header-border: #E2D1ED;
+  --pdf-header-text: #6F4E85;
+  --pdf-font-display: 'Cinzel Decorative', 'Cinzel', serif;
+  --pdf-font-heading: 'Cinzel', 'Cormorant Garamond', serif;
+  --pdf-font-body: 'EB Garamond', 'Cormorant Garamond', Georgia, serif;
+  --pdf-font-accent: 'Marcellus', serif;
+}
+
+/* 5. Theme Minimalist (Haute Divination) */
+.pdf-theme-minimalist {
+  --pdf-bg: #FDFCFB;
+  --pdf-text-main: #141414;
+  --pdf-text-heading: #0A0A0A;
+  --pdf-text-sub: #424242;
+  --pdf-text-muted: #6E6E6E;
+  --pdf-accent: #8A6B47;
+  --pdf-accent-secondary: #2E2E2E;
+  --pdf-border-subtle: #E2DDD6;
+  --pdf-border-strong: #9E978E;
+  --pdf-card-bg: #F6F3EF;
+  --pdf-card-border: #DDD7CE;
+  --pdf-header-border: #E6E1D9;
+  --pdf-header-text: #666666;
+  --pdf-font-display: 'Italiana', 'Cinzel', serif;
+  --pdf-font-heading: 'Italiana', 'Marcellus', 'Cinzel', serif;
+  --pdf-font-body: 'EB Garamond', 'Cormorant Garamond', serif;
+  --pdf-font-accent: 'Marcellus', serif;
+}
+
+/* PDF Page Elements Thematic Inheritance */
+.pdf-page h1,
+.pdf-page .pdf-display-title {
+  font-family: var(--pdf-font-display, 'Cinzel Decorative', 'Cinzel', serif) !important;
+  letter-spacing: 0.05em;
+}
+
+.pdf-page h2,
+.pdf-page h3,
+.pdf-page h4,
+.pdf-page .pdf-heading,
+.pdf-page [style*="Montserrat"] {
+  font-family: var(--pdf-font-heading, 'Cinzel', 'Cormorant Garamond', serif) !important;
+}
+
+.pdf-page p,
+.pdf-page li,
+.pdf-page blockquote,
+.pdf-page .pdf-body,
+.pdf-page [style*="Times New Roman"] {
+  font-family: var(--pdf-font-body, 'EB Garamond', 'Cormorant Garamond', Georgia, serif) !important;
+  line-height: 1.62;
+}
+
+.pdf-page [class*="text-[#1F1914]"] {
+  color: var(--pdf-text-main, #2A2118) !important;
+}
+.pdf-page [class*="text-[#2C241E]"] {
+  color: var(--pdf-text-heading, #1A130E) !important;
+}
+.pdf-page [class*="text-[#4A3F35]"] {
+  color: var(--pdf-text-sub, #48392B) !important;
+}
+.pdf-page [class*="text-[#6B5E51]"] {
+  color: var(--pdf-text-muted, #6B5844) !important;
+}
+.pdf-page [class*="text-[#7A6B5B]"],
+.pdf-page [class*="text-[#8C7D6D]"] {
+  color: var(--pdf-header-text, #6B5844) !important;
+}
+.pdf-page [class*="text-[#A89884]"] {
+  color: var(--pdf-border-strong, #9E8669) !important;
+}
+.pdf-page [class*="border-[#D8CEBE]"] {
+  border-color: var(--pdf-border-subtle, #D6C8B4) !important;
+}
+.pdf-page [class*="border-[#E8E1D5]"] {
+  border-color: var(--pdf-header-border, #E2D5C3) !important;
+}
+.pdf-page [class*="border-[#A89884]"] {
+  border-color: var(--pdf-border-strong, #9E8669) !important;
+}
+.pdf-page [class*="bg-[#F7F3EB]"] {
+  background-color: var(--pdf-card-bg, #F5EFE4) !important;
+}
+.pdf-page [class*="bg-[#FAF7EE]"] {
+  background-color: var(--pdf-bg, #FAF7EE) !important;
+}
+.pdf-page [class*="bg-[#C4B6A4]"] {
+  background-color: var(--pdf-border-strong, #9E8669) !important;
+}
+

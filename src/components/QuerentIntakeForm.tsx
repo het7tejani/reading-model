@@ -1,20 +1,20 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React from 'react';
 import {
   Sparkles,
   RotateCcw,
   ArrowRight,
   BookOpen,
-  User,
-  Layers,
-  Compass,
   Store,
-  CheckCircle2,
+  HelpCircle,
+  FileText,
+  Palette,
+  Check,
 } from 'lucide-react';
-import { ReadingInputs, ReadingTier, TarotCard } from '../types';
-import { calculateLifePath } from '../utils/numerology';
-import { ZODIAC_PROFILES, getZodiacFromDob } from '../utils/astrology';
-import { parseClientParagraph, extractTarotCardsFromText, autoDrawSacredCards } from '../utils/clientDataParser';
-import { getTarotCardImageUrl } from '../utils/tarotImageMapper';
+import { ReadingInputs, ReadingTier, TarotCard, PdfThemeId } from '../types';
+import { PDF_THEME_LIST, getPdfTheme } from '../data/pdfThemes';
+import { getZodiacFromDob } from '../utils/astrology';
+import { parseClientParagraph } from '../utils/clientDataParser';
+import { TarotCardPicker } from './TarotCardPicker';
 
 interface QuerentIntakeFormProps {
   inputs: ReadingInputs;
@@ -25,11 +25,6 @@ interface QuerentIntakeFormProps {
   isLoading: boolean;
 }
 
-const DEFAULT_TITLE =
-  'Ancestral Psychic Reading | Spirit Guide Message, Tarot Insights (PDF)';
-const DEFAULT_CLIENT_DETAILS =
-  'Calida anderson birthday may 21, 1982. I want to know what my ancestors want me to know like mom Georgette anderson and others';
-
 export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
   inputs,
   onUpdateInputs,
@@ -38,197 +33,62 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
   onOpenApiKeyModal,
   isLoading,
 }) => {
-  // Shop / Studio Name
-  const [shopNameText, setShopNameText] = useState<string>(() => {
-    return inputs.shopName || '';
-  });
-
-  // Title / Listing Title
-  const [titleText, setTitleText] = useState<string>(() => {
-    return inputs.topic || DEFAULT_TITLE;
-  });
-
-  // Client Details text
-  const [clientDetailsText, setClientDetailsText] = useState<string>(() => {
-    if (inputs.clientDetails) return inputs.clientDetails;
-    if (inputs.name || inputs.problem) {
-      const parts: string[] = [];
-      if (inputs.name) parts.push(`Name: ${inputs.name}`);
-      if (inputs.dob) parts.push(`DOB: ${inputs.dob}`);
-      if (inputs.age) parts.push(`Age: ${inputs.age}`);
-      if (inputs.problem) parts.push(inputs.problem);
-      return parts.join(', ');
-    }
-    return DEFAULT_CLIENT_DETAILS;
-  });
-
-  // Agenda text
-  const [agendaText, setAgendaText] = useState<string>(() => {
-    return inputs.agenda || inputs.question || '';
-  });
-
   const activeTier: ReadingTier = inputs.tier || 'detailed';
-  const hasDob = Boolean(inputs.dob && inputs.dob.trim().length > 3);
 
-  const numerology = useMemo(() => {
-    return hasDob ? calculateLifePath(inputs.dob) : null;
-  }, [inputs.dob, hasDob]);
+  // Spread cards array for TarotCardPicker
+  const spreadCards: [TarotCard | null, TarotCard | null, TarotCard | null] = [
+    inputs.cards?.[0] || null,
+    inputs.cards?.[1] || null,
+    inputs.cards?.[2] || null,
+  ];
 
-  // Synchronize Shop Name change
-  const handleShopNameChange = (text: string) => {
-    setShopNameText(text);
-    onUpdateInputs({
-      shopName: text,
-    });
+  const handleSpreadCardsUpdate = (
+    newCards: [TarotCard | null, TarotCard | null, TarotCard | null]
+  ) => {
+    const filtered = newCards.filter((c): c is TarotCard => c !== null);
+    onUpdateInputs({ cards: filtered });
   };
 
-  // Synchronize Title change
-  const handleTitleChange = (text: string) => {
-    setTitleText(text);
-    onUpdateInputs({
-      topic: text,
-    });
-  };
+  const handleDetailsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    const parsedData = parseClientParagraph(val);
 
-  // Synchronize Client Details change
-  const handleClientDetailsChange = (text: string) => {
-    setClientDetailsText(text);
-    const parsed = parseClientParagraph(text);
-
-    const updatePayload: Partial<ReadingInputs> = {
-      clientDetails: text,
-      problem: parsed.problem || text,
+    const updates: Partial<ReadingInputs> = {
+      clientDetails: val,
+      problem: parsedData.problem || val,
     };
 
-    if (parsed.name) updatePayload.name = parsed.name;
-    if (parsed.age) updatePayload.age = parsed.age;
-    if (parsed.question && (!agendaText || agendaText.trim() === '')) {
-      setAgendaText(parsed.question);
-      updatePayload.agenda = parsed.question;
-      updatePayload.question = parsed.question;
+    if (parsedData.name) updates.name = parsedData.name;
+    if (parsedData.age) updates.age = parsedData.age;
+    if (parsedData.dob) {
+      updates.dob = parsedData.dob;
+      const detectedZodiac = getZodiacFromDob(parsedData.dob);
+      if (detectedZodiac) updates.zodiacSign = detectedZodiac.name;
     }
-    // Directly prioritize cards extracted from master prompt text or prompt output
-    const combined = `${text}\n${agendaText || ''}`;
-    const autoExtracted = extractTarotCardsFromText(combined);
-    if (autoExtracted.cards && autoExtracted.cards.length >= 3) {
-      updatePayload.cards = autoExtracted.cards;
-    } else if (parsed.cards && parsed.cards.length >= 3) {
-      updatePayload.cards = parsed.cards;
+    if (parsedData.question) {
+      updates.question = parsedData.question;
+      updates.agenda = parsedData.question;
     }
-    if (parsed.shopName && !shopNameText) {
-      setShopNameText(parsed.shopName);
-      updatePayload.shopName = parsed.shopName;
-    }
-    if (parsed.dob) {
-      updatePayload.dob = parsed.dob;
-      const detectedZodiac = getZodiacFromDob(parsed.dob);
-      if (detectedZodiac) {
-        updatePayload.zodiacSign = detectedZodiac.name;
-      }
+    if (parsedData.shopName) updates.shopName = parsedData.shopName;
+    if (parsedData.topic) updates.topic = parsedData.topic;
+    if (parsedData.cards && parsedData.cards.length >= 3) {
+      updates.cards = parsedData.cards;
     }
 
-    onUpdateInputs(updatePayload);
+    onUpdateInputs(updates);
   };
-
-  // Synchronize Agenda change
-  const handleAgendaChange = (text: string) => {
-    setAgendaText(text);
-    const updatePayload: Partial<ReadingInputs> = {
-      agenda: text,
-      question: text,
-    };
-    // Automatically fetch cards if prompt text/output is provided in agenda field
-    const combined = `${clientDetailsText}\n${text}`;
-    const autoExtracted = extractTarotCardsFromText(combined);
-    if (autoExtracted.cards && autoExtracted.cards.length >= 3) {
-      updatePayload.cards = autoExtracted.cards;
-    }
-    onUpdateInputs(updatePayload);
-  };
-
-  // Synchronize Tier selection
-  const handleTierChange = (tier: ReadingTier) => {
-    onUpdateInputs({ tier });
-  };
-
-  // Check if cards were detected from prompt text, or generated by AI output
-  const promptCardStatus = useMemo(() => {
-    const combined = `${clientDetailsText}\n${agendaText}`;
-    const parsed = extractTarotCardsFromText(combined);
-    if (parsed.detectedFromPrompt && parsed.cards && parsed.cards.length >= 3) {
-      return {
-        detected: true,
-        source: 'prompt' as const,
-        cards: parsed.cards,
-        cardNames: parsed.cardNames || [parsed.cards[0].name, parsed.cards[1].name, parsed.cards[2].name],
-        cardDetails: parsed.cardDetails || ['', '', ''],
-      };
-    }
-    const hasCustomDetails = inputs.cards?.some((c) => Boolean(c?.customDetails));
-    if (hasCustomDetails && inputs.cards?.length >= 3) {
-      return {
-        detected: true,
-        source: 'prompt' as const,
-        cards: inputs.cards,
-        cardNames: [inputs.cards[0]?.name || '', inputs.cards[1]?.name || '', inputs.cards[2]?.name || ''],
-        cardDetails: [inputs.cards[0]?.customDetails || '', inputs.cards[1]?.customDetails || '', inputs.cards[2]?.customDetails || ''],
-      };
-    }
-    if (inputs.cards && inputs.cards.length >= 3 && inputs.cards.every((c) => Boolean(c?.name))) {
-      return {
-        detected: true,
-        source: 'ai-output' as const,
-        cards: inputs.cards,
-        cardNames: [inputs.cards[0]?.name || '', inputs.cards[1]?.name || '', inputs.cards[2]?.name || ''],
-        cardDetails: [inputs.cards[0]?.customDetails || '', inputs.cards[1]?.customDetails || '', inputs.cards[2]?.customDetails || ''],
-      };
-    }
-    return { detected: false, source: null, cards: null, cardNames: null, cardDetails: null };
-  }, [clientDetailsText, agendaText, inputs.cards]);
-
-  // Initialize form with defaults on first render
-  useEffect(() => {
-    const updateInit: Partial<ReadingInputs> = {};
-
-    if (!inputs.topic) {
-      updateInit.topic = DEFAULT_TITLE;
-    }
-    if (!inputs.clientDetails && !inputs.name) {
-      updateInit.clientDetails = DEFAULT_CLIENT_DETAILS;
-      const parsed = parseClientParagraph(DEFAULT_CLIENT_DETAILS);
-      if (parsed.name) updateInit.name = parsed.name;
-      if (parsed.dob) updateInit.dob = parsed.dob;
-      if (parsed.problem) updateInit.problem = parsed.problem;
-      if (parsed.age) updateInit.age = parsed.age;
-      if (parsed.cards && parsed.cards.length >= 3) {
-        updateInit.cards = parsed.cards;
-      }
-    }
-    if (!inputs.tier) {
-      updateInit.tier = 'detailed';
-    }
-
-    if (Object.keys(updateInit).length > 0) {
-      onUpdateInputs(updateInit);
-    }
-  }, []);
-
-  const hasClientDetails = Boolean(
-    clientDetailsText && clientDetailsText.trim().length > 0
-  );
-  const isFormValid = hasClientDetails;
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (isFormValid && !isLoading) {
+        if (!isLoading) {
           onGenerateReading();
         }
       }}
       className="space-y-6"
     >
-      {/* Top Banner */}
+      {/* Top Banner & Control Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[#FAF7F2] border border-[#E0D7CC] rounded-sm">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-[#4A3F35] text-[#FAF7F2] flex items-center justify-center">
@@ -236,10 +96,10 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
           </div>
           <div>
             <h2 className="text-xs font-bold uppercase tracking-wider text-[#4A3F35]">
-              {shopNameText ? `${shopNameText} Reading Engine` : 'Master Psychic & Spiritual Reading Engine'}
+              {inputs.shopName ? `${inputs.shopName} Oracle Engine` : 'Sacred Intuitive Reading Engine'}
             </h2>
             <p className="text-[11px] text-[#8C7B6A]">
-              Page-by-page structured spiritual reading (40–90 words per page)
+              Intuitive Tarot & Numerology reading generation with calibrated page structures
             </p>
           </div>
         </div>
@@ -259,13 +119,7 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
           {onClearForm && (
             <button
               type="button"
-              onClick={() => {
-                setShopNameText('');
-                setTitleText('');
-                setClientDetailsText('');
-                setAgendaText('');
-                onClearForm();
-              }}
+              onClick={onClearForm}
               className="flex items-center gap-1 text-xs font-semibold text-[#8C7B6A] hover:text-[#4A3F35] transition-colors py-1.5 px-2.5 rounded-xs hover:bg-[#E0D7CC]/40 cursor-pointer"
             >
               <RotateCcw className="w-3 h-3" />
@@ -275,7 +129,7 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
         </div>
       </div>
 
-      {/* 1. Shop / Studio Name */}
+      {/* 1. Listing Title */}
       <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-3">
         <div className="flex items-center justify-between pb-2 border-b border-[#E0D7CC]">
           <div className="flex items-center gap-2">
@@ -284,100 +138,65 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
             </span>
             <div>
               <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
-                Shop Name / Studio Branding
+                1. Listing Title (Optional or Preset)
               </label>
               <p className="text-[11px] text-[#8C7B6A]">
-                Your shop or studio brand (embossed on PDF covers, headers, and certificates)
+                The overarching theme, listing headline, or spiritual offering
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-[#8C7B6A]">
-            <Store className="w-3.5 h-3.5 text-[#BC6C25]" />
-            <span className="hidden sm:inline font-mono text-[10px] uppercase">
-              {shopNameText ? 'Custom Brand' : 'Optional (Default: Sacred Intuitive Studio)'}
-            </span>
-          </div>
+          <BookOpen className="w-4 h-4 text-[#BC6C25]" />
         </div>
 
         <input
           type="text"
-          value={shopNameText}
-          onChange={(e) => handleShopNameChange(e.target.value)}
-          placeholder="e.g. Luna & Light Tarot, Sacred Intuitive Studio, Mystic Willow Oracle..."
-          className="w-full p-3.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm font-serif text-[#1F1914] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 font-medium"
-        />
-      </div>
-
-      {/* 2. Title */}
-      <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-3">
-        <div className="flex items-center gap-2 pb-2 border-b border-[#E0D7CC]">
-          <span className="w-6 h-6 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
-            02
-          </span>
-          <div>
-            <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
-              Title / Listing Title *
-            </label>
-            <p className="text-[11px] text-[#8C7B6A]">
-              The reading listing title or subject line
-            </p>
-          </div>
-        </div>
-
-        <input
-          type="text"
-          value={titleText}
-          onChange={(e) => handleTitleChange(e.target.value)}
+          value={inputs.topic || ''}
+          onChange={(e) => onUpdateInputs({ topic: e.target.value })}
           placeholder="e.g. Ancestral Psychic Reading | Spirit Guide Message, Tarot Insights (PDF)"
           className="w-full p-3.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm font-serif text-[#1F1914] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 font-medium"
         />
       </div>
 
-      {/* 3. Client Details */}
-      <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-3">
+      {/* 2. Client Details (Master Input Field) */}
+      <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-4">
         <div className="flex items-center justify-between pb-2 border-b border-[#E0D7CC]">
           <div className="flex items-center gap-2">
             <span className="w-6 h-6 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
-              03
+              02
             </span>
             <div>
               <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
-                Client Details *
+                2. Client Details (Name, Birthday, Question in one paragraph, or paste from Etsy/customer message) *
               </label>
               <p className="text-[11px] text-[#8C7B6A]">
-                Name, DOB, situation, deceased loved ones, and specific questions
+                Input or paste raw customer order note. The intelligent parser auto-detects name, birthday, age, problem, and question.
               </p>
             </div>
           </div>
-
-          {numerology && (
-            <span className="text-[11px] font-sans font-bold px-2 py-0.5 rounded bg-[#F2EDE8] text-[#4A3F35] border border-[#E0D7CC]">
-              Life Path {numerology.lifePathNumber}
-            </span>
-          )}
+          <FileText className="w-4 h-4 text-[#BC6C25]" />
         </div>
 
         <textarea
-          rows={3}
-          value={clientDetailsText}
-          onChange={(e) => handleClientDetailsChange(e.target.value)}
-          placeholder="e.g. Calida anderson birthday may 21, 1982. I want to know what my ancestors want me to know like mom Georgette anderson and others"
-          className="w-full p-3.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-xs font-sans text-[#1F1914] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 font-medium leading-relaxed"
+          rows={4}
+          value={inputs.clientDetails || ''}
+          onChange={handleDetailsChange}
+          placeholder="e.g. Sarah Jenkins, birthday August 14, 1992. I want to know what my spirit guides have to share regarding my life path and transitions."
+          className="w-full p-3.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-xs sm:text-sm font-sans text-[#1F1914] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 font-medium leading-relaxed"
         />
       </div>
 
-      {/* 4. Reading Level / Type */}
+      {/* 3. Reading Depth / Tier */}
       <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-3">
         <div className="flex items-center gap-2 pb-2 border-b border-[#E0D7CC]">
           <span className="w-6 h-6 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
-            04
+            03
           </span>
           <div>
             <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
-              Type / Reading Level *
+              3. Reading Depth / Tier *
             </label>
             <p className="text-[11px] text-[#8C7B6A]">
-              Choose the depth and page volume for your channeled transmission
+              Choose the depth and page volume for your generated PDF reading
             </p>
           </div>
         </div>
@@ -408,7 +227,7 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
               <button
                 key={tier.id}
                 type="button"
-                onClick={() => handleTierChange(tier.id)}
+                onClick={() => onUpdateInputs({ tier: tier.id })}
                 className={`p-4 rounded-xs border text-left transition-all cursor-pointer relative ${
                   isSelected
                     ? 'bg-[#F2EDE8] border-[#4A3F35] ring-1 ring-[#4A3F35] shadow-xs'
@@ -438,216 +257,168 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
         </div>
       </div>
 
-      {/* 5. Agenda */}
+      {/* 4. Agenda / Sacred Focus (Optional) */}
       <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-3">
-        <div className="flex items-center gap-2 pb-2 border-b border-[#E0D7CC]">
-          <span className="w-6 h-6 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
-            05
-          </span>
-          <div>
-            <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
-              Agenda (Optional)
-            </label>
-            <p className="text-[11px] text-[#8C7B6A]">
-              Specific goal, focus area, theme, or detailed agenda (leave blank to auto-infer)
-            </p>
+        <div className="flex items-center justify-between pb-2 border-b border-[#E0D7CC]">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
+              04
+            </span>
+            <div>
+              <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
+                4. Agenda / Sacred Focus (Optional)
+              </label>
+              <p className="text-[11px] text-[#8C7B6A]">
+                Key agenda topics, specific questions to address, or session focus
+              </p>
+            </div>
           </div>
+          <HelpCircle className="w-4 h-4 text-[#BC6C25]" />
         </div>
 
         <textarea
           rows={2}
-          value={agendaText}
-          onChange={(e) => handleAgendaChange(e.target.value)}
-          placeholder="e.g. Specific message from Mom Georgette, breaking generational patterns, emotional peace, and guidance on the future..."
-          className="w-full p-3.5 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-xs font-sans text-[#1F1914] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 font-medium"
+          value={inputs.agenda || ''}
+          onChange={(e) => onUpdateInputs({ agenda: e.target.value })}
+          placeholder="e.g. Core objectives, current challenges, key insights, and actionable next steps..."
+          className="w-full p-3 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-xs font-sans text-[#1F1914] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 font-medium leading-relaxed"
         />
       </div>
 
-      {/* 6. Three Cards (Automatically Fetched from Prompt / Output or Intuitively Drawn by AI) */}
+      {/* 5. Shop / Studio Name (Optional) */}
+      <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-[#E0D7CC]">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
+              05
+            </span>
+            <div>
+              <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
+                5. Shop / Studio Name (Optional)
+              </label>
+              <p className="text-[11px] text-[#8C7B6A]">
+                Your brand name printed on PDF covers, headers, and certificates
+              </p>
+            </div>
+          </div>
+          <Store className="w-4 h-4 text-[#BC6C25]" />
+        </div>
+
+        <input
+          type="text"
+          value={inputs.shopName || ''}
+          onChange={(e) => onUpdateInputs({ shopName: e.target.value })}
+          placeholder="e.g. Luna & Light Tarot, Sacred Path Sanctuary, Solaris Vision Studio..."
+          className="w-full p-3 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs text-sm font-serif text-[#1F1914] placeholder:text-[#8C7B6A]/50 focus:outline-none focus:border-[#4A3F35] focus:ring-1 focus:ring-[#4A3F35]/20 font-medium"
+        />
+      </div>
+
+      {/* 6. Tarot Cards (TarotCardPicker) */}
+      <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-4">
+        <div className="flex items-center gap-2 pb-2 border-b border-[#E0D7CC]">
+          <span className="w-6 h-6 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
+            06
+          </span>
+          <div>
+            <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
+              6. Oracle Tarot Spread Selection
+            </label>
+            <p className="text-[11px] text-[#8C7B6A]">
+              Select 3 cards from the 78-card deck, or use Intuitive 3-Card Draw. If left unassigned, AI channels cards dynamically.
+            </p>
+          </div>
+        </div>
+
+        <TarotCardPicker
+          cards={spreadCards}
+          onUpdateCards={handleSpreadCardsUpdate}
+        />
+      </div>
+
+      {/* 7. PDF Structure & Psychic Reading Theme Selection */}
       <div className="p-6 bg-white border border-[#E0D7CC] rounded-sm shadow-xs space-y-4">
         <div className="flex items-center justify-between pb-2 border-b border-[#E0D7CC]">
           <div className="flex items-center gap-2">
             <span className="w-6 h-6 rounded-full border border-[#4A3F35] flex items-center justify-center text-xs font-serif italic text-[#4A3F35] bg-[#F2EDE8]">
-              06
+              07
             </span>
             <div>
               <label className="text-xs uppercase tracking-widest font-bold text-[#4A3F35] block">
-                Three Cards (Tarot Anchors)
+                7. PDF Structure & Psychic Theme Selection
               </label>
               <p className="text-[11px] text-[#8C7B6A]">
-                {promptCardStatus.detected
-                  ? promptCardStatus.source === 'prompt'
-                    ? 'Automatically fetched from your prompt input'
-                    : 'Considered & channeled from AI output'
-                  : 'Intuitively drawn by AI Oracle upon generation (no cards fixed)'}
+                Select the artisanal visual structure and psychic aesthetic for your downloadable PDF:
               </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            {promptCardStatus.detected ? (
-              promptCardStatus.source === 'prompt' ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xs text-[11px] font-bold bg-[#FAF7F2] text-[#BC6C25] border border-[#BC6C25]/30">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#BC6C25]" />
-                  <span>Auto-Fetched from Prompt</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xs text-[11px] font-bold bg-[#FAF7EE] text-[#4A3F35] border border-[#4A3F35]/30">
-                  <Sparkles className="w-3.5 h-3.5 text-[#BC6C25]" />
-                  <span>Channeled by AI Output</span>
-                </span>
-              )
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xs text-[11px] font-semibold text-[#8C7B6A] bg-[#F2EDE8] border border-[#E0D7CC]">
-                <Sparkles className="w-3 h-3 text-[#BC6C25]" />
-                <span>Dynamic AI Oracle Draw</span>
-              </span>
-            )}
-          </div>
+          <Palette className="w-4 h-4 text-[#BC6C25]" />
         </div>
 
-        {/* Card Detection Notice */}
-        {promptCardStatus.detected && promptCardStatus.cards ? (
-          <>
-            {promptCardStatus.source === 'prompt' ? (
-              <div className="p-3 bg-[#FAF7F2] border border-[#BC6C25]/35 rounded-xs flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-[#BC6C25] shrink-0 mt-0.5" />
-                <div className="text-xs text-[#4A3F35]">
-                  <span className="font-bold text-[#2A2118]">
-                    3 Tarot Cards Automatically Fetched from Prompt:
-                  </span>{' '}
-                  <span className="font-serif font-bold text-[#4A3F35]">
-                    {promptCardStatus.cardNames?.join(' • ')}
-                  </span>
-                  <p className="text-[11px] text-[#8C7B6A] mt-0.5">
-                    The AI Oracle will interpret these specific cards in the generated reading.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="p-3 bg-[#FAF7EE] border border-[#BC6C25]/40 rounded-xs flex items-start gap-2.5">
-                <Sparkles className="w-4 h-4 text-[#BC6C25] shrink-0 mt-0.5" />
-                <div className="text-xs text-[#4A3F35]">
-                  <span className="font-bold text-[#2A2118]">
-                    3 Tarot Cards Channeled from AI Output:
-                  </span>{' '}
-                  <span className="font-serif font-bold text-[#4A3F35]">
-                    {promptCardStatus.cardNames?.join(' • ')}
-                  </span>
-                  <p className="text-[11px] text-[#8C7B6A] mt-0.5">
-                    These cards were dynamically chosen and interpreted by the AI Oracle.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {promptCardStatus.cards.map((card, idx) => {
-                const cardName = card.name;
-                const cardImg = getTarotCardImageUrl(cardName);
-                const isFromPrompt = promptCardStatus.source === 'prompt';
-                return (
-                  <div
-                    key={idx}
-                    className="p-3 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs flex items-start gap-3 transition-colors hover:border-[#D8CEBE]"
-                  >
-                    <div className="w-11 h-16 rounded overflow-hidden border border-[#D8CEBE] shrink-0 bg-[#F7F3EB] shadow-xs flex items-center justify-center mt-0.5">
-                      <img
-                        src={cardImg}
-                        alt={cardName}
-                        referrerPolicy="no-referrer"
-                        crossOrigin="anonymous"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-1 mb-0.5">
-                        <span className="text-[9px] uppercase font-bold text-[#8C7B6A]">
-                          Card {idx + 1} ·{' '}
-                          {idx === 0
-                            ? 'Current Energy'
-                            : idx === 1
-                            ? 'The Blockage'
-                            : 'Path Forward'}
-                        </span>
-                        <span className={`text-[8px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-2xs ${
-                          isFromPrompt ? 'text-[#BC6C25] bg-[#BC6C25]/10' : 'text-[#606C38] bg-[#606C38]/10'
-                        }`}>
-                          {isFromPrompt ? 'From Prompt' : 'AI Output'}
-                        </span>
-                      </div>
-                      <p className="font-serif font-bold text-sm text-[#1F1914] truncate">
-                        {cardName}
-                      </p>
-                      {card?.customDetails ? (
-                        <p className="text-[10px] text-[#4A3F35] mt-0.5 line-clamp-2 italic" title={card.customDetails}>
-                          "{card.customDetails}"
-                        </p>
-                      ) : (
-                        <p className="text-[10px] text-[#8C7B6A] mt-0.5 truncate">
-                          {card?.keywords?.slice(0, 4).join(', ') || 'Clarity, Intuition, Alignment'}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="p-3 bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs flex items-start gap-2.5">
-              <Sparkles className="w-4 h-4 text-[#BC6C25] shrink-0 mt-0.5" />
-              <div className="text-xs text-[#4A3F35]">
-                <span className="font-bold text-[#2A2118]">
-                  Dynamic AI Oracle Draw:
-                </span>{' '}
-                No cards are fixed here. When you click <span className="font-semibold text-[#1F1914]">Generate Sacred Reading</span>, the AI Oracle will intuitively select and draw 3 sacred Tarot cards matching your querent's question and energy, and they will automatically populate here.
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                { pos: 'Position 01', label: 'Current Energy', desc: 'Intuitively drawn by AI' },
-                { pos: 'Position 02', label: 'The Blockage', desc: 'Intuitively drawn by AI' },
-                { pos: 'Position 03', label: 'Path Forward', desc: 'Intuitively drawn by AI' },
-              ].map((slot, idx) => (
-                <div
-                  key={idx}
-                  className="p-3.5 bg-[#FCFAF7] border border-dashed border-[#D8CEBE] rounded-xs flex items-center gap-3.5"
-                >
-                  <div className="w-11 h-16 rounded overflow-hidden border border-[#D8CEBE] shrink-0 bg-[#382E26] shadow-xs flex flex-col items-center justify-center text-center p-1 text-[#E0D7CC]">
-                    <Sparkles className="w-3.5 h-3.5 text-[#D4A373] animate-pulse" />
-                    <span className="text-[7px] uppercase tracking-widest font-mono font-bold mt-1 text-[#D4A373]">
-                      Tarot
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {PDF_THEME_LIST.map((theme) => {
+            const isSelected = (inputs.pdfTheme || 'parchment') === theme.id;
+            return (
+              <button
+                key={theme.id}
+                type="button"
+                onClick={() => onUpdateInputs({ pdfTheme: theme.id })}
+                className={`p-3.5 rounded-sm border text-left transition-all relative flex flex-col justify-between cursor-pointer group ${
+                  isSelected
+                    ? 'border-[#BC6C25] bg-[#FCFAF7] shadow-sm ring-1 ring-[#BC6C25]'
+                    : 'border-[#E0D7CC] bg-[#FAF8F5] hover:border-[#BC6C25]/50 hover:bg-white'
+                }`}
+              >
+                {/* Top Row: Title & Badge */}
+                <div>
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <span className="font-serif font-bold text-xs text-[#1F1914] leading-snug group-hover:text-[#BC6C25] transition-colors">
+                      {theme.name}
                     </span>
+                    {isSelected && (
+                      <span className="w-4 h-4 rounded-full bg-[#BC6C25] text-white flex items-center justify-center shrink-0">
+                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                      </span>
+                    )}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[9px] uppercase tracking-wider font-bold text-[#8C7B6A]">
-                      Card {idx + 1} · {slot.pos}
-                    </div>
-                    <p className="font-serif font-bold text-sm text-[#4A3F35]">
-                      {slot.label}
-                    </p>
-                    <p className="text-[10px] text-[#BC6C25] font-medium flex items-center gap-1 mt-0.5">
-                      <Sparkles className="w-2.5 h-2.5" />
-                      {slot.desc}
-                    </p>
+                  <p className="text-[10px] font-sans uppercase tracking-wider text-[#BC6C25] font-semibold mb-1.5">
+                    {theme.subtitle}
+                  </p>
+                  <p className="text-[11px] text-[#6B5E51] font-sans leading-relaxed line-clamp-2 mb-3">
+                    {theme.description}
+                  </p>
+                </div>
+
+                {/* Bottom Row: Palette Swatch Preview */}
+                <div className="pt-2 border-t border-[#E8E1D5] flex items-center justify-between text-[10px] text-[#8C7B6A]">
+                  <span className="italic font-serif">{theme.decorations.dividerSymbol} {theme.category.split(' ')[0]}</span>
+                  <div className="flex items-center gap-1.5" title="Theme Palette">
+                    <div
+                      className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-2xs"
+                      style={{ backgroundColor: theme.swatch.bg }}
+                    />
+                    <div
+                      className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-2xs"
+                      style={{ backgroundColor: theme.swatch.primary }}
+                    />
+                    <div
+                      className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-2xs"
+                      style={{ backgroundColor: theme.swatch.accent }}
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
-          </>
-        )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* 6. Submit Button */}
+      {/* 8. Generate Reading Action Button */}
       <div className="pt-2">
         <button
           type="submit"
-          disabled={!isFormValid || isLoading}
+          disabled={isLoading}
           className={`w-full py-4 px-6 rounded-sm font-serif font-bold text-sm sm:text-base uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-md cursor-pointer ${
-            isFormValid && !isLoading
+            !isLoading
               ? 'bg-[#1F1914] hover:bg-[#382E26] text-white ring-2 ring-[#BC6C25]/40 hover:ring-[#BC6C25]'
               : 'bg-[#C4B6A4]/40 text-[#8C7B6A] cursor-not-allowed border border-[#E0D7CC]'
           }`}
@@ -661,7 +432,7 @@ export const QuerentIntakeForm: React.FC<QuerentIntakeFormProps> = ({
             <>
               <Sparkles className="w-5 h-5 text-[#D4A373]" />
               <span>
-                Generate Complete Reading ({activeTier.toUpperCase()})
+                Generate {activeTier.toUpperCase()} Reading ({activeTier === 'standard' ? '15 Pages' : activeTier === 'detailed' ? '25 Pages' : '32 Pages'})
               </span>
               <ArrowRight className="w-4 h-4 text-[#D4A373]" />
             </>

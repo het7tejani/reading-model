@@ -42,6 +42,13 @@ export interface CategoryCustomData {
 
 export type ReadingTier = 'standard' | 'detailed' | 'premium';
 
+export type PdfThemeId =
+  | 'parchment'
+  | 'midnight'
+  | 'botanical'
+  | 'amethyst'
+  | 'minimalist';
+
 export interface SectionDefinition {
   id: string;
   key: string;
@@ -66,6 +73,7 @@ export interface ReadingInputs {
   question: string;
   topic: string;
   shopName?: string; // Shop / Studio name for PDF header & branding
+  pdfTheme?: PdfThemeId; // Visual theme and layout style for PDF generation
   cards: TarotCard[];
   categoryData?: CategoryCustomData;
   customSections?: string[]; // IDs of explicitly enabled sections
@@ -95,6 +103,7 @@ export interface StoredReading {
     question: string;
     topic: string;
     shopName?: string;
+    pdfTheme?: PdfThemeId;
     cardNames: [string, string, string];
   };
   lifePath: number;

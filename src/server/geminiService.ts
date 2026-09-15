@@ -102,17 +102,20 @@ export async function generateReading(payload: ReadingRequestPayload) {
   const effectiveQuestion = (question || "").trim() || `What is the highest truth, hidden blockage, and sovereign path forward for ${safeTopicTitle}?`;
   const effectiveAge = age || "Adult";
 
-  // 1. Resolve Tarot Cards: Check if querent explicitly specified cards in the prompt text
-  const combinedPromptText = `${payload.clientDetails || ''}\n${payload.agenda || ''}\n${problem || ''}\n${question || ''}`;
-  const extracted = extractTarotCardsFromText(combinedPromptText);
-  const hasProvidedCards = Boolean(extracted.detectedFromPrompt && extracted.cards && extracted.cards.length >= 3);
-  let resolvedCards: any[] = hasProvidedCards
-    ? extracted.cards!
-    : (cards && Array.isArray(cards) && cards.length >= 3 && cards.some((c) => Boolean(c?.customDetails)))
-    ? cards
-    : [];
+  // 1. Resolve Tarot Cards: Check if querent explicitly specified cards in the payload or prompt text
+  let resolvedCards: any[] = [];
+  if (cards && Array.isArray(cards) && cards.length >= 3 && cards.every((c) => Boolean(c?.name && c.name.trim().length > 0))) {
+    resolvedCards = cards;
+  } else {
+    const combinedPromptText = `${payload.clientDetails || ''}\n${payload.agenda || ''}\n${problem || ''}\n${question || ''}`;
+    const extracted = extractTarotCardsFromText(combinedPromptText);
+    if (extracted.detectedFromPrompt && extracted.cards && extracted.cards.length >= 3) {
+      resolvedCards = extracted.cards;
+    }
+  }
 
-  const rawCards = resolvedCards.length >= 3
+  const hasProvidedCards = resolvedCards.length >= 3;
+  const rawCards = hasProvidedCards
     ? resolvedCards
     : autoDrawSacredCards(safeTopicTitle, effectiveProblem);
 
@@ -144,7 +147,9 @@ export async function generateReading(payload: ReadingRequestPayload) {
   const triangulation = performCrossSystemTriangulation(safeTopicTitle, problem, question, card1.element || 'Water', Number(lpNumber) || 1);
   const temporalAnchor = calculateDynamicTemporalAnchor(card1, card2, card3);
 
-  const mainHeadline = matchedTopic
+  const mainHeadline = (topic && topic.trim().length > 0)
+    ? topic.trim()
+    : matchedTopic
     ? matchedTopic.headline
     : generatedModuleTitle.toUpperCase() || safeTopicTitle.toUpperCase() || "SACRED TAROT & NUMEROLOGY ORACLE";
 
@@ -152,12 +157,13 @@ export async function generateReading(payload: ReadingRequestPayload) {
   const topicId = matchedTopic?.id || (typeof topic === 'number' ? topic : 1);
   const categorySpec = getCategorySpecByTopic(topicId);
 
-  // Build category custom context details and ensure customQuestions are populated
+  // Build category custom context details
   let categoryContextStr = "";
   const catData = { ...(categoryData || {}) };
 
-  // If customQuestions is empty, populate from categorySpec suggestedQuestions or customFields defaults
-  if ((!catData.customQuestions || !Array.isArray(catData.customQuestions) || catData.customQuestions.length === 0)) {
+  // Only inject suggestedQuestions if user DID NOT provide their own question/agenda, and customQuestions wasn't explicitly supplied
+  const hasUserSpecificQuestion = Boolean((question && question.trim().length > 5) || (payload.agenda && payload.agenda.trim().length > 5));
+  if (!hasUserSpecificQuestion && (!catData.customQuestions || !Array.isArray(catData.customQuestions) || catData.customQuestions.length === 0)) {
     if (categorySpec?.suggestedQuestions && categorySpec.suggestedQuestions.length > 0) {
       catData.customQuestions = [...categorySpec.suggestedQuestions];
     } else if (categorySpec?.customFields) {
@@ -291,9 +297,11 @@ export async function generateReading(payload: ReadingRequestPayload) {
       }
 
       if (text) {
-        // Automatically consider and extract the cards which the AI gave as output
+        // Preserve user-provided cards if supplied; otherwise extract channeled cards from AI output
         const outputCards = extractTarotCardsFromText(text);
-        const finalCards = (outputCards.cards && outputCards.cards.length >= 3)
+        const finalCards = hasProvidedCards
+          ? [card1, card2, card3]
+          : (outputCards.cards && outputCards.cards.length >= 3)
           ? outputCards.cards
           : [card1, card2, card3];
 

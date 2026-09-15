@@ -1,5 +1,6 @@
 import { generateReading as generateGeminiReading, ReadingRequestPayload } from "./geminiService.ts";
 import { buildDaisySystemInstruction, buildDaisyUserPrompt } from "./daisyPrompt.ts";
+import { extractTarotCardsFromText, autoDrawSacredCards } from "../utils/clientDataParser.ts";
 
 /**
  * Resolves Luna 5.6 / OpenAI-compatible API Key
@@ -140,30 +141,42 @@ export async function generateLunaReading(payload: LunaReadingRequestPayload) {
   const baseUrl = getLunaApiBaseUrl(payload.lunaBaseUrl);
   const modelName = getLunaModelName(payload.lunaModelName);
 
-  const clientName = payload.name?.trim() || "Valued Client";
-  const clientDetails = payload.clientDetails || payload.problem || "Individual seeking strategic guidance, clarity, and sovereign action steps.";
-  const agenda = payload.agenda || payload.question || "Core objectives, current challenges, key insights, and actionable next steps.";
+  const clientName = payload.name?.trim() || "Querent";
+  const effectiveProblem = payload.problem?.trim() || payload.clientDetails?.trim() || "Seeking intuitive clarity, domain insight, and empowered breakthrough.";
+  const effectiveQuestion = payload.question?.trim() || payload.agenda?.trim() || "What is the highest truth and sovereign path forward?";
   const tier = payload.tier || "detailed";
-  const topic = payload.topic || "Strategic Roadmap & Life Direction";
+  const topic = payload.topic?.trim() || "Intuitive Tarot & Soul Path Reading";
   const requestedTier = ((payload.tier || "detailed").toUpperCase()) as "STANDARD" | "DETAILED" | "PREMIUM";
 
-  const cards = payload.cards && Array.isArray(payload.cards) && payload.cards.length >= 3 ? payload.cards : [
-    { name: "The Star", keywords: ["Hope", "Healing", "Inspiration"] },
-    { name: "Eight of Swords", keywords: ["Restriction", "Overthinking", "Shadow"] },
-    { name: "The Sun", keywords: ["Joy", "Vitality", "Radiance", "Clarity"] },
-  ];
+  // Resolve Tarot Cards
+  let resolvedCards: any[] = [];
+  if (payload.cards && Array.isArray(payload.cards) && payload.cards.length >= 3 && payload.cards.every((c) => Boolean(c?.name && c.name.trim().length > 0))) {
+    resolvedCards = payload.cards;
+  } else {
+    const combined = `${payload.clientDetails || ''}\n${payload.agenda || ''}\n${payload.problem || ''}\n${payload.question || ''}`;
+    const extracted = extractTarotCardsFromText(combined);
+    if (extracted.detectedFromPrompt && extracted.cards && extracted.cards.length >= 3) {
+      resolvedCards = extracted.cards;
+    }
+  }
 
-  const systemInstruction = buildDaisySystemInstruction(clientName, cards, payload.shopName);
+  const hasProvidedCards = resolvedCards.length >= 3;
+  const cards = hasProvidedCards
+    ? resolvedCards
+    : autoDrawSacredCards(topic, effectiveProblem);
+
+  const systemInstruction = buildDaisySystemInstruction(clientName, cards, payload.shopName, hasProvidedCards);
   const userPrompt = buildDaisyUserPrompt({
     listingTitle: topic,
     clientName,
     shopName: payload.shopName,
     age: payload.age,
     dob: payload.dob,
-    problem: payload.problem || clientDetails,
-    question: payload.question || agenda,
-    agenda: payload.agenda || agenda,
+    problem: effectiveProblem,
+    question: effectiveQuestion,
+    agenda: payload.agenda,
     readingLevel: requestedTier,
+    hasProvidedCards,
     cards,
   });
 
@@ -196,6 +209,7 @@ export async function generateLunaReading(payload: LunaReadingRequestPayload) {
             mathBreakdown: "Strategic Profile Coordinate",
             source: "luna-ai" as const,
             model: modelName,
+            cards: cards,
           };
         }
       } else {
@@ -212,9 +226,10 @@ export async function generateLunaReading(payload: LunaReadingRequestPayload) {
   const fallbackResult = await generateGeminiReading({
     ...payload,
     name: clientName,
-    problem: clientDetails,
-    question: agenda,
+    problem: effectiveProblem,
+    question: effectiveQuestion,
     topic: topic,
+    cards: cards,
   });
 
   return {

@@ -343,6 +343,43 @@ export function parseClientParagraph(text: string): ParsedClientData {
     name = parsedName.replace(/[,;].*$/, '').trim();
   }
 
+  // Check for phrases like "My name is [Name]" or "I am [Name]" if not already extracted
+  if (!name) {
+    const introNameMatch = raw.match(/\bmy\s*name\s*is\s+([A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*)?)/i);
+    if (introNameMatch && introNameMatch[1]) {
+      name = introNameMatch[1].trim();
+    } else {
+      const nonNameWords = new Set([
+        'feeling', 'seeking', 'looking', 'wondering', 'struggling', 'facing',
+        'experiencing', 'curious', 'hoping', 'ready', 'trying', 'thinking',
+        'asking', 'going', 'having', 'planning', 'afraid', 'scared', 'worried'
+      ]);
+      const amMatch = raw.match(/\b(?:i\s*am|i'm)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/);
+      if (amMatch && amMatch[1] && !nonNameWords.has(amMatch[1].toLowerCase().split(' ')[0])) {
+        name = amMatch[1].trim();
+      }
+    }
+  }
+
+  // Fallback heuristic: If name is still empty, inspect line by line or comma separation
+  if (!name) {
+    const firstLine = raw.split(/[\n,]+/)[0]?.trim() || '';
+    if (
+      firstLine &&
+      !firstLine.includes(':') &&
+      !firstLine.includes('-') &&
+      !firstLine.includes('?') &&
+      firstLine.split(/\s+/).length <= 4 &&
+      !/\b(want|need|feel|like|will|can|should|help|how|what|why|when|where)\b/i.test(firstLine)
+    ) {
+      name = firstLine.replace(/^(?:my\s*name\s*is|i\s*am|i'm)\s+/i, '').trim();
+    }
+  }
+
+  if (name) {
+    name = name.replace(/^(?:my\s*name\s*is|i\s*am|i'm)\s+/i, '').replace(/[,;].*$/, '').trim();
+  }
+
   // 2. Parse DOB (Date of birth)
   const parsedDob = extractField(['dob', 'birthdate', 'birth\\s*date', 'birthday', 'date\\s*of\\s*birth', 'born']);
   if (parsedDob && !/^(none|na|n\/a|no|nil|unknown|-)$/i.test(parsedDob)) {
@@ -431,22 +468,29 @@ export function parseClientParagraph(text: string): ParsedClientData {
       .trim();
   }
 
-  // Fallback heuristic: If name or problem is still empty, inspect line by line or comma separation
-  if (!name && !problem && !question) {
-    const lines = raw.split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
-    if (lines.length >= 1 && !lines[0].includes(':') && !lines[0].includes('-')) {
-      name = lines[0];
-    }
-    if (lines.length >= 2 && /^\d+$/.test(lines[1])) {
-      age = lines[1];
-    }
-  }
-
   // Check if any sentence ends with a question mark if question is not found
   if (!question) {
     const questionSentence = raw.match(/([A-Z][^\.!\?]*\?)/);
     if (questionSentence && questionSentence[1]) {
       question = questionSentence[1].trim();
+    }
+  }
+
+  // If problem is still empty, extract narrative sentences that are not the question or pure labels
+  if (!problem && raw.length > 5) {
+    const sentences = raw.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+    const nonQuestionSentences = sentences.filter((s) => !s.endsWith('?') && s.length > 8);
+    if (nonQuestionSentences.length > 0) {
+      const narrative = nonQuestionSentences.filter((s) => {
+        return !/^(?:my\s*name\s*is|name\b|client\b|querent\b|dob\b|age\b|born\b|birthday\b)/i.test(s) &&
+               !/^(?:[A-Z][a-z]+\s*,\s*\d{1,3})/i.test(s);
+      });
+      if (narrative.length > 0) {
+        problem = narrative.join(' ').replace(/\b(?:born|birthday|dob)\s+[^,;.]+/gi, '').replace(/^[,\s;.-]+|[,\s;.-]+$/g, '').trim();
+      }
+    }
+    if (!problem && question) {
+      problem = question.replace(/\?$/, '').trim();
     }
   }
 

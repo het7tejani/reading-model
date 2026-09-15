@@ -14,31 +14,24 @@ import { generateTarotNumerologyReadingMarkdown } from './utils/fallbackGenerato
 import { executeReading } from './utils/geminiClient';
 import { getCategorySpecByTopic } from './data/categoryConfig';
 import { getTopicByTitleOrId } from './data/readingTopics';
-import { extractTarotCardsFromText } from './utils/clientDataParser';
+import { extractTarotCardsFromText, parseClientParagraph } from './utils/clientDataParser';
 import { Sparkles, AlertCircle, Wand2, Key } from 'lucide-react';
 
 const STORAGE_KEY = 'tarot_numerology_readings_history_v1';
 const API_KEY_STORAGE = 'gemini_user_api_key_v1';
 
-const DEFAULT_TITLE =
-  'Ancestral Psychic Reading | Spirit Guide Message, Tarot Insights (PDF)';
-const DEFAULT_CLIENT_DETAILS =
-  'Calida anderson birthday may 21, 1982. I want to know what my ancestors want me to know like mom Georgette anderson and others';
-
 const EMPTY_INPUTS: ReadingInputs = {
-  name: 'Calida Anderson',
-  age: '42',
-  dob: '05/21/1982',
-  problem:
-    'I want to know what my ancestors want me to know like mom Georgette anderson and others',
-  question:
-    'What do my ancestors want me to know, especially Mom Georgette Anderson and others?',
-  topic: DEFAULT_TITLE,
-  clientDetails: DEFAULT_CLIENT_DETAILS,
+  name: '',
+  age: '',
+  dob: '',
+  problem: '',
+  question: '',
+  topic: '',
+  clientDetails: '',
   tier: 'detailed',
   agenda: '',
   shopName: '',
-  cards: [], // No fixed cards - AI will draw them dynamically based on querent energy, or prompt can provide them
+  cards: [],
 };
 
 export default function App() {
@@ -142,6 +135,17 @@ export default function App() {
   };
 
   const handleGenerateReading = async () => {
+    const rawDetails = (inputs.clientDetails || '').trim();
+    const parsed = rawDetails ? parseClientParagraph(rawDetails) : null;
+
+    const rawName = (inputs.name?.trim() || parsed?.name?.trim() || '').trim();
+    if (!rawName && !rawDetails) {
+      setErrorMessage('Please enter the Querent / Client Details to begin your reading.');
+      return;
+    }
+
+    const finalName = rawName || 'Querent';
+
     setIsLoading(true);
     setErrorMessage(null);
     setIsSaved(false);
@@ -153,28 +157,38 @@ export default function App() {
       const savedLunaUrl = localStorage.getItem('luna_base_url_v1') || '';
       const savedLunaModel = localStorage.getItem('luna_model_name_v1') || '';
 
+      const userProblem = inputs.problem?.trim() || parsed?.problem?.trim() || rawDetails || '';
+      const userQuestion = inputs.question?.trim() || parsed?.question?.trim() || inputs.agenda?.trim() || '';
+      const userTopic = inputs.topic?.trim() || 'Intuitive Tarot & Soul Path Reading';
+      const userAge = inputs.age?.trim() || parsed?.age?.trim() || undefined;
+      const userDob = inputs.dob?.trim() || parsed?.dob?.trim() || undefined;
+
+      const validCards = (inputs.cards || [])
+        .filter((c) => Boolean(c?.name && c.name.trim().length > 0))
+        .map((c) => ({
+          name: c.name.trim(),
+          arcana: c.arcana,
+          element: c.element,
+          archetype: c.archetype,
+          keywords: c.keywords,
+          customDetails: c.customDetails,
+        }));
+
       const result = await executeReading({
-        name: inputs.name,
-        age: inputs.age,
-        dob: inputs.dob,
-        clientDetails: inputs.clientDetails || inputs.problem,
-        agenda: inputs.agenda || inputs.question,
+        name: finalName,
+        age: userAge,
+        dob: userDob,
+        clientDetails: userProblem || undefined,
+        agenda: userQuestion || undefined,
         tier: inputs.tier || 'detailed',
-        shopName: inputs.shopName,
-        problem: inputs.problem || inputs.clientDetails,
-        question: inputs.question || inputs.agenda,
-        topic: inputs.topic || inputs.agenda || 'Strategic Consultation',
+        shopName: inputs.shopName?.trim() || undefined,
+        problem: userProblem || undefined,
+        question: userQuestion || undefined,
+        topic: userTopic,
         lunaApiKey: savedLunaKey || undefined,
         lunaBaseUrl: savedLunaUrl || undefined,
         lunaModelName: savedLunaModel || undefined,
-        cards: inputs.cards.map((c) => ({
-          name: c?.name || 'The Star',
-          arcana: c?.arcana,
-          element: c?.element,
-          archetype: c?.archetype,
-          keywords: c?.keywords,
-          customDetails: c?.customDetails,
-        })),
+        cards: validCards,
         categoryData: inputs.categoryData,
         userApiKey: customApiKey || viteKey || savedLunaKey || undefined,
       });
@@ -186,16 +200,19 @@ export default function App() {
           setGenerationModel(result.model);
         }
 
-        // Automatically adopt the cards which the AI gave as output
-        const outputCards = (result.cards && result.cards.length >= 3)
-          ? { cards: result.cards }
-          : extractTarotCardsFromText(result.markdown);
+        // Only adopt AI output cards if user did not pre-select/provide cards
+        const userProvidedCards = validCards.length >= 3;
+        if (!userProvidedCards) {
+          const outputCards = (result.cards && result.cards.length >= 3)
+            ? { cards: result.cards }
+            : extractTarotCardsFromText(result.markdown);
 
-        if (outputCards.cards && outputCards.cards.length >= 3) {
-          setInputs((prev) => ({
-            ...prev,
-            cards: outputCards.cards!,
-          }));
+          if (outputCards.cards && outputCards.cards.length >= 3) {
+            setInputs((prev) => ({
+              ...prev,
+              cards: outputCards.cards!,
+            }));
+          }
         }
       } else {
         throw new Error('No markdown content received from generation engine');
@@ -211,7 +228,7 @@ export default function App() {
       setMarkdownResult(fallbackMarkdown);
       setGenerationSource('algorithmic');
       const fallbackCards = extractTarotCardsFromText(fallbackMarkdown);
-      if (fallbackCards.cards && fallbackCards.cards.length >= 3) {
+      if (fallbackCards.cards && fallbackCards.cards.length >= 3 && (!inputs.cards || inputs.cards.length < 3)) {
         setInputs((prev) => ({
           ...prev,
           cards: fallbackCards.cards!,

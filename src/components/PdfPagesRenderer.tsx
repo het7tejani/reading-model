@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { ReadingInputs, ReadingTier, TarotCard } from '../types';
+import { ReadingInputs, ReadingTier, TarotCard, PdfThemeId } from '../types';
+import { getPdfTheme } from '../data/pdfThemes';
 import { calculateLifePath, reduceToSingleDigit, LIFE_PATH_ARCHETYPES } from '../utils/numerology';
 import { parseReadingMarkdown, cleanHeadingText, cleanMarkdownText, parseTextAlignment, renderTextWithLineBreaks } from '../utils/readingParser';
 import { getTarotCardImageUrl } from '../utils/tarotImageMapper';
@@ -44,6 +45,7 @@ interface PdfPagesRendererProps {
   customTemplatePages?: string[] | null;
   onTotalPagesCalculated?: (count: number) => void;
   overrideTier?: ReadingTier;
+  overrideTheme?: PdfThemeId;
   selectedSectionCodes?: string[];
 }
 
@@ -58,8 +60,11 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
   markdown,
   onTotalPagesCalculated,
   overrideTier,
+  overrideTheme,
 }) => {
   const activeTier: ReadingTier = overrideTier || inputs.tier || 'detailed';
+  const activeThemeId: PdfThemeId = overrideTheme || inputs.pdfTheme || 'parchment';
+  const themeConfig = getPdfTheme(activeThemeId);
   const hasDob = Boolean(inputs.dob && inputs.dob.trim().length > 3);
 
   const safeTopic = cleanTopicTitle(inputs.topic || 'Future Direction & Soul Purpose');
@@ -309,17 +314,17 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
   const renderCover = (pageNumber: number, totalPages: number) => (
     <div
       className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between items-center z-10 text-center"
-      style={{ fontFamily: "'Times New Roman', Times, serif" }}
+      style={{ fontFamily: "var(--pdf-font-body, 'EB Garamond', Georgia, serif)" }}
     >
       <div className="space-y-2 pt-2">
         <h1
-          className="text-[26pt] font-bold tracking-tight text-[#1F1914] uppercase leading-tight"
-          style={{ fontFamily: "'Montserrat', sans-serif" }}
+          className="text-[26pt] font-bold tracking-tight text-[#1F1914] uppercase leading-tight pdf-display-title"
+          style={{ fontFamily: "var(--pdf-font-display, 'Cinzel Decorative', 'Cinzel', serif)" }}
         >
           {effectiveShopName}
         </h1>
         <PageHeadingDivider className="my-2.5" />
-        <p className="text-[12pt] italic text-[#4A3F35]">
+        <p className="text-[12pt] italic text-[#4A3F35]" style={{ fontFamily: "var(--pdf-font-accent, 'Cormorant Garamond', serif)" }}>
           Intuitive Tarot · Cosmic Alchemy · Soul Blueprint Channeling
         </p>
       </div>
@@ -332,11 +337,11 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         <div className="border-t border-b border-[#D8CEBE] py-4 space-y-1.5">
           <h2
             className="text-[22pt] font-bold text-[#1F1914] leading-tight uppercase tracking-wider"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
+            style={{ fontFamily: "var(--pdf-font-heading, 'Cinzel', serif)" }}
           >
             SACRED TAROT & SPIRITUAL GUIDANCE
           </h2>
-          <p className="text-[12pt] text-[#6B5E51] italic">
+          <p className="text-[12pt] text-[#6B5E51] italic" style={{ fontFamily: "var(--pdf-font-accent, 'Cormorant Garamond', serif)" }}>
             DIVINE INTUITIVE TRANSMISSION · {activeTier.toUpperCase()} EDITION
           </p>
         </div>
@@ -383,17 +388,17 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     return (
       <div
         className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between items-center z-10"
-        style={{ fontFamily: "'Times New Roman', Times, serif" }}
+        style={{ fontFamily: "var(--pdf-font-body, 'EB Garamond', Georgia, serif)" }}
       >
         <div className="text-center space-y-1.5 pt-2">
           <h1
             className="text-[24px] font-bold text-[#1F1914] uppercase tracking-wide"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
+            style={{ fontFamily: "var(--pdf-font-heading, 'Cinzel', serif)" }}
           >
             {title}
           </h1>
           <PageHeadingDivider className="my-2.5" />
-          <p className="text-[14px] italic text-[#4A3F35]">
+          <p className="text-[14px] italic text-[#4A3F35]" style={{ fontFamily: "var(--pdf-font-accent, 'Cormorant Garamond', serif)" }}>
             The foundational energetic triad anchoring your reading
           </p>
         </div>
@@ -418,12 +423,12 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                   />
                 </div>
               </div>
-              <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B5E51] font-semibold" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B5E51] font-semibold" style={{ fontFamily: "var(--pdf-font-heading, 'Cinzel', serif)" }}>
                 Present Vibration
               </span>
               <p
                 className="font-bold text-[14px] text-[#1F1914] leading-tight text-center"
-                style={{ fontFamily: "'Montserrat', sans-serif" }}
+                style={{ fontFamily: "var(--pdf-font-heading, 'Cinzel', serif)" }}
               >
                 {card1.name}
               </p>
@@ -443,12 +448,12 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                   />
                 </div>
               </div>
-              <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B5E51] font-semibold" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B5E51] font-semibold" style={{ fontFamily: "var(--pdf-font-heading, 'Cinzel', serif)" }}>
                 The Blockage
               </span>
               <p
                 className="font-bold text-[14px] text-[#1F1914] leading-tight text-center"
-                style={{ fontFamily: "'Montserrat', sans-serif" }}
+                style={{ fontFamily: "var(--pdf-font-heading, 'Cinzel', serif)" }}
               >
                 {card2.name}
               </p>
@@ -468,12 +473,12 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                   />
                 </div>
               </div>
-              <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B5E51] font-semibold" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B5E51] font-semibold" style={{ fontFamily: "var(--pdf-font-heading, 'Cinzel', serif)" }}>
                 Path Forward
               </span>
               <p
                 className="font-bold text-[14px] text-[#1F1914] leading-tight text-center"
-                style={{ fontFamily: "'Montserrat', sans-serif" }}
+                style={{ fontFamily: "var(--pdf-font-heading, 'Cinzel', serif)" }}
               >
                 {card3.name}
               </p>
@@ -497,7 +502,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
               <p
                 key={pIdx}
                 className={`text-[16px] text-[#1F1914] leading-[1.6] italic whitespace-pre-line ${alignClass}`}
-                style={{ fontFamily: "'Times New Roman', Times, serif" }}
+                style={{ fontFamily: "var(--pdf-font-body, 'EB Garamond', Georgia, serif)" }}
               >
                 {renderTextWithLineBreaks(cleanParText)}
               </p>
@@ -532,17 +537,17 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
     return (
       <div
         className="absolute inset-0 pt-[72px] pb-[72px] px-[72px] flex flex-col justify-between items-center z-10 text-center"
-        style={{ fontFamily: "'Times New Roman', Times, serif" }}
+        style={{ fontFamily: "var(--pdf-font-body, 'EB Garamond', Georgia, serif)" }}
       >
         <div className="space-y-1.5 pt-2">
           <h1
             className="text-[24px] font-bold text-[#1F1914] leading-tight uppercase tracking-wide"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
+            style={{ fontFamily: "var(--pdf-font-heading, 'Cinzel', serif)" }}
           >
             {targetCard.name}
           </h1>
           <PageHeadingDivider className="my-2.5" />
-          <p className="text-[14px] italic text-[#4A3F35]">
+          <p className="text-[14px] italic text-[#4A3F35]" style={{ fontFamily: "var(--pdf-font-accent, 'Cormorant Garamond', serif)" }}>
             {roleLabel} · Element: {targetCard.element || 'Universal'} · Arcana: {targetCard.arcana || 'Major'}
           </p>
         </div>
@@ -565,7 +570,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         <div className="space-y-2 w-full max-w-xl pb-2">
           <span
             className="text-[12px] uppercase tracking-[0.24em] text-[#6B5E51] block font-semibold"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
+            style={{ fontFamily: "var(--pdf-font-heading, 'Cinzel', serif)" }}
           >
             Core Keywords & Frequencies
           </span>
@@ -575,7 +580,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
         </div>
 
         <div className="w-full border-t border-[#E8E1D5] pt-2 text-center">
-          <p className="text-[16px] italic text-[#1F1914]">
+          <p className="text-[16px] italic text-[#1F1914]" style={{ fontFamily: "var(--pdf-font-accent, 'Cormorant Garamond', serif)" }}>
             &ldquo;{quoteText}&rdquo;
           </p>
         </div>
@@ -642,7 +647,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                 )}
                 <p
                   className={`text-[20px] leading-[1.8] text-[#1F1914] whitespace-pre-line ${alignClass}`}
-                  style={{ fontFamily: "'Times New Roman', Times, serif" }}
+                  style={{ fontFamily: "var(--pdf-font-body, 'EB Garamond', Georgia, serif)" }}
                 >
                   {renderTextWithLineBreaks(cleanParText)}
                 </p>
@@ -687,13 +692,13 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           <div className="space-y-2 text-center w-full">
             <h2
               className="font-bold text-[20px] text-[#1F1914] text-center uppercase"
-              style={{ fontFamily: "'Montserrat', sans-serif" }}
+              style={{ fontFamily: "var(--pdf-font-heading, 'Cinzel', serif)" }}
             >
               ✦ Core Vibrational Essence ✦
             </h2>
             <p
               className={`text-[20px] leading-[1.8] text-[#1F1914] whitespace-pre-line ${alignClassP1}`}
-              style={{ fontFamily: "'Times New Roman', Times, serif" }}
+              style={{ fontFamily: "var(--pdf-font-body, 'EB Garamond', Georgia, serif)" }}
             >
               {renderTextWithLineBreaks(parsedP1.text)}
             </p>
@@ -704,13 +709,13 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           <div className="space-y-2 text-center w-full">
             <h2
               className="font-bold text-[20px] text-[#1F1914] text-center uppercase"
-              style={{ fontFamily: "'Montserrat', sans-serif" }}
+              style={{ fontFamily: "var(--pdf-font-heading, 'Cinzel', serif)" }}
             >
               ✦ Application to Your Situation ✦
             </h2>
             <p
               className={`text-[20px] leading-[1.8] text-[#1F1914] whitespace-pre-line ${alignClassP2}`}
-              style={{ fontFamily: "'Times New Roman', Times, serif" }}
+              style={{ fontFamily: "var(--pdf-font-body, 'EB Garamond', Georgia, serif)" }}
             >
               {renderTextWithLineBreaks(parsedP2.text)}
             </p>
@@ -791,7 +796,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
                   className={`text-[20px] leading-[1.8] text-[#1F1914] whitespace-pre-line ${alignClass} ${
                     isMantra ? 'italic font-medium' : ''
                   }`}
-                  style={{ fontFamily: "'Times New Roman', Times, serif" }}
+                  style={{ fontFamily: "var(--pdf-font-body, 'EB Garamond', Georgia, serif)" }}
                 >
                   {renderTextWithLineBreaks(cleanParText)}
                 </p>
@@ -803,13 +808,13 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
             <div className="space-y-1 text-center border-t border-[#E8E1D5] pt-3 max-w-lg mx-auto mt-2">
               <p
                 className="text-[11px] font-bold uppercase tracking-wider text-[#1F1914] text-center"
-                style={{ fontFamily: "'Montserrat', sans-serif" }}
+                style={{ fontFamily: "var(--pdf-font-heading, 'Cinzel', serif)" }}
               >
                 ✦ Sacred Divination Disclaimer ✦
               </p>
               <p
                 className="text-[11px] leading-relaxed text-[#6B5E51] text-center"
-                style={{ fontFamily: "'Times New Roman', Times, serif" }}
+                style={{ fontFamily: "var(--pdf-font-accent, 'Cormorant Garamond', serif)" }}
               >
                 Tarot, astrology, and numerology readings are offered solely for personal insight,
                 self-reflection, spiritual exploration, and entertainment purposes. Guidance
@@ -1016,7 +1021,7 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           <div className="border-t border-b border-[#D8CEBE] py-4 space-y-1.5">
             <h2
               className="text-[22pt] font-bold text-[#1F1914] leading-tight uppercase tracking-wider"
-              style={{ fontFamily: "'Montserrat', sans-serif" }}
+              style={{ fontFamily: "var(--pdf-font-heading, 'Cinzel', serif)" }}
             >
               SACRED TAROT & SPIRITUAL GUIDANCE
             </h2>
@@ -2140,14 +2145,16 @@ export const PdfPagesRenderer: React.FC<PdfPagesRendererProps> = ({
           <div
             key={pageDef.key || `pdf-page-${pageNum}`}
             id={`pdf-page-${pageNum}`}
-            className="pdf-page w-[794px] h-[1123px] relative bg-[#FAF7EE] text-[#1F1914] overflow-hidden shadow-2xl select-none"
-            style={{ fontFamily: "'Times New Roman', Times, serif" }}
+            data-theme={activeThemeId}
+            className={`pdf-page pdf-theme-${activeThemeId} w-[794px] h-[1123px] relative overflow-hidden shadow-2xl select-none`}
+            style={{ fontFamily: themeConfig.typography.bodyFont }}
           >
             <UniversalPageDecorations
               pageNumber={pageNum}
               totalPages={dynamicTotalPages}
               headerTitle={pageDef.headerTitle}
               brandName={effectiveShopName}
+              themeId={activeThemeId}
             />
             {pageDef.render(pageNum, dynamicTotalPages)}
           </div>

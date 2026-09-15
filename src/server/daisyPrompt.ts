@@ -319,6 +319,13 @@ ${readingLevel}
 
 ${tarotCardsSection}
 
-Now create the complete personalized PDF content page by page. Speak directly ${shopName ? `representing ${shopName}` : 'as an intuitive spiritual guide'} writing uniquely to ${clientName}. Follow the correct page range for ${readingLevel}. Ensure EVERY PAGE CONTENT IS BETWEEN 60 AND 130 WORDS (except Card Art visual introduction pages, which are 30–50 words). Do not mention that you are an AI or explain your process.
+Now create the complete personalized PDF content page by page. Speak directly ${shopName ? `representing ${shopName}` : 'as an intuitive spiritual guide'} writing uniquely to ${clientName}. Follow the correct page range for ${readingLevel}. Ensure EVERY PAGE CONTENT IS BETWEEN 60 AND 130 WORDS (except Card Art visual introduction pages, which are 30–50 words).
+
+CRITICAL DYNAMIC INPUT MANDATE:
+You must strictly base all interpretations, personal letters, card readings, and guidance on ${clientName}'s EXACT situation and question provided above:
+- Client Name: ${clientName}
+- Situation / Problem: ${problem || 'Seeking intuitive clarity and direction'}
+- Question / Inquiry: ${question || 'What is the highest guidance for my path?'}
+Do NOT inject unrequested names, default scenarios, or ancestral spirits (such as 'Calida', 'Georgette', or generic deceased family members) unless explicitly stated in the client details above. Every single page must directly resonate with ${clientName}'s actual inquiry. Do not mention that you are an AI or explain your process.
 Start directly with: PAGE 1 — [TITLE]`;
 }
