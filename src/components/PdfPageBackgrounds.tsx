@@ -1810,56 +1810,19 @@ export const UniversalPageDecorations: React.FC<{
         </div>
       )}
 
-      {/* 7. Clean Thematic Top Header Bar - Suppressed on Page 1 */}
+      {/* 7. Bottom Center Shop Name - subtle, small text, without footer dividing line */}
       {!isCover && (
         <div
-          className="absolute top-[34px] left-[46px] right-[46px] flex items-center justify-between text-[8.5pt] tracking-[0.28em] uppercase pb-2 z-10 border-b"
+          className="absolute bottom-[34px] inset-x-0 flex items-center justify-center text-center z-10 pointer-events-none select-none"
           style={{
-            borderColor: theme.colors.headerBorder,
-            color: theme.colors.headerText,
-          }}
-        >
-          <div className="flex items-center gap-2 max-w-[300px] truncate">
-            <span className="text-[7pt] text-[var(--pdf-accent)]">✦</span>
-            <span
-              className="font-bold tracking-[0.24em] truncate"
-              style={{ fontFamily: theme.typography.headingFont }}
-            >
-              {effectiveBrandName}
-            </span>
-          </div>
-          <span
-            className="shrink min-w-0 max-w-[380px] truncate text-right font-medium tracking-[0.22em] opacity-90"
-            style={{ fontFamily: theme.typography.headingFont }}
-          >
-            {headerTitle}
-          </span>
-        </div>
-      )}
-
-      {/* 8. Clean Thematic Bottom Footer */}
-      {!isCover && (
-        <div
-          className={`absolute bottom-[36px] left-[46px] ${isLastPage ? 'right-[112px]' : 'right-[46px]'} flex items-center justify-between text-[8pt] tracking-[0.24em] uppercase pt-2 z-10 border-t`}
-          style={{
-            borderColor: theme.colors.headerBorder,
             color: theme.colors.headerText,
           }}
         >
           <span
-            className="opacity-90 font-medium"
+            className="text-[7pt] tracking-[0.28em] uppercase opacity-70 font-medium"
             style={{ fontFamily: theme.typography.headingFont }}
           >
             {effectiveBrandName}
-          </span>
-          <div className="flex items-center gap-2 opacity-80 font-serif">
-            <span className="text-[8pt] text-[var(--pdf-accent)]">{theme.decorations.dividerSymbol}</span>
-            <span className="tracking-[0.2em] text-[7pt]">
-              FOLIO {pageNumber} OF {totalPages}
-            </span>
-          </div>
-          <span className="tracking-widest text-[7pt] opacity-80">
-            {theme.decorations.headerIcon} · {theme.name.toUpperCase()}
           </span>
         </div>
       )}

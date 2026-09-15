@@ -66,9 +66,9 @@ export const UniversalPageContainer: React.FC<UniversalPageContainerProps> = ({
         {children}
       </div>
 
-      {/* Bottom Center Footer / Anchor - only rendered when custom footerText provided, 'grounded in' removed */}
+      {/* Bottom Center Footer / Anchor - only rendered when custom footerText provided, without dividing line */}
       {footerText && !footerText.toLowerCase().includes('grounded in') ? (
-        <div className="w-full max-w-2xl mx-auto text-center border-t border-[#E8E1D5] pt-2">
+        <div className="w-full max-w-2xl mx-auto text-center pt-2">
           <p
             className="text-[12px] italic text-[#6B5E51]"
             style={{ fontFamily: "var(--pdf-font-accent, 'Cormorant Garamond', serif)" }}
