@@ -397,18 +397,20 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
 
         {/* Live Content Area: Either Live PDF Preview or In-Modal Content Editor */}
         {isEditingContent ? (
-          <div className="flex-1 overflow-y-auto p-4 bg-[#FAF7F2]">
-            <div className="max-w-4xl mx-auto">
-              <ReadingContentEditor
-                initialMarkdown={markdown}
-                onSave={(newMd) => {
-                  onUpdateMarkdown?.(newMd);
-                  setIsEditingContent(false);
-                }}
-                onCancel={() => setIsEditingContent(false)}
-                isModal={true}
-              />
-            </div>
+          <div className="flex-1 overflow-hidden p-2 sm:p-3 bg-[#FAF7F2] flex flex-col">
+            <ReadingContentEditor
+              initialMarkdown={markdown}
+              inputs={inputs}
+              onSave={(newMd) => {
+                onUpdateMarkdown?.(newMd);
+                setIsEditingContent(false);
+              }}
+              onLiveChange={(newMd) => {
+                onUpdateMarkdown?.(newMd);
+              }}
+              onCancel={() => setIsEditingContent(false)}
+              isModal={true}
+            />
           </div>
         ) : (
           /* Live Scrollable Pages View */

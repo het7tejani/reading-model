@@ -312,9 +312,13 @@ export const ReadingResultView: React.FC<ReadingResultViewProps> = ({
             <ReadingContentEditor
               initialMarkdown={markdown}
               originalAiMarkdown={originalAiMarkdown}
+              inputs={inputs}
               onSave={(newMd) => {
                 onUpdateMarkdown?.(newMd);
                 setIsEditingContent(false);
+              }}
+              onLiveChange={(newMd) => {
+                onUpdateMarkdown?.(newMd);
               }}
               onCancel={() => setIsEditingContent(false)}
               initialFocusedSectionId={focusedSectionId}

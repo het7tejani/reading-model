@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useDeferredValue, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Save,
@@ -26,10 +26,21 @@ import {
   AlignJustify,
   CornerDownLeft,
   Pilcrow,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Minimize2,
+  ChevronLeft,
+  ChevronRight,
+  Palette,
+  ExternalLink,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { cleanHeadingText, cleanMarkdownText, parsePageByPageOutput } from '../utils/readingParser';
+import { PdfPagesRenderer } from './PdfPagesRenderer';
+import { PDF_THEME_LIST, getPdfTheme } from '../data/pdfThemes';
+import { ReadingInputs, ReadingTier, PdfThemeId } from '../types';
 
 export interface EditableSection {
   id: string;
@@ -251,6 +262,8 @@ interface ReadingContentEditorProps {
   onCancel: () => void;
   initialFocusedSectionId?: string;
   isModal?: boolean;
+  inputs?: ReadingInputs;
+  onLiveChange?: (newMarkdown: string) => void;
 }
 
 export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
@@ -259,196 +272,268 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
   onSave,
   onCancel,
   initialFocusedSectionId,
-  isModal = false
+  isModal = false,
+  inputs,
+  onLiveChange,
 }) => {
-  const [editorTab, setEditorTab] = useState<'pages' | 'full' | 'split'>('pages');
   const [sections, setSections] = useState<EditableSection[]>(() =>
     parseMarkdownToEditableSections(initialMarkdown)
   );
   const [fullMarkdown, setFullMarkdown] = useState<string>(initialMarkdown);
+  const [editMode, setEditMode] = useState<'page' | 'full'>('page');
+  const [previewMode, setPreviewMode] = useState<'pdf' | 'illuminated'>('pdf');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [activeSectionId, setActiveSectionId] = useState<string | null>(
-    initialFocusedSectionId || (sections[0] ? sections[0].id : null)
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [selectedTheme, setSelectedTheme] = useState<PdfThemeId>(inputs?.pdfTheme || 'parchment');
+  const [zoomLevel, setZoomLevel] = useState<number>(75);
+
+  const [activeSectionId, setActiveSectionId] = useState<string>(
+    initialFocusedSectionId || (sections[0] ? sections[0].id : 'page-1')
   );
 
-  // Sync when sections change in pages mode (auto-cleaning any pasted HTML tags)
-  const handleSectionContentChange = (id: string, rawInput: string) => {
-    let newContent = rawInput;
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+  const activeTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Smooth deferred value of markdown for live preview to guarantee 60fps typing speed
+  const deferredMarkdown = useDeferredValue(fullMarkdown);
+
+  // Active section helper
+  const activeSection = useMemo(() => {
+    return sections.find((s) => s.id === activeSectionId) || sections[0] || null;
+  }, [sections, activeSectionId]);
+
+  const activePageIndex = useMemo(() => {
+    return sections.findIndex((s) => s.id === activeSectionId);
+  }, [sections, activeSectionId]);
+
+  // Fallback inputs if not provided
+  const effectiveInputs: ReadingInputs = useMemo(() => {
+    return (
+      inputs || {
+        name: 'Querent',
+        age: '33',
+        dob: '1990-05-15',
+        problem: 'Navigating life crossroads and seeking clarity',
+        question: 'What is my highest soul path?',
+        topic: 'Intuitive Soul Path',
+        tier: 'detailed',
+        cards: [],
+      }
+    );
+  }, [inputs]);
+
+  // Sync sections to full markdown and notify live change
+  const syncSectionsToFullMarkdown = (updatedSections: EditableSection[]) => {
+    const serialized = serializeSectionsToMarkdown(updatedSections);
+    setFullMarkdown(serialized);
+    onLiveChange?.(serialized);
+  };
+
+  // When editing content in Page mode
+  const handleActiveContentChange = (newContent: string) => {
+    let cleaned = newContent;
     let detectedAlign: 'left' | 'center' | 'right' | 'justify' | undefined;
 
-    // Automatically strip any HTML tags pasted by non-tech users
     if (
-      /<(?:div|p)[^>]*align=["'](left|center|right|justify)["']/i.test(newContent) ||
-      /<\/?(?:div|p|span)[^>]*>/i.test(newContent)
+      /<(?:div|p)[^>]*align=["'](left|center|right|justify)["']/i.test(cleaned) ||
+      /<\/?(?:div|p|span)[^>]*>/i.test(cleaned)
     ) {
-      detectedAlign = extractAlignmentFromText(newContent);
-      newContent = stripAllHtmlTags(newContent);
+      detectedAlign = extractAlignmentFromText(cleaned);
+      cleaned = stripAllHtmlTags(cleaned);
     }
 
-    setSections((prev) =>
-      prev.map((sec) =>
-        sec.id === id
+    setSections((prev) => {
+      const updated = prev.map((sec) =>
+        sec.id === activeSectionId
           ? {
               ...sec,
-              content: newContent,
+              content: cleaned,
               ...(detectedAlign ? { alignment: detectedAlign } : {}),
             }
           : sec
-      )
-    );
+      );
+      syncSectionsToFullMarkdown(updated);
+      return updated;
+    });
+
     setHasUnsavedChanges(true);
   };
 
-  const handleSectionTitleChange = (id: string, newTitle: string) => {
-    setSections((prev) =>
-      prev.map((sec) => (sec.id === id ? { ...sec, title: newTitle } : sec))
-    );
+  // When editing title in Page mode
+  const handleActiveTitleChange = (newTitle: string) => {
+    setSections((prev) => {
+      const updated = prev.map((sec) =>
+        sec.id === activeSectionId ? { ...sec, title: newTitle } : sec
+      );
+      syncSectionsToFullMarkdown(updated);
+      return updated;
+    });
     setHasUnsavedChanges(true);
   };
 
-  // Directly set alignment for a section visually without any HTML tags
-  const handleSetSectionAlignment = (
-    sectionId: string,
-    alignment: 'left' | 'center' | 'right' | 'justify'
-  ) => {
-    setSections((prev) =>
-      prev.map((sec) => (sec.id === sectionId ? { ...sec, alignment } : sec))
-    );
+  // Change alignment for active page
+  const handleSetActiveAlignment = (alignment: 'left' | 'center' | 'right' | 'justify') => {
+    setSections((prev) => {
+      const updated = prev.map((sec) =>
+        sec.id === activeSectionId ? { ...sec, alignment } : sec
+      );
+      syncSectionsToFullMarkdown(updated);
+      return updated;
+    });
     setHasUnsavedChanges(true);
   };
 
-  // Sync to full markdown whenever switching to full or split mode
-  const handleTabChange = (newTab: 'pages' | 'full' | 'split') => {
-    if (editorTab === 'pages' && (newTab === 'full' || newTab === 'split')) {
+  // Full Markdown direct edit
+  const handleFullMarkdownChange = (newVal: string) => {
+    setFullMarkdown(newVal);
+    onLiveChange?.(newVal);
+    setHasUnsavedChanges(true);
+  };
+
+  // When switching modes
+  const handleSwitchEditMode = (mode: 'page' | 'full') => {
+    if (mode === 'full') {
       setFullMarkdown(serializeSectionsToMarkdown(sections));
-    } else if ((editorTab === 'full' || editorTab === 'split') && newTab === 'pages') {
-      setSections(parseMarkdownToEditableSections(fullMarkdown));
+    } else {
+      const parsed = parseMarkdownToEditableSections(fullMarkdown);
+      setSections(parsed);
+      if (parsed.length > 0 && !parsed.some((s) => s.id === activeSectionId)) {
+        setActiveSectionId(parsed[0].id);
+      }
     }
-    setEditorTab(newTab);
+    setEditMode(mode);
   };
 
-  const handleFullMarkdownChange = (val: string) => {
-    setFullMarkdown(val);
-    setHasUnsavedChanges(true);
+  // Navigate pages
+  const handleSelectSection = (secId: string) => {
+    setActiveSectionId(secId);
+    const sec = sections.find((s) => s.id === secId);
+    if (sec?.pageNumber) {
+      scrollToPreviewPage(sec.pageNumber);
+    }
   };
 
-  // Clean all HTML tags across the entire reading in 1 click
-  const handleCleanAllHtmlTags = () => {
-    setFullMarkdown((prev) => stripAllHtmlTags(prev));
+  const handlePrevPage = () => {
+    if (activePageIndex > 0) {
+      const prev = sections[activePageIndex - 1];
+      handleSelectSection(prev.id);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (activePageIndex < sections.length - 1) {
+      const next = sections[activePageIndex + 1];
+      handleSelectSection(next.id);
+    }
+  };
+
+  // Scroll to a specific page inside the preview container
+  const scrollToPreviewPage = (pageNum: number) => {
+    if (!previewContainerRef.current) return;
+    const pageEl = previewContainerRef.current.querySelector(
+      `#pdf-page-${pageNum}`
+    ) as HTMLElement | null;
+    if (pageEl) {
+      pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Handle clicking a page inside the preview
+  const handlePreviewContainerClick = (e: React.MouseEvent) => {
+    const target = (e.target as HTMLElement).closest('[id^="pdf-page-"]');
+    if (target && target.id) {
+      const num = parseInt(target.id.replace('pdf-page-', ''), 10);
+      if (!isNaN(num)) {
+        const found = sections.find((s) => s.pageNumber === num);
+        if (found) {
+          setActiveSectionId(found.id);
+        }
+      }
+    }
+  };
+
+  // Insert token at cursor
+  const handleInsertToken = (tokenPrefix: string, tokenSuffix = '') => {
+    if (editMode === 'page') {
+      if (!activeTextareaRef.current || !activeSection) return;
+      const ta = activeTextareaRef.current;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const sel = activeSection.content.substring(start, end);
+      const rep = `${tokenPrefix}${sel || 'text'}${tokenSuffix}`;
+      const updated =
+        activeSection.content.substring(0, start) + rep + activeSection.content.substring(end);
+      handleActiveContentChange(updated);
+      setTimeout(() => {
+        ta.focus();
+        ta.setSelectionRange(
+          start + tokenPrefix.length,
+          start + tokenPrefix.length + (sel.length || 4)
+        );
+      }, 15);
+    } else {
+      const ta = document.getElementById('full-markdown-textarea') as HTMLTextAreaElement | null;
+      if (!ta) return;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const sel = fullMarkdown.substring(start, end);
+      const rep = `${tokenPrefix}${sel || 'text'}${tokenSuffix}`;
+      const updated = fullMarkdown.substring(0, start) + rep + fullMarkdown.substring(end);
+      handleFullMarkdownChange(updated);
+      setTimeout(() => {
+        ta.focus();
+        ta.setSelectionRange(
+          start + tokenPrefix.length,
+          start + tokenPrefix.length + (sel.length || 4)
+        );
+      }, 15);
+    }
+  };
+
+  // Insert line break or paragraph break
+  const handleInsertBreak = (type: 'newline' | 'paragraph' | 'br') => {
+    const breakStr = type === 'paragraph' ? '\n\n' : type === 'br' ? '<br />\n' : '\n';
+    if (editMode === 'page') {
+      if (!activeTextareaRef.current || !activeSection) return;
+      insertTextAtCursor(
+        activeTextareaRef.current,
+        activeSection.content,
+        breakStr,
+        handleActiveContentChange
+      );
+    } else {
+      const ta = document.getElementById('full-markdown-textarea') as HTMLTextAreaElement | null;
+      if (!ta) return;
+      insertTextAtCursor(ta, fullMarkdown, breakStr, handleFullMarkdownChange);
+    }
+  };
+
+  // Clean all HTML tags
+  const handleCleanAllHtml = () => {
+    const cleanedFull = stripAllHtmlTags(fullMarkdown);
+    setFullMarkdown(cleanedFull);
     setSections((prev) =>
-      prev.map((s) => {
-        const detectedAlign = extractAlignmentFromText(s.content) || s.alignment;
-        return {
-          ...s,
-          content: stripAllHtmlTags(s.content),
-          alignment: detectedAlign || 'center',
-        };
-      })
+      prev.map((s) => ({
+        ...s,
+        content: stripAllHtmlTags(s.content),
+      }))
     );
+    onLiveChange?.(cleanedFull);
     setHasUnsavedChanges(true);
   };
 
-  const hasRawHtmlTags =
+  const hasHtmlTags =
     /<\/?(?:div|p|span)[^>]*>/i.test(fullMarkdown) ||
     sections.some((s) => /<\/?(?:div|p|span)[^>]*>/i.test(s.content));
 
-  // Insert markdown helper tokens
-  const handleInsertToken = (tokenPrefix: string, tokenSuffix = '') => {
-    const textarea = document.getElementById('full-markdown-textarea') as HTMLTextAreaElement | null;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = fullMarkdown.substring(start, end);
-    const replacement = `${tokenPrefix}${selectedText || 'text'}${tokenSuffix}`;
-
-    const updated =
-      fullMarkdown.substring(0, start) + replacement + fullMarkdown.substring(end);
-    setFullMarkdown(updated);
-    setHasUnsavedChanges(true);
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(
-        start + tokenPrefix.length,
-        start + tokenPrefix.length + (selectedText.length || 4)
-      );
-    }, 10);
-  };
-
-  // Align text in full or split markdown textarea
-  const handleAlignFullMarkdown = (alignment: 'left' | 'center' | 'right' | 'justify') => {
-    const textarea = document.getElementById('full-markdown-textarea') as HTMLTextAreaElement | null;
-    if (!textarea) return;
-    applyTextAlignmentToTextarea(textarea, fullMarkdown, alignment, (newVal) => {
-      handleFullMarkdownChange(newVal);
-    });
-  };
-
-  // Universal top toolbar alignment handler
-  const handleTopToolbarAlign = (alignment: 'left' | 'center' | 'right' | 'justify') => {
-    if (editorTab === 'pages') {
-      const targetId = activeSectionId || (sections[0] ? sections[0].id : null);
-      if (targetId) {
-        handleSetSectionAlignment(targetId, alignment);
-      }
-    } else {
-      handleAlignFullMarkdown(alignment);
-    }
-  };
-
-  // Insert New Line / Line Break / Paragraph Break handler
-  const handleInsertNewLine = (
-    breakType: 'newline' | 'paragraph' | 'br' = 'newline',
-    targetSectionId?: string
-  ) => {
-    const breakString =
-      breakType === 'paragraph'
-        ? '\n\n'
-        : breakType === 'br'
-        ? '<br />\n'
-        : '\n';
-
-    if (editorTab === 'pages') {
-      const sectionId =
-        targetSectionId || activeSectionId || (sections[0] ? sections[0].id : null);
-      if (!sectionId) return;
-
-      const textarea = document.getElementById(
-        `section-textarea-${sectionId}`
-      ) as HTMLTextAreaElement | null;
-      const sec = sections.find((s) => s.id === sectionId);
-      if (!sec) return;
-
-      if (textarea) {
-        insertTextAtCursor(textarea, sec.content, breakString, (newContent) => {
-          handleSectionContentChange(sectionId, newContent);
-        });
-      } else {
-        handleSectionContentChange(sectionId, sec.content + breakString);
-      }
-    } else {
-      const textarea = document.getElementById(
-        'full-markdown-textarea'
-      ) as HTMLTextAreaElement | null;
-      if (textarea) {
-        insertTextAtCursor(textarea, fullMarkdown, breakString, (newContent) => {
-          handleFullMarkdownChange(newContent);
-        });
-      } else {
-        handleFullMarkdownChange(fullMarkdown + breakString);
-      }
-    }
-  };
-
   // Save handler
   const handleSave = () => {
-    let finalMarkdown = fullMarkdown;
-    if (editorTab === 'pages') {
-      finalMarkdown = serializeSectionsToMarkdown(sections);
+    let finalMd = fullMarkdown;
+    if (editMode === 'page') {
+      finalMd = serializeSectionsToMarkdown(sections);
     }
-    onSave(finalMarkdown);
+    onSave(finalMd);
     setHasUnsavedChanges(false);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2500);
@@ -457,37 +542,50 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
   // Reset to original
   const handleResetToOriginal = () => {
     if (!originalAiMarkdown) return;
-    const confirmReset = window.confirm(
-      'Are you sure you want to reset all edits back to the original AI generated reading?'
+    const ok = window.confirm(
+      'Are you sure you want to reset all edits back to the initial AI transmission?'
     );
-    if (!confirmReset) return;
+    if (!ok) return;
 
     setFullMarkdown(originalAiMarkdown);
-    setSections(parseMarkdownToEditableSections(originalAiMarkdown));
+    const parsed = parseMarkdownToEditableSections(originalAiMarkdown);
+    setSections(parsed);
+    if (parsed[0]) setActiveSectionId(parsed[0].id);
+    onLiveChange?.(originalAiMarkdown);
     setHasUnsavedChanges(true);
   };
 
-  const totalWords = countWords(
-    editorTab === 'pages' ? serializeSectionsToMarkdown(sections) : fullMarkdown
-  );
+  const currentWords = activeSection ? countWords(activeSection.content) : 0;
+  const isCardArt = activeSection
+    ? /visual|card\s+\d.*(keyword|visual|intro|artwork)/i.test(activeSection.title)
+    : false;
+  const idealWordRange = isCardArt ? '30–60 words' : '65–125 words';
 
   return (
     <div
-      className={`rounded-sm bg-white border border-[#E0D7CC] shadow-sm flex flex-col overflow-hidden ${
-        isModal ? 'h-full max-h-[88vh]' : 'my-4'
+      className={`rounded-sm bg-white border border-[#E0D7CC] shadow-md flex flex-col overflow-hidden transition-all duration-200 ${
+        isFullscreen
+          ? 'fixed inset-0 z-50 rounded-none border-none h-screen w-screen'
+          : isModal
+          ? 'h-full max-h-[90vh]'
+          : 'my-4 min-h-[780px]'
       }`}
     >
-      {/* Editor Header Bar */}
-      <div className="p-3.5 bg-[#FAF7F2] border-b border-[#E0D7CC] flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30">
+      {/* Top Header Bar: Studio Title, Unsaved Badge, Global Controls */}
+      <div className="px-4 py-3 bg-[#FAF7F2] border-b border-[#E0D7CC] flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[#4A3F35] text-white flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-[#4A3F35] text-white flex items-center justify-center shadow-xs">
             <Pencil className="w-4 h-4 text-[#D4A373]" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-serif italic font-bold text-base text-[#4A3F35]">
-                Edit Reading Content
+              <h3 className="font-serif italic font-bold text-base text-[#4A3F35] tracking-tight">
+                Live Reading Studio
               </h3>
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-[10px] font-bold uppercase tracking-wider font-mono">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Live Preview Synchronized
+              </span>
               {hasUnsavedChanges && (
                 <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold uppercase tracking-wider">
                   Unsaved Edits
@@ -500,72 +598,50 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
               )}
             </div>
             <p className="text-xs text-[#8C7B6A]">
-              Customize any page or paragraph. Changes immediately sync to the Illuminated view and PDF export.
+              Left pane edits content in real time • Right pane renders live authentic PDF folio
             </p>
           </div>
         </div>
 
-        {/* Editor Mode Tabs & Actions */}
+        {/* Action Buttons */}
         <div className="flex items-center flex-wrap gap-2">
-          {/* Mode Switcher */}
-          <div className="flex items-center bg-[#F2EDE8] p-0.5 rounded-xs border border-[#E0D7CC] text-xs">
-            <button
-              onClick={() => handleTabChange('pages')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-xs text-[11px] font-bold uppercase tracking-wider transition-all ${
-                editorTab === 'pages'
-                  ? 'bg-[#4A3F35] text-[#FCFAF7] shadow-xs'
-                  : 'text-[#8C7B6A] hover:text-[#4A3F35]'
-              }`}
-            >
-              <Layers className="w-3 h-3" />
-              Page-by-Page ({sections.length})
-            </button>
-            <button
-              onClick={() => handleTabChange('full')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-xs text-[11px] font-bold uppercase tracking-wider transition-all ${
-                editorTab === 'full'
-                  ? 'bg-[#4A3F35] text-[#FCFAF7] shadow-xs'
-                  : 'text-[#8C7B6A] hover:text-[#4A3F35]'
-              }`}
-            >
-              <FileText className="w-3 h-3" />
-              Full Markdown
-            </button>
-            <button
-              onClick={() => handleTabChange('split')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-xs text-[11px] font-bold uppercase tracking-wider transition-all ${
-                editorTab === 'split'
-                  ? 'bg-[#4A3F35] text-[#FCFAF7] shadow-xs'
-                  : 'text-[#8C7B6A] hover:text-[#4A3F35]'
-              }`}
-            >
-              <Columns className="w-3 h-3" />
-              Live Split
-            </button>
-          </div>
-
-          {/* Reset to Original if available */}
           {originalAiMarkdown && (
             <button
               onClick={handleResetToOriginal}
-              title="Reset reading back to initial AI output"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-xs bg-white hover:bg-[#F2EDE8] border border-[#E0D7CC] text-xs font-semibold text-[#8C7B6A] hover:text-[#4A3F35] transition-colors"
+              title="Reset reading back to initial AI generation"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xs bg-white hover:bg-[#F2EDE8] border border-[#E0D7CC] text-xs font-semibold text-[#8C7B6A] hover:text-[#4A3F35] transition-colors cursor-pointer"
             >
               <RotateCcw className="w-3 h-3" />
-              <span className="hidden md:inline">Reset</span>
+              <span className="hidden sm:inline">Reset</span>
             </button>
           )}
 
-          {/* Cancel */}
           <button
-            onClick={onCancel}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xs bg-white hover:bg-[#F2EDE8] border border-[#E0D7CC] text-xs font-semibold text-[#4A3F35] transition-colors"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Expand to Fullscreen Workspace'}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xs bg-white hover:bg-[#F2EDE8] border border-[#E0D7CC] text-xs font-semibold text-[#4A3F35] transition-colors cursor-pointer"
           >
-            <X className="w-3.5 h-3.5" />
-            <span>Cancel</span>
+            {isFullscreen ? (
+              <>
+                <Minimize2 className="w-3.5 h-3.5 text-[#BC6C25]" />
+                <span className="hidden sm:inline">Minimize</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="w-3.5 h-3.5 text-[#BC6C25]" />
+                <span className="hidden sm:inline">Fullscreen</span>
+              </>
+            )}
           </button>
 
-          {/* Primary Save Button */}
+          <button
+            onClick={onCancel}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xs bg-white hover:bg-[#F2EDE8] border border-[#E0D7CC] text-xs font-semibold text-[#4A3F35] transition-colors cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Close</span>
+          </button>
+
           <button
             onClick={handleSave}
             className="flex items-center gap-1.5 px-4 py-1.5 rounded-xs bg-[#4A3F35] hover:bg-[#2C2C2C] text-[#FCFAF7] text-xs font-bold uppercase tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer"
@@ -576,491 +652,469 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
         </div>
       </div>
 
-      {/* Word Count & Formatting / Alignment Helper Bar */}
-      <div className="px-4 py-2 bg-[#FAF8F3] border-b border-[#E0D7CC] flex flex-wrap items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-3 text-[#8C7B6A]">
-          <span className="font-mono text-[11px]">
-            Total Words: <strong className="text-[#4A3F35]">{totalWords}</strong>
-          </span>
-          <span className="text-[#D8CEBE]">|</span>
-          <span className="text-[11px] italic">
-            Click Left, Center, Right, or Justify to align text cleanly without any technical HTML tags.
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Quick Clean All HTML Tags button (if legacy tags are detected) */}
-          {hasRawHtmlTags && (
-            <button
-              type="button"
-              onClick={handleCleanAllHtmlTags}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 font-semibold text-[11px] cursor-pointer transition-colors shadow-2xs animate-pulse"
-              title="Click to remove all <div align='...'> tags and convert to clean text"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-700" />
-              <span>Clean HTML Tags</span>
-            </button>
-          )}
-
-          {/* Text Alignment Group (Active across all tabs - visual alignment) */}
-          {(() => {
-            const activeSection = sections.find((s) => s.id === activeSectionId) || sections[0];
-            const currentAlignment = activeSection?.alignment || 'center';
-            return (
-              <div
-                className="flex items-center gap-0.5 bg-white p-0.5 rounded border border-[#E0D7CC]"
-                title="Simple Text Alignment: click to align cleanly without any code tags"
+      {/* Main Dual-Pane Studio Body (Left: Content Edit, Right: Live Preview) */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0 bg-[#FCFAF7]">
+        {/* ========================================================= */}
+        {/* LEFT PANE: CONTENT EDIT                                   */}
+        {/* ========================================================= */}
+        <div className="w-full lg:w-[48%] xl:w-[45%] flex flex-col border-b lg:border-b-0 lg:border-r border-[#E0D7CC] bg-white overflow-hidden shrink-0">
+          {/* Left Pane Top Bar: Page Selector & Mode Switch */}
+          <div className="p-3 bg-[#FAF8F3] border-b border-[#E0D7CC] flex flex-wrap items-center justify-between gap-2 text-xs">
+            {/* Page navigation buttons */}
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handlePrevPage}
+                disabled={activePageIndex <= 0}
+                className="p-1 rounded-xs bg-white border border-[#E0D7CC] hover:bg-[#F2EDE8] text-[#4A3F35] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                title="Previous Page"
               >
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7B6A] px-1.5 hidden sm:inline">
-                  Align
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleTopToolbarAlign('left')}
-                  title="Align Left (No HTML tags needed)"
-                  className={`p-1 rounded cursor-pointer transition-colors ${
-                    currentAlignment === 'left'
-                      ? 'bg-[#BC6C25] text-white'
-                      : 'hover:bg-[#F2EDE8] text-[#4A3F35]'
-                  }`}
-                >
-                  <AlignLeft className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleTopToolbarAlign('center')}
-                  title="Align Center (Default)"
-                  className={`p-1 rounded cursor-pointer transition-colors ${
-                    currentAlignment === 'center' || !currentAlignment
-                      ? 'bg-[#BC6C25] text-white'
-                      : 'hover:bg-[#F2EDE8] text-[#4A3F35]'
-                  }`}
-                >
-                  <AlignCenter className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleTopToolbarAlign('right')}
-                  title="Align Right (No HTML tags needed)"
-                  className={`p-1 rounded cursor-pointer transition-colors ${
-                    currentAlignment === 'right'
-                      ? 'bg-[#BC6C25] text-white'
-                      : 'hover:bg-[#F2EDE8] text-[#4A3F35]'
-                  }`}
-                >
-                  <AlignRight className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleTopToolbarAlign('justify')}
-                  title="Justify Text (No HTML tags needed)"
-                  className={`p-1 rounded cursor-pointer transition-colors ${
-                    currentAlignment === 'justify'
-                      ? 'bg-[#BC6C25] text-white'
-                      : 'hover:bg-[#F2EDE8] text-[#4A3F35]'
-                  }`}
-                >
-                  <AlignJustify className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            );
-          })()}
+                <ChevronLeft className="w-4 h-4" />
+              </button>
 
-          {/* New Line & Break Group (Active across all editor tabs) */}
-          <div className="flex items-center gap-0.5 bg-white p-0.5 rounded border border-[#E0D7CC]" title="Insert New Line or Break at cursor">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7B6A] px-1.5 hidden sm:inline">
-              Break
-            </span>
-            <button
-              type="button"
-              onClick={() => handleInsertNewLine('newline')}
-              title="Insert New Line (↵ Break at cursor)"
-              className="flex items-center gap-1 px-1.5 py-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35] text-[11px] font-medium cursor-pointer transition-colors"
-            >
-              <CornerDownLeft className="w-3.5 h-3.5 text-[#BC6C25]" />
-              <span className="hidden md:inline">New Line</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleInsertNewLine('paragraph')}
-              title="Insert New Paragraph (↵↵ Double line break)"
-              className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35] cursor-pointer"
-            >
-              <Pilcrow className="w-3.5 h-3.5 text-[#4A3F35]" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleInsertNewLine('br')}
-              title="Insert HTML <br/> Break tag"
-              className="px-1.5 py-0.5 hover:bg-[#F2EDE8] rounded text-[10px] font-mono font-semibold text-[#8C7B6A] hover:text-[#4A3F35] cursor-pointer"
-            >
-              &lt;br&gt;
-            </button>
+              {/* Page Selector Dropdown */}
+              <div className="relative">
+                <select
+                  value={activeSectionId}
+                  onChange={(e) => handleSelectSection(e.target.value)}
+                  className="px-2.5 py-1 pr-6 text-xs font-serif font-bold text-[#1F1914] bg-white border border-[#E0D7CC] rounded-xs focus:outline-none focus:border-[#BC6C25] cursor-pointer max-w-[200px] sm:max-w-[260px] truncate"
+                >
+                  {sections.map((sec, idx) => (
+                    <option key={sec.id} value={sec.id}>
+                      {sec.pageNumber ? `Page ${sec.pageNumber}: ` : `Section ${idx + 1}: `}
+                      {sec.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleNextPage}
+                disabled={activePageIndex >= sections.length - 1}
+                className="p-1 rounded-xs bg-white border border-[#E0D7CC] hover:bg-[#F2EDE8] text-[#4A3F35] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                title="Next Page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Page-by-Page vs Full Markdown Toggle */}
+            <div className="flex items-center bg-[#F2EDE8] p-0.5 rounded-xs border border-[#E0D7CC]">
+              <button
+                type="button"
+                onClick={() => handleSwitchEditMode('page')}
+                className={`px-2.5 py-1 rounded-xs text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  editMode === 'page'
+                    ? 'bg-[#4A3F35] text-[#FCFAF7] shadow-xs'
+                    : 'text-[#8C7B6A] hover:text-[#4A3F35]'
+                }`}
+              >
+                Page-by-Page
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchEditMode('full')}
+                className={`px-2.5 py-1 rounded-xs text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  editMode === 'full'
+                    ? 'bg-[#4A3F35] text-[#FCFAF7] shadow-xs'
+                    : 'text-[#8C7B6A] hover:text-[#4A3F35]'
+                }`}
+              >
+                Full Markdown
+              </button>
+            </div>
           </div>
 
-          {(editorTab === 'full' || editorTab === 'split') && (
-            <div className="flex items-center gap-1 bg-white p-0.5 rounded border border-[#E0D7CC]">
+          {/* Formatting & Alignment Toolbar */}
+          <div className="px-3 py-2 bg-white border-b border-[#E0D7CC] flex flex-wrap items-center justify-between gap-2">
+            {/* Visual Alignment Controls */}
+            <div className="flex items-center gap-0.5 bg-[#FAF7F2] p-0.5 rounded border border-[#E0D7CC]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7B6A] px-1.5 hidden sm:inline">
+                Align
+              </span>
               <button
+                type="button"
+                onClick={() => handleSetActiveAlignment('left')}
+                title="Align Left (No HTML tags needed)"
+                className={`p-1 rounded-xs transition-colors cursor-pointer ${
+                  activeSection?.alignment === 'left'
+                    ? 'bg-[#BC6C25] text-white shadow-2xs'
+                    : 'hover:bg-white text-[#6B5E51]'
+                }`}
+              >
+                <AlignLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetActiveAlignment('center')}
+                title="Align Center (Default)"
+                className={`p-1 rounded-xs transition-colors cursor-pointer ${
+                  activeSection?.alignment === 'center' || !activeSection?.alignment
+                    ? 'bg-[#BC6C25] text-white shadow-2xs'
+                    : 'hover:bg-white text-[#6B5E51]'
+                }`}
+              >
+                <AlignCenter className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetActiveAlignment('right')}
+                title="Align Right"
+                className={`p-1 rounded-xs transition-colors cursor-pointer ${
+                  activeSection?.alignment === 'right'
+                    ? 'bg-[#BC6C25] text-white shadow-2xs'
+                    : 'hover:bg-white text-[#6B5E51]'
+                }`}
+              >
+                <AlignRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetActiveAlignment('justify')}
+                title="Justify Text"
+                className={`p-1 rounded-xs transition-colors cursor-pointer ${
+                  activeSection?.alignment === 'justify'
+                    ? 'bg-[#BC6C25] text-white shadow-2xs'
+                    : 'hover:bg-white text-[#6B5E51]'
+                }`}
+              >
+                <AlignJustify className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Break Insertion Controls */}
+            <div className="flex items-center gap-0.5 bg-[#FAF7F2] p-0.5 rounded border border-[#E0D7CC]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7B6A] px-1.5 hidden sm:inline">
+                Break
+              </span>
+              <button
+                type="button"
+                onClick={() => handleInsertBreak('newline')}
+                title="Insert New Line (↵ Break at cursor)"
+                className="flex items-center gap-1 px-1.5 py-1 hover:bg-white rounded-xs text-[#4A3F35] text-[11px] font-medium cursor-pointer transition-colors"
+              >
+                <CornerDownLeft className="w-3 h-3 text-[#BC6C25]" />
+                <span className="hidden sm:inline">Line</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleInsertBreak('paragraph')}
+                title="Insert Double Line Break (↵↵ Paragraph)"
+                className="p-1 hover:bg-white rounded-xs text-[#4A3F35] cursor-pointer"
+              >
+                <Pilcrow className="w-3 h-3 text-[#4A3F35]" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleInsertBreak('br')}
+                title="Insert HTML <br/> Break tag"
+                className="px-1.5 py-0.5 hover:bg-white rounded-xs text-[10px] font-mono text-[#8C7B6A] hover:text-[#4A3F35] cursor-pointer"
+              >
+                &lt;br&gt;
+              </button>
+            </div>
+
+            {/* Markdown Tokens */}
+            <div className="flex items-center gap-0.5 bg-[#FAF7F2] p-0.5 rounded border border-[#E0D7CC]">
+              <button
+                type="button"
                 onClick={() => handleInsertToken('**', '**')}
-                title="Bold"
-                className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+                title="Bold (**text**)"
+                className="p-1 hover:bg-white rounded-xs text-[#4A3F35] cursor-pointer"
               >
                 <Bold className="w-3.5 h-3.5" />
               </button>
               <button
+                type="button"
                 onClick={() => handleInsertToken('*', '*')}
-                title="Italic"
-                className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+                title="Italic (*text*)"
+                className="p-1 hover:bg-white rounded-xs text-[#4A3F35] cursor-pointer"
               >
                 <Italic className="w-3.5 h-3.5" />
               </button>
               <button
-                onClick={() => handleInsertToken('## ')}
-                title="Heading 2"
-                className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
-              >
-                <Heading2 className="w-3.5 h-3.5" />
-              </button>
-              <button
+                type="button"
                 onClick={() => handleInsertToken('### ')}
                 title="Heading 3"
-                className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+                className="p-1 hover:bg-white rounded-xs text-[#4A3F35] cursor-pointer"
               >
                 <Heading3 className="w-3.5 h-3.5" />
               </button>
               <button
+                type="button"
                 onClick={() => handleInsertToken('> ')}
-                title="Blockquote"
-                className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+                title="Quote"
+                className="p-1 hover:bg-white rounded-xs text-[#4A3F35] cursor-pointer"
               >
                 <Quote className="w-3.5 h-3.5" />
               </button>
               <button
+                type="button"
                 onClick={() => handleInsertToken('• ')}
                 title="Bullet"
-                className="p-1 hover:bg-[#F2EDE8] rounded text-[#4A3F35]"
+                className="p-1 hover:bg-white rounded-xs text-[#4A3F35] cursor-pointer"
               >
                 <List className="w-3.5 h-3.5" />
               </button>
             </div>
+
+            {hasHtmlTags && (
+              <button
+                type="button"
+                onClick={handleCleanAllHtml}
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 font-semibold text-[10px] cursor-pointer transition-colors"
+                title="Clean all <div align='...'> tags and convert to clean text"
+              >
+                <Sparkles className="w-3 h-3 text-amber-700" />
+                <span>Clean HTML</span>
+              </button>
+            )}
+          </div>
+
+          {/* Left Pane Editing Form Area */}
+          <div className="flex-1 overflow-y-auto p-4 flex flex-col space-y-3 min-h-[300px]">
+            {editMode === 'page' && activeSection ? (
+              <>
+                {/* Page Title Field */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7B6A] flex items-center gap-1">
+                      <span>Page Title</span>
+                      <span className="text-[#BC6C25]">
+                        ({activeSection.pageNumber ? `Page ${activeSection.pageNumber}` : 'Section'})
+                      </span>
+                    </span>
+                    <span className="text-[11px] text-[#6B5E51] font-mono">
+                      Words: <strong className="text-[#1F1914]">{currentWords}</strong> • Target: {idealWordRange}
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={activeSection.title}
+                    onChange={(e) => handleActiveTitleChange(e.target.value)}
+                    placeholder="Page Title..."
+                    className="w-full px-3 py-1.5 text-sm font-serif font-bold text-[#1F1914] bg-[#FAF8F3] border border-[#E0D7CC] rounded-xs focus:bg-white focus:outline-none focus:border-[#BC6C25] transition-colors"
+                  />
+                </div>
+
+                {/* Page Content Textarea */}
+                <div className="flex-1 flex flex-col space-y-1 min-h-[220px]">
+                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#8C7B6A]">
+                    <span>Content (Type to update live preview instantly)</span>
+                    <span className="font-mono lowercase text-[#BC6C25]">
+                      alignment: {activeSection.alignment || 'center'}
+                    </span>
+                  </div>
+                  <textarea
+                    ref={activeTextareaRef}
+                    value={activeSection.content}
+                    onChange={(e) => handleActiveContentChange(e.target.value)}
+                    placeholder="Enter spiritual interpretation text here..."
+                    className="flex-1 w-full p-3.5 text-xs font-sans text-[#2C2C2C] bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs focus:bg-white focus:outline-none focus:border-[#BC6C25] leading-relaxed resize-none shadow-inner min-h-[220px]"
+                  />
+                </div>
+              </>
+            ) : (
+              /* Full Markdown Textarea */
+              <div className="flex-1 flex flex-col space-y-1">
+                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#8C7B6A]">
+                  <span>Full Markdown Transmission</span>
+                  <span className="font-mono">
+                    Total Words: <strong className="text-[#1F1914]">{countWords(fullMarkdown)}</strong>
+                  </span>
+                </div>
+                <textarea
+                  id="full-markdown-textarea"
+                  value={fullMarkdown}
+                  onChange={(e) => handleFullMarkdownChange(e.target.value)}
+                  className="flex-1 w-full p-3.5 text-xs font-mono text-[#2C2C2C] bg-[#FCFAF7] border border-[#E0D7CC] rounded-xs focus:bg-white focus:outline-none focus:border-[#BC6C25] leading-relaxed resize-none shadow-inner min-h-[300px]"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Quick Page Jumper Strip at bottom of Left Pane */}
+          {editMode === 'page' && (
+            <div className="p-2 bg-[#FAF7F2] border-t border-[#E0D7CC] flex items-center gap-1.5 overflow-x-auto text-[11px] shrink-0">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-[#8C7B6A] shrink-0 pl-1">
+                Pages:
+              </span>
+              {sections.map((sec, idx) => {
+                const isSelected = sec.id === activeSectionId;
+                const pageNum = sec.pageNumber || idx + 1;
+                return (
+                  <button
+                    key={sec.id}
+                    type="button"
+                    onClick={() => handleSelectSection(sec.id)}
+                    title={`Jump to Page ${pageNum}: ${sec.title}`}
+                    className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#BC6C25] text-white shadow-2xs scale-105'
+                        : 'bg-white border border-[#E0D7CC] text-[#6B5E51] hover:border-[#BC6C25] hover:text-[#1F1914]'
+                    }`}
+                  >
+                    P{pageNum}
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Editor Body Area */}
-      <div className="flex-1 overflow-y-auto p-4 bg-[#FCFAF7] min-h-[420px]">
-        {/* TAB 1: Page-by-Page Cards Editor */}
-        {editorTab === 'pages' && (
-          <div className="space-y-4 max-w-4xl mx-auto">
-            {sections.map((sec, index) => {
-              const words = countWords(sec.content);
-              const isCardArtPage = /visual|card\s+\d.*(keyword|visual|intro|artwork)/i.test(sec.title);
-              const isWordLimitOk = isCardArtPage
-                ? words >= 25 && words <= 60
-                : words >= 55 && words <= 135;
-              const isWordTooLong = isCardArtPage ? words > 70 : words > 145;
-              const isWordTooShort = isCardArtPage
-                ? words < 20
-                : words < 50 && sec.pageNumber !== 1;
-
-              return (
-                <div
-                  key={sec.id}
-                  id={sec.id}
-                  className={`rounded-sm bg-white border transition-all p-4 space-y-3 ${
-                    activeSectionId === sec.id
-                      ? 'border-[#BC6C25] shadow-md ring-1 ring-[#BC6C25]/20'
-                      : 'border-[#E0D7CC] hover:border-[#C4B6A4]'
-                  }`}
-                  onClick={() => setActiveSectionId(sec.id)}
-                >
-                  {/* Card Header: Page Number + Title Input + Word Count */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#F2EDE8]">
-                    <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-                      <span className="shrink-0 px-2 py-0.5 rounded-xs bg-[#F2EDE8] border border-[#D8CEBE] text-[#4A3F35] text-[10px] font-bold uppercase tracking-wider font-mono">
-                        {sec.pageNumber ? `Page ${sec.pageNumber}` : `Section ${index + 1}`}
-                      </span>
-                      <input
-                        type="text"
-                        value={sec.title}
-                        onChange={(e) => handleSectionTitleChange(sec.id, e.target.value)}
-                        placeholder="Page / Section Title..."
-                        className="flex-1 px-2.5 py-1 text-sm font-serif font-bold text-[#1F1914] bg-[#FAF7F2] border border-[#E0D7CC] rounded-xs focus:bg-white focus:outline-none focus:border-[#BC6C25]"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* Visual Alignment Toolbar for this specific Page (No HTML tags needed) */}
-                      <div
-                        className="flex items-center gap-0.5 bg-[#FAF7F2] p-0.5 rounded border border-[#E0D7CC]"
-                        title="Click to align text visually (No HTML tags required)"
-                      >
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSetSectionAlignment(sec.id, 'left');
-                          }}
-                          title="Align Left"
-                          className={`p-1 rounded-xs transition-colors cursor-pointer ${
-                            sec.alignment === 'left'
-                              ? 'bg-[#BC6C25] text-white shadow-2xs font-semibold'
-                              : 'hover:bg-white text-[#6B5E51] hover:text-[#1F1914]'
-                          }`}
-                        >
-                          <AlignLeft className="w-3 h-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSetSectionAlignment(sec.id, 'center');
-                          }}
-                          title="Align Center (Default)"
-                          className={`p-1 rounded-xs transition-colors cursor-pointer ${
-                            sec.alignment === 'center' || !sec.alignment
-                              ? 'bg-[#BC6C25] text-white shadow-2xs font-semibold'
-                              : 'hover:bg-white text-[#6B5E51] hover:text-[#1F1914]'
-                          }`}
-                        >
-                          <AlignCenter className="w-3 h-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSetSectionAlignment(sec.id, 'right');
-                          }}
-                          title="Align Right"
-                          className={`p-1 rounded-xs transition-colors cursor-pointer ${
-                            sec.alignment === 'right'
-                              ? 'bg-[#BC6C25] text-white shadow-2xs font-semibold'
-                              : 'hover:bg-white text-[#6B5E51] hover:text-[#1F1914]'
-                          }`}
-                        >
-                          <AlignRight className="w-3 h-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSetSectionAlignment(sec.id, 'justify');
-                          }}
-                          title="Justify Text"
-                          className={`p-1 rounded-xs transition-colors cursor-pointer ${
-                            sec.alignment === 'justify'
-                              ? 'bg-[#BC6C25] text-white shadow-2xs font-semibold'
-                              : 'hover:bg-white text-[#6B5E51] hover:text-[#1F1914]'
-                          }`}
-                        >
-                          <AlignJustify className="w-3 h-3" />
-                        </button>
-
-                        <div className="w-[1px] h-3 bg-[#E0D7CC] my-auto mx-0.5"></div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleInsertNewLine('newline', sec.id);
-                          }}
-                          title="Insert New Line (↵ Break at cursor)"
-                          className="flex items-center gap-1 px-1.5 py-0.5 hover:bg-white rounded-xs text-[#6B5E51] hover:text-[#BC6C25] transition-colors cursor-pointer text-[10px] font-medium"
-                        >
-                          <CornerDownLeft className="w-3 h-3 text-[#BC6C25]" />
-                          <span>New Line</span>
-                        </button>
-                      </div>
-
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold ${
-                          isWordLimitOk
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : isWordTooLong
-                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                            : isWordTooShort
-                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                        title={
-                          isWordLimitOk
-                            ? (isCardArtPage ? 'Ideal word count (30–50 words for Card Art page)' : 'Ideal word count (60–130 words)')
-                            : isWordTooLong
-                            ? (isCardArtPage ? 'Exceeds 30–50 words for Card Art page' : 'Exceeds 130 words. May overflow single PDF page with 20px font.')
-                            : 'Shorter than recommended'
-                        }
-                      >
-                        {words} words
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Card Content Textarea */}
-                  <div className="space-y-1">
-                    <textarea
-                      id={`section-textarea-${sec.id}`}
-                      value={sec.content}
-                      onChange={(e) => handleSectionContentChange(sec.id, e.target.value)}
-                      rows={Math.max(4, Math.min(10, Math.ceil(sec.content.length / 80)))}
-                      placeholder="Write or edit the channeled text for this page..."
-                      style={{
-                        textAlign: sec.alignment || 'center',
-                      }}
-                      className={`w-full p-3 text-sm leading-relaxed text-[#1F1914] font-serif bg-[#FCFAF7] border border-[#E8E1D5] rounded-xs focus:bg-white focus:outline-none focus:border-[#BC6C25] resize-y transition-colors ${
-                        sec.alignment === 'justify'
-                          ? 'text-justify'
-                          : sec.alignment === 'left'
-                          ? 'text-left'
-                          : sec.alignment === 'right'
-                          ? 'text-right'
-                          : 'text-center'
-                      }`}
-                    />
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-[#8C7B6A] pt-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[#8C7B6A]">Quick break:</span>
-                        <button
-                          type="button"
-                          onClick={() => handleInsertNewLine('newline', sec.id)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors shadow-2xs font-sans text-[10px] font-medium"
-                          title="Insert single new line break (\n) at cursor"
-                        >
-                          <CornerDownLeft className="w-2.5 h-2.5 text-[#BC6C25]" />
-                          <span>↵ New Line</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleInsertNewLine('paragraph', sec.id)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors shadow-2xs font-sans text-[10px] font-medium"
-                          title="Insert double line break (\n\n) for a new paragraph"
-                        >
-                          <Pilcrow className="w-2.5 h-2.5 text-[#4A3F35]" />
-                          <span>¶ New Paragraph</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleInsertNewLine('br', sec.id)}
-                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors shadow-2xs font-mono text-[9px]"
-                          title="Insert HTML <br /> break tag"
-                        >
-                          <span>&lt;br /&gt;</span>
-                        </button>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className="capitalize text-[#8C7B6A]">
-                          Alignment: <strong className="text-[#4A3F35]">{sec.alignment || 'center'}</strong>
-                        </span>
-                        <span className="text-emerald-700 font-medium">✓ Clean visual mode</span>
-                      </div>
-
-                      {isWordTooLong && (
-                        <span className="text-rose-600 flex items-center gap-1 font-semibold">
-                          <AlertCircle className="w-3 h-3" /> Exceeds 100 words (may cause PDF page overflow)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* TAB 2: Full Document Raw Markdown Editor */}
-        {editorTab === 'full' && (
-          <div className="max-w-4xl mx-auto space-y-2">
-            <textarea
-              id="full-markdown-textarea"
-              value={fullMarkdown}
-              onChange={(e) => handleFullMarkdownChange(e.target.value)}
-              rows={22}
-              className="w-full p-4 text-xs font-mono text-[#2C2C2C] bg-white border border-[#E0D7CC] rounded-xs focus:outline-none focus:border-[#BC6C25] leading-relaxed whitespace-pre-wrap select-text resize-y shadow-inner"
-              placeholder="Full markdown reading content..."
-            />
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#8C7B6A] pt-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[#8C7B6A] text-[10px]">Insert Break at Cursor:</span>
-                <button
-                  type="button"
-                  onClick={() => handleInsertNewLine('newline')}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors shadow-2xs text-[11px]"
-                  title="Insert single new line break (\n) at cursor"
-                >
-                  <CornerDownLeft className="w-3 h-3 text-[#BC6C25]" />
-                  <span>↵ New Line</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleInsertNewLine('paragraph')}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors shadow-2xs text-[11px]"
-                  title="Insert double line break (\n\n) for a new paragraph"
-                >
-                  <Pilcrow className="w-3 h-3" />
-                  <span>¶ New Paragraph</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleInsertNewLine('br')}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors shadow-2xs text-[10px] font-mono"
-                  title="Insert HTML <br /> line break tag"
-                >
-                  <span>&lt;br /&gt;</span>
-                </button>
-              </div>
-              <span className="text-[10px] text-[#8C7B6A]">Enter or Shift+Enter inserts lines directly</span>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: Live Split Editor + Preview */}
-        {editorTab === 'split' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full min-h-[500px]">
-            <div className="flex flex-col h-full space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7B6A]">
-                  Markdown Source
-                </span>
-                <div className="flex items-center gap-1 text-[10px]">
-                  <button
-                    type="button"
-                    onClick={() => handleInsertNewLine('newline')}
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors text-[10px]"
-                    title="Insert single new line break (\n)"
-                  >
-                    <CornerDownLeft className="w-2.5 h-2.5 text-[#BC6C25]" />
-                    <span>↵ New Line</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleInsertNewLine('paragraph')}
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors text-[10px]"
-                    title="Insert double line break (\n\n)"
-                  >
-                    <Pilcrow className="w-2.5 h-2.5" />
-                    <span>¶ Paragraph</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleInsertNewLine('br')}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded bg-white border border-[#E0D7CC] text-[#4A3F35] hover:border-[#BC6C25] hover:text-[#BC6C25] cursor-pointer transition-colors text-[9px] font-mono"
-                    title="Insert HTML <br /> tag"
-                  >
-                    <span>&lt;br/&gt;</span>
-                  </button>
-                </div>
-              </div>
-              <textarea
-                id="full-markdown-textarea"
-                value={fullMarkdown}
-                onChange={(e) => handleFullMarkdownChange(e.target.value)}
-                className="flex-1 w-full p-3 text-xs font-mono text-[#2C2C2C] bg-white border border-[#E0D7CC] rounded-xs focus:outline-none focus:border-[#BC6C25] leading-relaxed resize-none shadow-inner"
-              />
-            </div>
-            <div className="flex flex-col h-full space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7B6A]">
-                Live Rendered Preview
+        {/* ========================================================= */}
+        {/* RIGHT PANE: LIVE PREVIEW                                  */}
+        {/* ========================================================= */}
+        <div className="flex-1 flex flex-col bg-[#241E19] overflow-hidden min-h-[400px]">
+          {/* Right Pane Top Controls: Theme Switcher & Zoom */}
+          <div className="px-4 py-2.5 bg-[#1F1914] border-b border-[#3D342B] flex flex-wrap items-center justify-between gap-3 text-xs text-[#FAF7EE] shrink-0">
+            {/* Live Preview Mode Switcher */}
+            <div className="flex items-center gap-2">
+              <span className="font-serif font-bold text-xs text-[#FAF7EE] flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5 text-[#BC6C25]" />
+                <span className="hidden sm:inline">Live Preview:</span>
               </span>
-              <div className="flex-1 p-4 bg-white border border-[#E0D7CC] rounded-xs overflow-y-auto reading-content text-sm shadow-inner">
+
+              <div className="flex items-center bg-[#2C241D] p-0.5 rounded border border-[#4A3F35]">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('pdf')}
+                  className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                    previewMode === 'pdf'
+                      ? 'bg-[#BC6C25] text-white shadow-xs'
+                      : 'text-[#A89887] hover:text-[#FAF7EE]'
+                  }`}
+                >
+                  Authentic PDF Folio
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('illuminated')}
+                  className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                    previewMode === 'illuminated'
+                      ? 'bg-[#BC6C25] text-white shadow-xs'
+                      : 'text-[#A89887] hover:text-[#FAF7EE]'
+                  }`}
+                >
+                  Illuminated Web
+                </button>
+              </div>
+            </div>
+
+            {/* PDF Themes and Zoom */}
+            <div className="flex items-center gap-2">
+              {/* Theme Swatches */}
+              {previewMode === 'pdf' && (
+                <div className="flex items-center gap-1 bg-[#2C241D] p-1 rounded border border-[#4A3F35] overflow-x-auto">
+                  {PDF_THEME_LIST.map((theme) => {
+                    const isSelected = selectedTheme === theme.id;
+                    return (
+                      <button
+                        key={theme.id}
+                        type="button"
+                        onClick={() => setSelectedTheme(theme.id)}
+                        title={`PDF Theme: ${theme.name}`}
+                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#4A3F35] text-white ring-1 ring-[#BC6C25]'
+                            : 'text-[#A89887] hover:text-white'
+                        }`}
+                      >
+                        <div
+                          className="w-2 h-2 rounded-full border border-black/40"
+                          style={{ backgroundColor: theme.swatch.accent }}
+                        />
+                        <span className="hidden md:inline">{theme.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Zoom Controls */}
+              <div className="flex items-center gap-1 bg-[#2C241D] p-0.5 rounded border border-[#4A3F35]">
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel((z) => Math.max(45, z - 10))}
+                  title="Zoom Out"
+                  className="p-1 hover:bg-[#4A3F35] rounded text-[#FAF7EE] cursor-pointer"
+                >
+                  <ZoomOut className="w-3 h-3" />
+                </button>
+                <span className="px-1 text-[10px] font-mono text-[#FAF7EE] min-w-[32px] text-center">
+                  {zoomLevel}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel((z) => Math.min(115, z + 10))}
+                  title="Zoom In"
+                  className="p-1 hover:bg-[#4A3F35] rounded text-[#FAF7EE] cursor-pointer"
+                >
+                  <ZoomIn className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel(75)}
+                  title="Reset Zoom to 75%"
+                  className="px-1.5 py-0.5 hover:bg-[#4A3F35] rounded text-[9px] font-bold text-[#BC6C25] cursor-pointer"
+                >
+                  Fit
+                </button>
+              </div>
+
+              {/* Sync to Editor Page button */}
+              {activeSection?.pageNumber && previewMode === 'pdf' && (
+                <button
+                  type="button"
+                  onClick={() => scrollToPreviewPage(activeSection.pageNumber!)}
+                  title={`Scroll live preview directly to Page ${activeSection.pageNumber}`}
+                  className="flex items-center gap-1 px-2 py-1 rounded bg-[#BC6C25] hover:bg-[#A35919] text-white text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  <span>Sync P{activeSection.pageNumber}</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Right Pane Scrollable Viewport */}
+          <div
+            ref={previewContainerRef}
+            onClick={handlePreviewContainerClick}
+            className="flex-1 overflow-y-auto overflow-x-auto p-4 md:p-6 flex flex-col items-center select-text"
+          >
+            {previewMode === 'pdf' ? (
+              <div
+                className="transition-transform origin-top duration-150"
+                style={{
+                  transform: `scale(${zoomLevel / 100})`,
+                  transformOrigin: 'top center',
+                }}
+              >
+                <PdfPagesRenderer
+                  inputs={effectiveInputs}
+                  markdown={deferredMarkdown}
+                  overrideTheme={selectedTheme}
+                  overrideTier={effectiveInputs.tier || 'detailed'}
+                />
+              </div>
+            ) : (
+              /* Illuminated Reading Web View */
+              <div className="w-full max-w-3xl bg-white rounded-sm border border-[#E0D7CC] p-6 md:p-8 text-[#2C2C2C] shadow-lg reading-content">
+                <div className="mb-4 pb-3 border-b border-[#E0D7CC] flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-[#8C7B6A] font-bold block">
+                      Illuminated Reading Preview
+                    </span>
+                    <h2 className="font-serif italic font-bold text-xl text-[#4A3F35]">
+                      {effectiveInputs.name} • {effectiveInputs.topic || 'Intuitive Guidance'}
+                    </h2>
+                  </div>
+                  <span className="text-xs text-[#8C7B6A] font-mono">
+                    DOB: {effectiveInputs.dob || 'N/A'}
+                  </span>
+                </div>
+
                 <ReactMarkdown
                   rehypePlugins={[rehypeRaw]}
                   components={{
@@ -1088,48 +1142,20 @@ export const ReadingContentEditor: React.FC<ReadingContentEditorProps> = ({
                           : align === 'center'
                           ? 'text-center'
                           : '';
-                      return <p className={`${className || ''} ${alignClass} whitespace-pre-line`} {...props} />;
+                      return (
+                        <p
+                          className={`${className || ''} ${alignClass} whitespace-pre-line my-3 leading-relaxed`}
+                          {...props}
+                        />
+                      );
                     },
                   }}
                 >
-                  {fullMarkdown}
+                  {deferredMarkdown}
                 </ReactMarkdown>
               </div>
-            </div>
+            )}
           </div>
-        )}
-      </div>
-
-      {/* Editor Footer Bar */}
-      <div className="p-3 bg-[#FAF7F2] border-t border-[#E0D7CC] flex items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-2 text-xs text-[#8C7B6A]">
-          {hasUnsavedChanges ? (
-            <span className="text-amber-700 font-medium flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5" />
-              You have unsaved changes. Click &ldquo;Save & Apply&rdquo; to update your reading.
-            </span>
-          ) : (
-            <span className="text-emerald-700 font-medium flex items-center gap-1">
-              <Check className="w-3.5 h-3.5" />
-              All changes applied to reading & PDF preview.
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onCancel}
-            className="px-3 py-1.5 rounded-xs bg-white hover:bg-[#F2EDE8] border border-[#E0D7CC] text-xs font-semibold text-[#4A3F35] transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xs bg-[#4A3F35] hover:bg-[#2C2C2C] text-[#FCFAF7] text-xs font-bold uppercase tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer"
-          >
-            <Save className="w-3.5 h-3.5 text-[#D4A373]" />
-            <span>Save & Apply Changes</span>
-          </button>
         </div>
       </div>
     </div>
